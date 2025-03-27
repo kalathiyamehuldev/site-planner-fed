@@ -8,158 +8,178 @@ import {
   Plus, 
   Search, 
   Filter, 
+  Grid, 
+  List, 
   Package, 
-  ShoppingBag, 
-  Edit, 
+  ShoppingCart, 
+  Download, 
+  MoreHorizontal,
+  Edit,
   Trash2,
-  ChevronDown,
-  Grid,
-  List,
-  Image
+  Tag,
+  DollarSign,
+  Bookmark,
+  Building
 } from "lucide-react";
 
 // Mock data for products
-const products = [
+const mockProducts = [
   {
-    id: "p1",
-    name: "Modern Sectional Sofa",
+    id: "prod1",
+    name: "Modern Leather Sofa",
     category: "Furniture",
-    subcategory: "Sofas",
-    sku: "FURN-SOF-001",
-    vendor: "Modern Furnishings Inc.",
-    price: 2500,
-    dimensions: "108 x 52 x 36",
-    color: "Charcoal Gray",
-    material: "Polyester, Wood",
+    type: "Sofa",
+    manufacturer: "Luxe Living",
+    price: 2499.99,
+    dimensions: "84\"W x 36\"D x 32\"H",
+    materials: ["Leather", "Wood", "Metal"],
+    colors: ["Black", "White", "Brown"],
     inStock: true,
-    image: null,
+    leadTime: "3-4 weeks",
+    tags: ["modern", "living room", "premium"],
+    thumbnail: null
   },
   {
-    id: "p2",
+    id: "prod2",
     name: "Glass Coffee Table",
     category: "Furniture",
-    subcategory: "Tables",
-    sku: "FURN-TBL-002",
-    vendor: "Modern Furnishings Inc.",
-    price: 800,
-    dimensions: "48 x 28 x 18",
-    color: "Clear/Black",
-    material: "Glass, Steel",
+    type: "Table",
+    manufacturer: "Modern Designs",
+    price: 799.99,
+    dimensions: "48\"W x 24\"D x 18\"H",
+    materials: ["Glass", "Stainless Steel"],
+    colors: ["Clear", "Frosted"],
     inStock: true,
-    image: null,
+    leadTime: "2 weeks",
+    tags: ["modern", "living room", "glass"],
+    thumbnail: null
   },
   {
-    id: "p3",
-    name: "Pendant Light Fixture",
-    category: "Lighting",
-    subcategory: "Ceiling Lights",
-    sku: "LIGHT-PND-001",
-    vendor: "Artistic Lighting Solutions",
-    price: 250,
-    dimensions: "14 diameter x 16 height",
-    color: "Brass",
-    material: "Metal, Glass",
-    inStock: true,
-    image: null,
-  },
-  {
-    id: "p4",
-    name: "Wool Area Rug",
-    category: "Decor",
-    subcategory: "Rugs",
-    sku: "DECOR-RUG-001",
-    vendor: "Premium Fabric Wholesalers",
-    price: 1200,
-    dimensions: "8' x 10'",
-    color: "Ivory/Blue",
-    material: "100% Wool",
-    inStock: false,
-    image: null,
-  },
-  {
-    id: "p5",
-    name: "Engineered Hardwood Flooring",
-    category: "Flooring",
-    subcategory: "Wood",
-    sku: "FLOOR-WD-001",
-    vendor: "Eco-Friendly Flooring Co.",
-    price: 8,
-    dimensions: "7.5 x 72",
-    color: "Natural Oak",
-    material: "Engineered Hardwood",
-    inStock: true,
-    image: null,
-  },
-  {
-    id: "p6",
-    name: "Marble Countertop",
-    category: "Surfaces",
-    subcategory: "Countertops",
-    sku: "SURF-CT-001",
-    vendor: "Stone Works",
-    price: 75,
-    dimensions: "Per square foot",
-    color: "Calacatta Gold",
-    material: "Marble",
-    inStock: true,
-    image: null,
-  },
-  {
-    id: "p7",
-    name: "Velvet Accent Chair",
+    id: "prod3",
+    name: "Velvet Armchair",
     category: "Furniture",
-    subcategory: "Chairs",
-    sku: "FURN-CHR-001",
-    vendor: "Modern Furnishings Inc.",
-    price: 650,
-    dimensions: "32 x 28 x 33",
-    color: "Navy Blue",
-    material: "Velvet, Wood",
-    inStock: true,
-    image: null,
+    type: "Chair",
+    manufacturer: "Luxe Living",
+    price: 899.99,
+    dimensions: "30\"W x 34\"D x 33\"H",
+    materials: ["Velvet", "Wood"],
+    colors: ["Navy", "Emerald", "Blush", "Gray"],
+    inStock: false,
+    leadTime: "5-6 weeks",
+    tags: ["accent", "living room", "comfortable"],
+    thumbnail: null
   },
   {
-    id: "p8",
+    id: "prod4",
     name: "Ceramic Table Lamp",
     category: "Lighting",
-    subcategory: "Table Lamps",
-    sku: "LIGHT-TBL-001",
-    vendor: "Artistic Lighting Solutions",
-    price: 180,
-    dimensions: "16 diameter x 26 height",
-    color: "White",
-    material: "Ceramic, Linen",
-    inStock: false,
-    image: null,
+    type: "Table Lamp",
+    manufacturer: "Illuminate",
+    price: 249.99,
+    dimensions: "14\"W x 14\"D x 26\"H",
+    materials: ["Ceramic", "Linen"],
+    colors: ["White", "Blue", "Green"],
+    inStock: true,
+    leadTime: "1 week",
+    tags: ["lighting", "accent", "ceramic"],
+    thumbnail: null
   },
+  {
+    id: "prod5",
+    name: "Wool Area Rug",
+    category: "Textiles",
+    type: "Rug",
+    manufacturer: "Soft Furnishings Co.",
+    price: 1199.99,
+    dimensions: "8' x 10'",
+    materials: ["Wool"],
+    colors: ["Beige", "Gray", "Multi"],
+    inStock: true,
+    leadTime: "2-3 weeks",
+    tags: ["flooring", "soft", "wool"],
+    thumbnail: null
+  },
+  {
+    id: "prod6",
+    name: "Pendant Light Fixture",
+    category: "Lighting",
+    type: "Pendant",
+    manufacturer: "Illuminate",
+    price: 349.99,
+    dimensions: "16\"W x 16\"D x 20\"H",
+    materials: ["Brass", "Glass"],
+    colors: ["Brass", "Matte Black"],
+    inStock: false,
+    leadTime: "4 weeks",
+    tags: ["lighting", "ceiling", "statement"],
+    thumbnail: null
+  },
+  {
+    id: "prod7",
+    name: "Marble Dining Table",
+    category: "Furniture",
+    type: "Table",
+    manufacturer: "Stone & Wood Designs",
+    price: 3499.99,
+    dimensions: "72\"W x 38\"D x 30\"H",
+    materials: ["Marble", "Wood"],
+    colors: ["White Marble/Walnut", "Black Marble/Oak"],
+    inStock: false,
+    leadTime: "8-10 weeks",
+    tags: ["dining", "marble", "premium"],
+    thumbnail: null
+  },
+  {
+    id: "prod8",
+    name: "Linen Curtains",
+    category: "Textiles",
+    type: "Window Treatment",
+    manufacturer: "Soft Furnishings Co.",
+    price: 199.99,
+    dimensions: "52\"W x 96\"L",
+    materials: ["Linen"],
+    colors: ["White", "Natural", "Navy", "Gray"],
+    inStock: true,
+    leadTime: "1-2 weeks",
+    tags: ["window", "linen", "drapery"],
+    thumbnail: null
+  }
 ];
 
 // Categories for filtering
-const categories = [
-  "All",
-  "Furniture",
-  "Lighting",
-  "Decor",
-  "Flooring",
-  "Surfaces"
-];
+const categories = ["All", "Furniture", "Lighting", "Textiles", "Decor", "Appliances"];
+
+// Types for filtering
+const types = ["All", "Sofa", "Chair", "Table", "Lamp", "Rug", "Window Treatment", "Pendant"];
 
 const ProductLibrary = () => {
+  const [products, setProducts] = useState(mockProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedType, setSelectedType] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
-  // Filter products based on search and category
+  // Filter products based on search, category, and type
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.vendor.toLowerCase().includes(searchTerm.toLowerCase());
+      product.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    const matchesType = selectedType === "All" || product.type === selectedType;
     
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesType;
   });
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
 
   return (
     <PageContainer>
@@ -168,7 +188,7 @@ const ProductLibrary = () => {
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-light mb-2">Product Library</h1>
-            <p className="text-muted-foreground">Catalog of furniture, fixtures, and materials</p>
+            <p className="text-muted-foreground">Manage your catalog of furniture, fixtures, and materials</p>
           </div>
           <MotionButton variant="default" motion="subtle">
             <Plus size={18} className="mr-2" /> Add Product
@@ -204,6 +224,21 @@ const ProductLibrary = () => {
               <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-muted-foreground" size={16} />
             </div>
             
+            <div className="relative">
+              <select
+                className="appearance-none px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring pr-8"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                {types.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-muted-foreground" size={16} />
+            </div>
+            
             <div className="flex rounded-lg border border-input overflow-hidden">
               <button
                 className={cn(
@@ -231,7 +266,7 @@ const ProductLibrary = () => {
           </div>
         </div>
 
-        {/* Products Grid/List */}
+        {/* Product Library */}
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-fade-in animation-delay-[0.2s]">
             {filteredProducts.length === 0 ? (
@@ -248,66 +283,77 @@ const ProductLibrary = () => {
                 </GlassCard>
               </div>
             ) : (
-              filteredProducts.map(product => (
+              filteredProducts.map((product) => (
                 <GlassCard 
                   key={product.id}
                   className="overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <div className="h-48 bg-secondary/30 flex items-center justify-center">
-                    {product.image ? (
+                  <div className="aspect-square bg-secondary/20 flex items-center justify-center relative group">
+                    {product.thumbnail ? (
                       <img 
-                        src={product.image} 
+                        src={product.thumbnail} 
                         alt={product.name} 
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Image className="text-muted-foreground" size={48} />
+                      <Package className="text-muted-foreground" size={48} />
                     )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button className="p-2 bg-white/20 rounded-full hover:bg-white/40 transition-colors text-white">
+                        <Edit size={18} />
+                      </button>
+                      <button className="p-2 bg-white/20 rounded-full hover:bg-white/40 transition-colors text-white">
+                        <ShoppingCart size={18} />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-medium truncate" title={product.name}>
                           {product.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground">{product.sku}</p>
+                        <p className="text-sm text-muted-foreground">{product.manufacturer}</p>
                       </div>
                       <span className={cn(
-                        "text-xs px-1.5 py-0.5 rounded-full",
+                        "text-xs px-2 py-1 rounded-full",
                         product.inStock 
                           ? "bg-green-100 text-green-600" 
                           : "bg-amber-100 text-amber-600"
                       )}>
-                        {product.inStock ? "In Stock" : "Out of Stock"}
+                        {product.inStock ? "In Stock" : `${product.leadTime}`}
                       </span>
                     </div>
                     
-                    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Category</p>
-                        <p>{product.subcategory}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Price</p>
-                        <p className="font-medium">${product.price.toFixed(2)}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground">Vendor</p>
-                        <p className="truncate" title={product.vendor}>{product.vendor}</p>
-                      </div>
+                    <div className="mt-3 flex items-center text-lg font-medium">
+                      <DollarSign size={16} className="text-muted-foreground" />
+                      {formatCurrency(product.price)}
                     </div>
                     
-                    <div className="mt-4 pt-3 border-t border-border flex justify-end gap-1">
-                      <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
-                        <Edit size={16} />
-                      </button>
-                      <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive">
-                        <Trash2 size={16} />
-                      </button>
-                      <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
-                        <ShoppingBag size={16} />
-                      </button>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {product.tags.slice(0, 3).map((tag, idx) => (
+                        <span 
+                          key={idx}
+                          className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-border flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        {product.category} / {product.type}
+                      </span>
+                      <div className="flex gap-1">
+                        <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
+                          <Download size={16} />
+                        </button>
+                        <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </GlassCard>
@@ -333,23 +379,22 @@ const ProductLibrary = () => {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left p-4 font-medium text-muted-foreground">Product</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">SKU</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Category</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">Vendor</th>
-                      <th className="text-right p-4 font-medium text-muted-foreground">Price</th>
-                      <th className="text-center p-4 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Manufacturer</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                       <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.map(product => (
+                    {filteredProducts.map((product) => (
                       <tr key={product.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-secondary/50 rounded flex items-center justify-center flex-shrink-0">
-                              {product.image ? (
+                            <div className="w-12 h-12 bg-secondary/50 rounded flex items-center justify-center">
+                              {product.thumbnail ? (
                                 <img 
-                                  src={product.image} 
+                                  src={product.thumbnail} 
                                   alt={product.name} 
                                   className="w-full h-full object-cover rounded"
                                 />
@@ -357,35 +402,38 @@ const ProductLibrary = () => {
                                 <Package className="text-muted-foreground" size={20} />
                               )}
                             </div>
-                            <span className="font-medium">{product.name}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-muted-foreground">{product.sku}</td>
-                        <td className="p-4">{product.subcategory}</td>
-                        <td className="p-4">{product.vendor}</td>
-                        <td className="p-4 text-right font-medium">${product.price.toFixed(2)}</td>
-                        <td className="p-4">
-                          <div className="flex justify-center">
-                            <span className={cn(
-                              "text-xs px-2 py-1 rounded-full inline-block",
-                              product.inStock 
-                                ? "bg-green-100 text-green-600" 
-                                : "bg-amber-100 text-amber-600"
-                            )}>
-                              {product.inStock ? "In Stock" : "Out of Stock"}
-                            </span>
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-xs text-muted-foreground">{product.dimensions}</p>
+                            </div>
                           </div>
                         </td>
                         <td className="p-4">
+                          <span>{product.category}</span>
+                          <p className="text-xs text-muted-foreground">{product.type}</p>
+                        </td>
+                        <td className="p-4">{product.manufacturer}</td>
+                        <td className="p-4 font-medium">{formatCurrency(product.price)}</td>
+                        <td className="p-4">
+                          <span className={cn(
+                            "text-xs px-2 py-1 rounded-full",
+                            product.inStock 
+                              ? "bg-green-100 text-green-600" 
+                              : "bg-amber-100 text-amber-600"
+                          )}>
+                            {product.inStock ? "In Stock" : "Lead time: " + product.leadTime}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
                           <div className="flex justify-end gap-1">
                             <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
                               <Edit size={16} />
                             </button>
+                            <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
+                              <ShoppingCart size={16} />
+                            </button>
                             <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive">
                               <Trash2 size={16} />
-                            </button>
-                            <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
-                              <ShoppingBag size={16} />
                             </button>
                           </div>
                         </td>

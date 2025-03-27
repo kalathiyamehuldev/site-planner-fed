@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
@@ -7,73 +8,54 @@ import { cn } from "@/lib/utils";
 import ProjectCard from "@/components/ProjectCard";
 import TaskCard from "@/components/TaskCard";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
-
-// Mock data for demo
-const recentProjects = [
-  {
-    id: "p1",
-    title: "Modern Loft Redesign",
-    client: "Jane Cooper",
-    status: "In Progress" as const,
-    dueDate: "Aug 24, 2023",
-    team: ["Alex Jones", "Sarah Smith", "Robert Lee"],
-    progress: 65,
-  },
-  {
-    id: "p2",
-    title: "Coastal Vacation Home",
-    client: "Michael Scott",
-    status: "Not Started" as const,
-    dueDate: "Sep 15, 2023",
-    team: ["Alex Jones", "Sarah Smith"],
-    progress: 0,
-  },
-  {
-    id: "p3",
-    title: "Corporate Office Revamp",
-    client: "Acme Corp",
-    status: "On Hold" as const,
-    dueDate: "Oct 30, 2023",
-    team: ["Alex Jones", "Robert Lee", "Emma Watson", "John Doe"],
-    progress: 35,
-  },
-];
-
-const upcomingTasks = [
-  {
-    id: "t1",
-    title: "Finalize floor plans",
-    projectName: "Modern Loft Redesign",
-    status: "In Progress" as const,
-    priority: "High" as const,
-    dueDate: "Tomorrow",
-    estimatedHours: 4,
-    assignedTo: "Alex Jones",
-  },
-  {
-    id: "t2",
-    title: "Source furniture options",
-    projectName: "Coastal Vacation Home",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "This week",
-    estimatedHours: 8,
-    assignedTo: "Sarah Smith",
-  },
-  {
-    id: "t3",
-    title: "Client meeting for material selection",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "Next Monday",
-    estimatedHours: 2,
-    assignedTo: "Alex Jones",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { selectAllProjects, getProjects } from "@/redux/slices/projectsSlice";
+import { selectAllTasks, getTasks } from "@/redux/slices/tasksSlice";
 
 const Dashboard = () => {
+  const dispatch = useAppDispatch();
+  const allProjects = useAppSelector(selectAllProjects);
+  const allTasks = useAppSelector(selectAllTasks);
+  
   const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks">("overview");
+
+  useEffect(() => {
+    dispatch(getProjects());
+    dispatch(getTasks());
+  }, [dispatch]);
+
+  // Get recent projects (3 most recent)
+  const recentProjects = [...allProjects].sort((a, b) => {
+    // Sort by most recent start date
+    return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+  }).slice(0, 3);
+
+  // Get upcoming tasks (3 most urgent)
+  const upcomingTasks = [...allTasks].filter(task => 
+    task.status !== "Completed"
+  ).sort((a, b) => {
+    // Simple sorting based on priority and due date keywords
+    const priorityOrder = { "High": 0, "Medium": 1, "Low": 2 };
+    const dueDateOrder = { 
+      "Today": 0, 
+      "Tomorrow": 1, 
+      "This week": 2,
+      "Next Monday": 3,
+      "Next week": 4,
+      "In 2 weeks": 5,
+      "Next month": 6,
+    };
+    
+    const aPriority = priorityOrder[a.priority] || 999;
+    const bPriority = priorityOrder[b.priority] || 999;
+    
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    
+    const aDueDate = dueDateOrder[a.dueDate as keyof typeof dueDateOrder] || 999;
+    const bDueDate = dueDateOrder[b.dueDate as keyof typeof dueDateOrder] || 999;
+    
+    return aDueDate - bDueDate;
+  }).slice(0, 3);
 
   const StatCard = ({ icon: Icon, label, value, trend, className }: {
     icon: React.ElementType;
@@ -133,14 +115,14 @@ const Dashboard = () => {
             <StatCard 
               icon={FileText} 
               label="Active Projects" 
-              value="12" 
+              value={allProjects.filter(p => p.status === "In Progress").length.toString()} 
               trend={{ value: "20%", positive: true }}
               className="animation-delay-[0.1s]"
             />
             <StatCard 
               icon={CheckSquare} 
               label="Pending Tasks" 
-              value="28" 
+              value={allTasks.filter(t => t.status !== "Completed").length.toString()} 
               trend={{ value: "5%", positive: false }}
               className="animation-delay-[0.2s]"
             />
@@ -154,7 +136,7 @@ const Dashboard = () => {
             <StatCard 
               icon={LayoutGrid} 
               label="Completed Projects" 
-              value="39" 
+              value={allProjects.filter(p => p.status === "Completed").length.toString()} 
               trend={{ value: "30%", positive: true }}
               className="animation-delay-[0.4s]"
             />
@@ -216,7 +198,7 @@ const Dashboard = () => {
                   </MotionButton>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recentProjects.slice(0, 3).map((project, index) => (
+                  {recentProjects.map((project, index) => (
                     <ProjectCard 
                       key={project.id} 
                       {...project} 
@@ -245,7 +227,7 @@ const Dashboard = () => {
                   </MotionButton>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcomingTasks.slice(0, 3).map((task, index) => (
+                  {upcomingTasks.map((task, index) => (
                     <TaskCard 
                       key={task.id} 
                       {...task} 
@@ -271,15 +253,15 @@ const Dashboard = () => {
                 </MotionButton>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recentProjects.map((project, index) => (
+                {allProjects.map((project, index) => (
                   <ProjectCard 
                     key={project.id} 
                     {...project} 
                     className={cn({
                       "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.1s]": index === 0,
-                      "animation-delay-[0.2s]": index === 1,
-                      "animation-delay-[0.3s]": index === 2,
+                      "animation-delay-[0.1s]": index % 3 === 0,
+                      "animation-delay-[0.2s]": index % 3 === 1,
+                      "animation-delay-[0.3s]": index % 3 === 2,
                     })}
                   />
                 ))}
@@ -296,15 +278,15 @@ const Dashboard = () => {
                 </MotionButton>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {upcomingTasks.map((task, index) => (
+                {allTasks.map((task, index) => (
                   <TaskCard 
                     key={task.id} 
                     {...task} 
                     className={cn({
                       "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.1s]": index === 0,
-                      "animation-delay-[0.2s]": index === 1,
-                      "animation-delay-[0.3s]": index === 2,
+                      "animation-delay-[0.1s]": index % 3 === 0,
+                      "animation-delay-[0.2s]": index % 3 === 1,
+                      "animation-delay-[0.3s]": index % 3 === 2,
                     })}
                   />
                 ))}

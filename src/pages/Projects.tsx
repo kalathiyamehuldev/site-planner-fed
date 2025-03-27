@@ -1,73 +1,24 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, ArrowRight } from "lucide-react";
-
-// Mock data for demo
-const projects = [
-  {
-    id: "p1",
-    title: "Modern Loft Redesign",
-    client: "Jane Cooper",
-    status: "In Progress" as const,
-    dueDate: "Aug 24, 2023",
-    team: ["Alex Jones", "Sarah Smith", "Robert Lee"],
-    progress: 65,
-  },
-  {
-    id: "p2",
-    title: "Coastal Vacation Home",
-    client: "Michael Scott",
-    status: "Not Started" as const,
-    dueDate: "Sep 15, 2023",
-    team: ["Alex Jones", "Sarah Smith"],
-    progress: 0,
-  },
-  {
-    id: "p3",
-    title: "Corporate Office Revamp",
-    client: "Acme Corp",
-    status: "On Hold" as const,
-    dueDate: "Oct 30, 2023",
-    team: ["Alex Jones", "Robert Lee", "Emma Watson", "John Doe"],
-    progress: 35,
-  },
-  {
-    id: "p4",
-    title: "Luxury Apartment Redesign",
-    client: "David Miller",
-    status: "Completed" as const,
-    dueDate: "Jul 10, 2023",
-    team: ["Sarah Smith", "Emma Watson"],
-    progress: 100,
-  },
-  {
-    id: "p5",
-    title: "Restaurant Interior",
-    client: "Fine Dining Inc.",
-    status: "In Progress" as const,
-    dueDate: "Nov 5, 2023",
-    team: ["Alex Jones", "John Doe"],
-    progress: 40,
-  },
-  {
-    id: "p6",
-    title: "Boutique Hotel Lobby",
-    client: "Elegance Hotels",
-    status: "Not Started" as const,
-    dueDate: "Dec 15, 2023",
-    team: ["Robert Lee", "Emma Watson"],
-    progress: 0,
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { selectAllProjects, getProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
 
 const Projects = () => {
+  const dispatch = useAppDispatch();
+  const projects = useAppSelector(selectAllProjects);
+  
   const [filter, setFilter] = useState<"all" | "active" | "completed" | "onhold">("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    dispatch(getProjects());
+  }, [dispatch]);
 
   const filteredProjects = projects.filter(project => {
     if (searchTerm) {
@@ -89,6 +40,10 @@ const Projects = () => {
         return true;
     }
   });
+
+  const handleProjectClick = (projectId: string) => {
+    dispatch(setSelectedProject(projectId));
+  };
 
   return (
     <PageContainer>
@@ -176,6 +131,7 @@ const Projects = () => {
               key={project.id} 
               to={`/projects/${project.id}`}
               className="transform transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
+              onClick={() => handleProjectClick(project.id)}
             >
               <GlassCard className={cn(
                 "h-full p-6 opacity-0 animate-scale-in", 

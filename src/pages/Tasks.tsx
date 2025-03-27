@@ -1,78 +1,24 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskCard from "@/components/TaskCard";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
-
-// Mock data for demo
-const allTasks = [
-  {
-    id: "t1",
-    title: "Finalize floor plans",
-    projectName: "Modern Loft Redesign",
-    status: "In Progress" as const,
-    priority: "High" as const,
-    dueDate: "Tomorrow",
-    estimatedHours: 4,
-    assignedTo: "Alex Jones",
-  },
-  {
-    id: "t2",
-    title: "Source furniture options",
-    projectName: "Coastal Vacation Home",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "This week",
-    estimatedHours: 8,
-    assignedTo: "Sarah Smith",
-  },
-  {
-    id: "t3",
-    title: "Client meeting for material selection",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "Next Monday",
-    estimatedHours: 2,
-    assignedTo: "Alex Jones",
-  },
-  {
-    id: "t4",
-    title: "Lighting design plan",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Low" as const,
-    dueDate: "Next week",
-    estimatedHours: 6,
-    assignedTo: "Robert Lee",
-  },
-  {
-    id: "t5",
-    title: "Select color palette options",
-    projectName: "Corporate Office Revamp",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "In 2 weeks",
-    estimatedHours: 3,
-    assignedTo: "Sarah Smith",
-  },
-  {
-    id: "t6",
-    title: "Create 3D renders of kitchen",
-    projectName: "Modern Loft Redesign",
-    status: "On Hold" as const,
-    priority: "High" as const,
-    dueDate: "Next month",
-    estimatedHours: 10,
-    assignedTo: "Robert Lee",
-  },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { selectAllTasks, getTasks, setSelectedTask } from "@/redux/slices/tasksSlice";
 
 const Tasks = () => {
+  const dispatch = useAppDispatch();
+  const allTasks = useAppSelector(selectAllTasks);
+  
   const [filter, setFilter] = useState<"all" | "mine" | "high-priority" | "upcoming">("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    dispatch(getTasks());
+  }, [dispatch]);
 
   const filteredTasks = allTasks.filter(task => {
     if (searchTerm) {
@@ -110,6 +56,10 @@ const Tasks = () => {
       <span>{label}</span>
     </button>
   );
+
+  const handleTaskClick = (taskId: string) => {
+    dispatch(setSelectedTask(taskId));
+  };
 
   return (
     <PageContainer>
@@ -156,6 +106,7 @@ const Tasks = () => {
                   "animation-delay-[0.2s]": index % 3 === 1,
                   "animation-delay-[0.3s]": index % 3 === 2,
                 })}
+                onClick={() => handleTaskClick(task.id)}
               />
             ))
           ) : (

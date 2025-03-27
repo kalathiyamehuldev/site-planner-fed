@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
@@ -12,16 +12,17 @@ import {
   ChevronDown, 
   Clock 
 } from "lucide-react";
-
-// Mock data for todos
-const initialTodos = [
-  { id: "1", text: "Review floor plans for Modern Loft project", completed: false, project: "Modern Loft Redesign", dueDate: "Tomorrow" },
-  { id: "2", text: "Call vendor about furniture delivery", completed: false, project: "Coastal Vacation Home", dueDate: "Today" },
-  { id: "3", text: "Prepare materials for client presentation", completed: false, project: "Corporate Office Revamp", dueDate: "Next Monday" },
-  { id: "4", text: "Update project timeline", completed: true, project: "Modern Loft Redesign", dueDate: "Yesterday" },
-  { id: "5", text: "Research sustainable building materials", completed: false, project: "Coastal Vacation Home", dueDate: "Next week" },
-  { id: "6", text: "Follow up with contractor about permits", completed: true, project: "Modern Loft Redesign", dueDate: "2 days ago" },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { 
+  selectAllTodos, 
+  selectActiveTodos, 
+  selectCompletedTodos, 
+  getTodos, 
+  addTodo, 
+  updateTodo, 
+  deleteTodo, 
+  toggleTodo 
+} from "@/redux/slices/todoSlice";
 
 // Mock projects for selection
 const projects = [
@@ -34,60 +35,56 @@ const projects = [
 ];
 
 const TodoList = () => {
-  const [todos, setTodos] = useState(initialTodos);
+  const dispatch = useAppDispatch();
+  const activeTodos = useAppSelector(selectActiveTodos);
+  const completedTodos = useAppSelector(selectCompletedTodos);
+  
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTodoText, setNewTodoText] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [editTodoId, setEditTodoId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
 
-  // Filter completed/uncompleted todos
-  const activeTodos = todos.filter(todo => !todo.completed);
-  const completedTodos = todos.filter(todo => todo.completed);
+  useEffect(() => {
+    dispatch(getTodos());
+  }, [dispatch]);
   
+  // Filter completed/uncompleted todos
   const displayedTodos = [...activeTodos, ...(showCompleted ? completedTodos : [])];
   
-  const addTodo = () => {
+  const handleAddTodo = () => {
     if (newTodoText.trim() === "") return;
     
-    const newTodo = {
-      id: Math.random().toString(36).substring(2, 9),
+    dispatch(addTodo({
       text: newTodoText,
-      completed: false,
       project: selectedProject || "Unassigned",
       dueDate: "No due date"
-    };
+    }));
     
-    setTodos([newTodo, ...todos]);
     setNewTodoText("");
     setSelectedProject("");
   };
   
-  const toggleTodo = (id: string) => {
-    setTodos(
-      todos.map(todo =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const handleToggleTodo = (id: string) => {
+    dispatch(toggleTodo(id));
   };
   
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const handleDeleteTodo = (id: string) => {
+    dispatch(deleteTodo(id));
   };
   
-  const startEdit = (todo: typeof todos[0]) => {
-    setEditTodoId(todo.id);
-    setEditText(todo.text);
+  const startEdit = (todoId: string, text: string) => {
+    setEditTodoId(todoId);
+    setEditText(text);
   };
   
   const saveEdit = () => {
-    if (editText.trim() === "") return;
+    if (editText.trim() === "" || !editTodoId) return;
     
-    setTodos(
-      todos.map(todo =>
-        todo.id === editTodoId ? { ...todo, text: editText } : todo
-      )
-    );
+    dispatch(updateTodo({
+      id: editTodoId,
+      todo: { text: editText }
+    }));
     
     setEditTodoId(null);
     setEditText("");
@@ -131,12 +128,12 @@ const TodoList = () => {
                 onChange={(e) => setNewTodoText(e.target.value)}
                 placeholder="Add a new task..."
                 className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                onKeyDown={(e) => e.key === "Enter" && addTodo()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
               />
               
               <MotionButton 
                 variant="default"
-                onClick={addTodo}
+                onClick={handleAddTodo}
                 disabled={newTodoText.trim() === ""}
                 motion="subtle"
               >
@@ -217,7 +214,7 @@ const TodoList = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                       <button
-                        onClick={() => toggleTodo(todo.id)}
+                        onClick={() => handleToggleTodo(todo.id)}
                         className={cn(
                           "flex-shrink-0 w-5 h-5 rounded-full border transition-colors mt-1",
                           todo.completed 
@@ -262,13 +259,13 @@ const TodoList = () => {
                     
                     <div className="flex items-center space-x-1">
                       <button 
-                        onClick={() => startEdit(todo)}
+                        onClick={() => startEdit(todo.id, todo.text)}
                         className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-secondary"
                       >
                         <Edit size={16} />
                       </button>
                       <button 
-                        onClick={() => deleteTodo(todo.id)}
+                        onClick={() => handleDeleteTodo(todo.id)}
                         className="text-muted-foreground hover:text-red-500 p-1 rounded-md hover:bg-secondary"
                       >
                         <Trash2 size={16} />
