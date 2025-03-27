@@ -28,11 +28,11 @@ const products = [
     sku: "FURN-SOF-001",
     vendor: "Modern Furnishings Inc.",
     price: 2500,
-    dimensions: "108" x 52" x 36"",
+    dimensions: "108 x 52 x 36",
     color: "Charcoal Gray",
     material: "Polyester, Wood",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p2",
@@ -42,11 +42,11 @@ const products = [
     sku: "FURN-TBL-002",
     vendor: "Modern Furnishings Inc.",
     price: 800,
-    dimensions: "48" x 28" x 18"",
+    dimensions: "48 x 28 x 18",
     color: "Clear/Black",
     material: "Glass, Steel",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p3",
@@ -56,11 +56,11 @@ const products = [
     sku: "LIGHT-PND-001",
     vendor: "Artistic Lighting Solutions",
     price: 250,
-    dimensions: "14" diameter x 16" height",
+    dimensions: "14 diameter x 16 height",
     color: "Brass",
     material: "Metal, Glass",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p4",
@@ -74,7 +74,7 @@ const products = [
     color: "Ivory/Blue",
     material: "100% Wool",
     inStock: false,
-    image: null
+    image: null,
   },
   {
     id: "p5",
@@ -84,11 +84,11 @@ const products = [
     sku: "FLOOR-WD-001",
     vendor: "Eco-Friendly Flooring Co.",
     price: 8,
-    dimensions: "7.5" x 72"",
+    dimensions: "7.5 x 72",
     color: "Natural Oak",
     material: "Engineered Hardwood",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p6",
@@ -102,7 +102,7 @@ const products = [
     color: "Calacatta Gold",
     material: "Marble",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p7",
@@ -112,11 +112,11 @@ const products = [
     sku: "FURN-CHR-001",
     vendor: "Modern Furnishings Inc.",
     price: 650,
-    dimensions: "32" x 28" x 33"",
+    dimensions: "32 x 28 x 33",
     color: "Navy Blue",
     material: "Velvet, Wood",
     inStock: true,
-    image: null
+    image: null,
   },
   {
     id: "p8",
@@ -126,12 +126,12 @@ const products = [
     sku: "LIGHT-TBL-001",
     vendor: "Artistic Lighting Solutions",
     price: 180,
-    dimensions: "16" diameter x 26" height",
+    dimensions: "16 diameter x 26 height",
     color: "White",
     material: "Ceramic, Linen",
     inStock: false,
-    image: null
-  }
+    image: null,
+  },
 ];
 
 // Categories for filtering
