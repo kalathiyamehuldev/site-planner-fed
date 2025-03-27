@@ -1,5 +1,10 @@
-import { useLocation } from "react-router-dom";
+
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { GlassCard } from "@/components/ui/glass-card";
+import { MotionButton } from "@/components/ui/motion-button";
+import { AnimatedGradient } from "@/components/ui/animated-gradient";
+import { ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,14 +17,27 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      <AnimatedGradient 
+        className="absolute top-0 left-0 w-full h-full -z-10 mask-radial-gradient" 
+        variant="accent"
+        intensity="low"
+      />
+      
+      <GlassCard className="p-8 max-w-md w-full text-center mx-auto animate-scale-in">
+        <h1 className="text-7xl font-light mb-4">404</h1>
+        <p className="text-xl mb-8">This page could not be found</p>
+        <div className="flex flex-col gap-2 items-center">
+          <Link to="/">
+            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto">
+              <ArrowLeft size={18} className="mr-2" /> Return to Dashboard
+            </MotionButton>
+          </Link>
+          <p className="text-sm text-muted-foreground mt-4">
+            If you believe this is an error, please contact support.
+          </p>
+        </div>
+      </GlassCard>
     </div>
   );
 };
