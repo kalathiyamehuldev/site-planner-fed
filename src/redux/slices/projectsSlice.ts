@@ -1,6 +1,7 @@
-
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
+import { projectService } from '@/services/project.service';
+import type { CreateProjectDto, UpdateProjectDto, PaginationDto, FilterDto } from '@/common/types/project.types';
 
 // Mock data for projects
 const initialProjects = [
@@ -92,63 +93,180 @@ interface ProjectsState {
   selectedProject: Project | null;
   loading: boolean;
   error: string | null;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 const initialState: ProjectsState = {
   projects: initialProjects,
   selectedProject: null,
   loading: false,
-  error: null
+  error: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  },
 };
+
+// Async thunks
+export const fetchProjects = createAsyncThunk(
+  'projects/fetchProjects',
+  async ({ pagination, filters }: { pagination?: PaginationDto; filters?: FilterDto }, { rejectWithValue }) => {
+    try {
+      const response = await projectService.getAll(pagination, filters);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch projects');
+    }
+  }
+);
+
+export const fetchProjectById = createAsyncThunk(
+  'projects/fetchProjectById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const project = await projectService.getById(id);
+      return project;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch project');
+    }
+  }
+);
+
+export const createProject = createAsyncThunk(
+  'projects/createProject',
+  async (project: CreateProjectDto, { rejectWithValue }) => {
+    try {
+      const newProject = await projectService.create(project);
+      return newProject;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create project');
+    }
+  }
+);
+
+export const updateProject = createAsyncThunk(
+  'projects/updateProject',
+  async ({ id, project }: { id: string; project: UpdateProjectDto }, { rejectWithValue }) => {
+    try {
+      const updatedProject = await projectService.update(id, project);
+      return updatedProject;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update project');
+    }
+  }
+);
+
+export const deleteProject = createAsyncThunk(
+  'projects/deleteProject',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await projectService.delete(id);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete project');
+    }
+  }
+);
 
 export const projectsSlice = createSlice({
   name: 'projects',
   initialState,
   reducers: {
-    getProjects: (state) => {
-      state.loading = false;
-      state.error = null;
-    },
     setSelectedProject: (state, action: PayloadAction<string>) => {
       state.selectedProject = state.projects.find(project => project.id === action.payload) || null;
     },
     clearSelectedProject: (state) => {
       state.selectedProject = null;
     },
-    addProject: (state, action: PayloadAction<Omit<Project, 'id'>>) => {
-      const newProject = {
-        ...action.payload,
-        id: `p${state.projects.length + 1}`,
-      };
-      state.projects.push(newProject);
-    },
-    updateProject: (state, action: PayloadAction<{ id: string; project: Partial<Project> }>) => {
-      const { id, project } = action.payload;
-      const index = state.projects.findIndex(p => p.id === id);
-      if (index !== -1) {
-        state.projects[index] = { ...state.projects[index], ...project };
-        if (state.selectedProject?.id === id) {
-          state.selectedProject = state.projects[index];
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch Projects
+      .addCase(fetchProjects.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchProjects.fulfilled, (state, action) => {
+        state.loading = false;
+        state.projects = action.payload.data;
+        state.pagination = action.payload.meta;
+      })
+      .addCase(fetchProjects.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Project by ID
+      .addCase(fetchProjectById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchProjectById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedProject = action.payload;
+      })
+      .addCase(fetchProjectById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Create Project
+      .addCase(createProject.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createProject.fulfilled, (state, action) => {
+        state.loading = false;
+        state.projects.push(action.payload);
+      })
+      .addCase(createProject.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Update Project
+      .addCase(updateProject.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateProject.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.projects.findIndex(p => p.id === action.payload.id);
+        if (index !== -1) {
+          state.projects[index] = action.payload;
         }
-      }
-    },
-    deleteProject: (state, action: PayloadAction<string>) => {
-      state.projects = state.projects.filter(project => project.id !== action.payload);
-      if (state.selectedProject?.id === action.payload) {
-        state.selectedProject = null;
-      }
-    }
-  }
+        if (state.selectedProject?.id === action.payload.id) {
+          state.selectedProject = action.payload;
+        }
+      })
+      .addCase(updateProject.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Delete Project
+      .addCase(deleteProject.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteProject.fulfilled, (state, action) => {
+        state.loading = false;
+        state.projects = state.projects.filter(project => project.id !== action.payload);
+        if (state.selectedProject?.id === action.payload) {
+          state.selectedProject = null;
+        }
+      })
+      .addCase(deleteProject.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
 });
 
-export const { 
-  getProjects, 
-  setSelectedProject, 
-  clearSelectedProject, 
-  addProject, 
-  updateProject, 
-  deleteProject 
-} = projectsSlice.actions;
+export const { setSelectedProject, clearSelectedProject } = projectsSlice.actions;
 
 export const selectAllProjects = (state: RootState) => state.projects.projects;
 export const selectSelectedProject = (state: RootState) => state.projects.selectedProject;
@@ -156,5 +274,6 @@ export const selectProjectById = (id: string) => (state: RootState) =>
   state.projects.projects.find(project => project.id === id);
 export const selectProjectLoading = (state: RootState) => state.projects.loading;
 export const selectProjectError = (state: RootState) => state.projects.error;
+export const selectProjectPagination = (state: RootState) => state.projects.pagination;
 
 export default projectsSlice.reducer;
