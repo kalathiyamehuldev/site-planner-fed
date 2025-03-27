@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -105,7 +104,6 @@ const Dashboard = () => {
   return (
     <PageContainer>
       <div className="space-y-8">
-        {/* Hero section */}
         <section className="relative mb-12">
           <AnimatedGradient 
             className="absolute inset-0 -z-10 rounded-2xl mask-radial-gradient opacity-30" 
@@ -130,7 +128,6 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* Stats Grid */}
         <section className="mb-12 opacity-0 animate-fade-in" style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
@@ -164,7 +161,6 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* Tabs */}
         <section className="mb-4 opacity-0 animate-fade-in" style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}>
           <div className="flex space-x-2 border-b border-border pb-2">
             <button
@@ -203,11 +199,9 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* Content */}
         <section className="opacity-0 animate-fade-in" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
           {activeTab === "overview" && (
             <div className="space-y-8">
-              {/* Recent Projects */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-medium">Recent Projects</h2>
@@ -223,17 +217,20 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {recentProjects.slice(0, 3).map((project, index) => (
-                    <ProjectCard key={project.id} {...project} className={cn({
-                      "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.1s]": index === 0,
-                      "animation-delay-[0.2s]": index === 1,
-                      "animation-delay-[0.3s]": index === 2,
-                    })} style={{ animationFillMode: "forwards" }} />
+                    <ProjectCard 
+                      key={project.id} 
+                      {...project} 
+                      className={cn({
+                        "opacity-0 animate-slide-up": true,
+                        "animation-delay-[0.1s]": index === 0,
+                        "animation-delay-[0.2s]": index === 1,
+                        "animation-delay-[0.3s]": index === 2,
+                      })}
+                    />
                   ))}
                 </div>
               </div>
 
-              {/* Upcoming Tasks */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-medium">Upcoming Tasks</h2>
@@ -249,12 +246,16 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {upcomingTasks.slice(0, 3).map((task, index) => (
-                    <TaskCard key={task.id} {...task} className={cn({
-                      "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.2s]": index === 0,
-                      "animation-delay-[0.3s]": index === 1,
-                      "animation-delay-[0.4s]": index === 2,
-                    })} style={{ animationFillMode: "forwards" }} />
+                    <TaskCard 
+                      key={task.id} 
+                      {...task} 
+                      className={cn({
+                        "opacity-0 animate-slide-up": true,
+                        "animation-delay-[0.2s]": index === 0,
+                        "animation-delay-[0.3s]": index === 1,
+                        "animation-delay-[0.4s]": index === 2,
+                      })}
+                    />
                   ))}
                 </div>
               </div>
@@ -271,12 +272,16 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentProjects.map((project, index) => (
-                  <ProjectCard key={project.id} {...project} className={cn({
-                    "opacity-0 animate-slide-up": true,
-                    "animation-delay-[0.1s]": index === 0,
-                    "animation-delay-[0.2s]": index === 1,
-                    "animation-delay-[0.3s]": index === 2,
-                  })} style={{ animationFillMode: "forwards" }} />
+                  <ProjectCard 
+                    key={project.id} 
+                    {...project} 
+                    className={cn({
+                      "opacity-0 animate-slide-up": true,
+                      "animation-delay-[0.1s]": index === 0,
+                      "animation-delay-[0.2s]": index === 1,
+                      "animation-delay-[0.3s]": index === 2,
+                    })}
+                  />
                 ))}
               </div>
             </div>
@@ -292,12 +297,16 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {upcomingTasks.map((task, index) => (
-                  <TaskCard key={task.id} {...task} className={cn({
-                    "opacity-0 animate-slide-up": true,
-                    "animation-delay-[0.1s]": index === 0,
-                    "animation-delay-[0.2s]": index === 1,
-                    "animation-delay-[0.3s]": index === 2,
-                  })} style={{ animationFillMode: "forwards" }} />
+                  <TaskCard 
+                    key={task.id} 
+                    {...task} 
+                    className={cn({
+                      "opacity-0 animate-slide-up": true,
+                      "animation-delay-[0.1s]": index === 0,
+                      "animation-delay-[0.2s]": index === 1,
+                      "animation-delay-[0.3s]": index === 2,
+                    })}
+                  />
                 ))}
               </div>
             </div>

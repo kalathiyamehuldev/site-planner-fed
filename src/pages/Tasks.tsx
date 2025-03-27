@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskCard from "@/components/TaskCard";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Filter, Calendar, Clock } from "lucide-react";
+import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
 
 // Mock data for demo
 const allTasks = [
@@ -115,7 +114,6 @@ const Tasks = () => {
   return (
     <PageContainer>
       <div className="space-y-8">
-        {/* Header */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-light mb-2">Tasks</h1>
@@ -126,7 +124,6 @@ const Tasks = () => {
           </MotionButton>
         </div>
 
-        {/* Filters and Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
@@ -141,13 +138,12 @@ const Tasks = () => {
           
           <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
             <FilterButton label="All Tasks" value="all" icon={Filter} />
-            <FilterButton label="My Tasks" value="mine" icon={Users} />
+            <FilterButton label="My Tasks" value="mine" icon={User} />
             <FilterButton label="High Priority" value="high-priority" icon={Clock} />
             <FilterButton label="Upcoming" value="upcoming" icon={Calendar} />
           </div>
         </div>
 
-        {/* Task Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.2s]">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task, index) => (
@@ -159,8 +155,7 @@ const Tasks = () => {
                   "animation-delay-[0.1s]": index % 3 === 0,
                   "animation-delay-[0.2s]": index % 3 === 1,
                   "animation-delay-[0.3s]": index % 3 === 2,
-                })} 
-                style={{ animationFillMode: "forwards" }}
+                })}
               />
             ))
           ) : (
