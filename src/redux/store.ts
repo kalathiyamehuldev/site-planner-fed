@@ -1,4 +1,3 @@
-
 import { configureStore } from '@reduxjs/toolkit';
 import projectsReducer from './slices/projectsSlice';
 import tasksReducer from './slices/tasksSlice';
@@ -10,9 +9,11 @@ import documentsReducer from './slices/documentsSlice';
 import contactsReducer from './slices/contactsSlice';
 import imagesReducer from './slices/imagesSlice';
 import productsReducer from './slices/productsSlice';
+import authReducer from './slices/authSlice';
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     projects: projectsReducer,
     tasks: tasksReducer,
     timeTracking: timeTrackingReducer,
