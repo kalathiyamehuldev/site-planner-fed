@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Key } from 'lucide-react';
+import { Eye, EyeOff, Mail, Key, User } from 'lucide-react';
 
 const Login = () => {
   const dispatch = useAppDispatch();
@@ -35,6 +35,7 @@ const Login = () => {
     defaultValues: {
       email: '',
       password: '',
+      accountId: '',
       role: 'team_member'
     }
   });
@@ -78,6 +79,26 @@ const Login = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="accountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account ID</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="Enter your account ID"
+                          {...field}
+                        />
+                        <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="email"
@@ -137,12 +158,14 @@ const Login = () => {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
-          <Link
-            to="/auth/forgot-password"
-            className="text-sm text-primary hover:underline"
-          >
-            Forgot your password?
-          </Link>
+          {role === 'root' && (
+            <Link
+              to="/auth/forgot-password"
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          )}
           <div className="text-sm text-gray-500">
             Don't have an account?{" "}
             <Link to="/auth/signup" className="text-primary hover:underline">

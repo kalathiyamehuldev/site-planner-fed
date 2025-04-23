@@ -4,6 +4,7 @@ export interface User {
     firstName: string;
     lastName: string;
     email: string;
+    accountId: string;
     role: 'root' | 'team_member';
     createdAt: string;
     updatedAt: string;
@@ -12,6 +13,7 @@ export interface User {
 export interface LoginDto {
     email: string;
     password: string;
+    accountId: string;
     role: 'root' | 'team_member';
 }
 
@@ -20,19 +22,22 @@ export interface SignupDto {
     lastName: string;
     email: string;
     password: string;
+    accountId: string;
     role: 'root' | 'team_member';
 }
 
 export interface ForgotPasswordDto {
     email: string;
-    role: 'root' | 'team_member';
+    accountId: string;
+    role: 'root';
 }
 
 export interface ResetPasswordDto {
     email: string;
+    accountId: string;
     otp: string;
     newPassword: string;
-    role: 'root' | 'team_member';
+    role: 'root';
 }
 
 export interface AuthState {

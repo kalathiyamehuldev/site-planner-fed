@@ -37,6 +37,7 @@ const Signup = () => {
       lastName: '',
       email: '',
       password: '',
+      accountId: '',
       role: 'team_member'
     }
   });
@@ -80,6 +81,26 @@ const Signup = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="accountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account ID</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="Enter your account ID"
+                          {...field}
+                        />
+                        <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="firstName"
