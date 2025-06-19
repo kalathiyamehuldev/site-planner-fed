@@ -7,11 +7,7 @@ import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import {
-  selectAllProjects,
-  fetchProjects,
-  setSelectedProject,
-} from "@/redux/slices/projectsSlice";
+import { selectAllProjects, getProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
 
 const Projects = () => {
   const dispatch = useAppDispatch();
@@ -21,7 +17,7 @@ const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    dispatch(fetchProjects({ pagination: { page: 1, limit: 10 } }));
+    dispatch(getProjects());
   }, [dispatch]);
 
   const filteredProjects = projects.filter(project => {
