@@ -35,9 +35,9 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
-  
-  if (!isAuthenticated) {
+  // const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  if (!localStorage.getItem("token")) {
     return <Navigate to="/auth/login" />;
   }
 
@@ -60,7 +60,7 @@ const App = () => (
 
             {/* Protected Routes */}
             <Route
-              path="/"
+              path="/*"
               element={
                 <ProtectedRoute>
                   <SidebarProvider>
@@ -70,17 +70,38 @@ const App = () => (
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/projects" element={<Projects />} />
-                          <Route path="/projects/:id" element={<ProjectDetails />} />
+                          <Route
+                            path="/projects/:id"
+                            element={<ProjectDetails />}
+                          />
                           <Route path="/tasks" element={<Tasks />} />
-                          <Route path="/time-tracking" element={<TimeTracking />} />
+                          <Route
+                            path="/time-tracking"
+                            element={<TimeTracking />}
+                          />
                           <Route path="/todo" element={<TodoList />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/documents" element={<Documents />} />
-                          <Route path="/procurement" element={<ProcurementHub />} />
-                          <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                          <Route path="/address-book" element={<AddressBook />} />
-                          <Route path="/image-library" element={<ImageLibrary />} />
-                          <Route path="/product-library" element={<ProductLibrary />} />
+                          <Route
+                            path="/procurement"
+                            element={<ProcurementHub />}
+                          />
+                          <Route
+                            path="/purchase-orders"
+                            element={<PurchaseOrders />}
+                          />
+                          <Route
+                            path="/address-book"
+                            element={<AddressBook />}
+                          />
+                          <Route
+                            path="/image-library"
+                            element={<ImageLibrary />}
+                          />
+                          <Route
+                            path="/product-library"
+                            element={<ProductLibrary />}
+                          />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </div>

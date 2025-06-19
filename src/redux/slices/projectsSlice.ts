@@ -112,6 +112,8 @@ export const projectsSlice = createSlice({
     setSelectedProject: (state, action: PayloadAction<string>) => {
       state.selectedProject = state.projects.find(project => project.id === action.payload) || null;
     },
+
+    // Clear selected project
     clearSelectedProject: (state) => {
       state.selectedProject = null;
     },
@@ -150,11 +152,13 @@ export const {
   deleteProject 
 } = projectsSlice.actions;
 
+// Selectors
 export const selectAllProjects = (state: RootState) => state.projects.projects;
 export const selectSelectedProject = (state: RootState) => state.projects.selectedProject;
 export const selectProjectById = (id: string) => (state: RootState) => 
   state.projects.projects.find(project => project.id === id);
 export const selectProjectLoading = (state: RootState) => state.projects.loading;
 export const selectProjectError = (state: RootState) => state.projects.error;
+
 
 export default projectsSlice.reducer;
