@@ -67,7 +67,9 @@ const Tasks = () => {
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-light mb-2">Tasks</h1>
-            <p className="text-muted-foreground">Manage and track all your project tasks</p>
+            <p className="text-muted-foreground">
+              Manage and track all your project tasks
+            </p>
           </div>
           <MotionButton variant="default" motion="subtle">
             <Plus size={18} className="mr-2" /> New Task
@@ -76,7 +78,10 @@ const Tasks = () => {
 
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search tasks..."
@@ -85,27 +90,30 @@ const Tasks = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
             <FilterButton label="All Tasks" value="all" icon={Filter} />
             <FilterButton label="My Tasks" value="mine" icon={User} />
-            <FilterButton label="High Priority" value="high-priority" icon={Clock} />
+            <FilterButton
+              label="High Priority"
+              value="high-priority"
+              icon={Clock}
+            />
             <FilterButton label="Upcoming" value="upcoming" icon={Calendar} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.2s]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task, index) => (
-              <TaskCard 
-                key={task.id} 
-                {...task} 
-                className={cn({
-                  "opacity-0 animate-scale-in": true,
-                  "animation-delay-[0.1s]": index % 3 === 0,
-                  "animation-delay-[0.2s]": index % 3 === 1,
-                  "animation-delay-[0.3s]": index % 3 === 2,
-                })}
+              <TaskCard
+                key={task.id}
+                {...task}
+                className="animate-fade-in"
+                style={{
+                  animationDelay: `${index * 0.1}s`,
+                  animationFillMode: "forwards",
+                }}
                 onClick={() => handleTaskClick(task.id)}
               />
             ))
@@ -115,14 +123,14 @@ const Tasks = () => {
                 <div className="text-3xl mb-4">✨</div>
                 <h3 className="text-xl font-medium mb-2">No tasks found</h3>
                 <p className="text-muted-foreground mb-6">
-                  {searchTerm ? 
-                    "No tasks match your search criteria. Try a different search term." : 
-                    "No tasks match the selected filter. Try a different filter."}
+                  {searchTerm
+                    ? "No tasks match your search criteria. Try a different search term."
+                    : "No tasks match the selected filter. Try a different filter."}
                 </p>
                 {searchTerm && (
-                  <MotionButton 
-                    variant="outline" 
-                    motion="subtle" 
+                  <MotionButton
+                    variant="outline"
+                    motion="subtle"
                     onClick={() => setSearchTerm("")}
                   >
                     Clear Search

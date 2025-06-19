@@ -222,12 +222,11 @@ const Dashboard = () => {
                     <ProjectCard
                       key={project.id}
                       {...project}
-                      className={cn({
-                        "opacity-0 animate-slide-up": true,
-                        "animation-delay-[0.1s]": index === 0,
-                        "animation-delay-[0.2s]": index === 1,
-                        "animation-delay-[0.3s]": index === 2,
-                      })}
+                      className="animate-fade-in"
+                      style={{
+                        animationDelay: `${index * 0.1}s`,
+                        animationFillMode: "forwards",
+                      }}
                     />
                   ))}
                 </div>
@@ -251,12 +250,11 @@ const Dashboard = () => {
                     <TaskCard
                       key={task.id}
                       {...task}
-                      className={cn({
-                        "opacity-0 animate-slide-up": true,
-                        "animation-delay-[0.2s]": index === 0,
-                        "animation-delay-[0.3s]": index === 1,
-                        "animation-delay-[0.4s]": index === 2,
-                      })}
+                      className="animate-fade-in"
+                      style={{
+                        animationDelay: `${index * 0.1 + 0.2}s`,
+                        animationFillMode: "forwards",
+                      }}
                     />
                   ))}
                 </div>
@@ -277,12 +275,11 @@ const Dashboard = () => {
                   <ProjectCard
                     key={project.id}
                     {...project}
-                    className={cn({
-                      "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.1s]": index % 3 === 0,
-                      "animation-delay-[0.2s]": index % 3 === 1,
-                      "animation-delay-[0.3s]": index % 3 === 2,
-                    })}
+                    className="animate-fade-in"
+                    style={{
+                      animationDelay: `${index * 0.1}s`,
+                      animationFillMode: "forwards",
+                    }}
                   />
                 ))}
               </div>
@@ -302,12 +299,11 @@ const Dashboard = () => {
                   <TaskCard
                     key={task.id}
                     {...task}
-                    className={cn({
-                      "opacity-0 animate-slide-up": true,
-                      "animation-delay-[0.1s]": index % 3 === 0,
-                      "animation-delay-[0.2s]": index % 3 === 1,
-                      "animation-delay-[0.3s]": index % 3 === 2,
-                    })}
+                    className="animate-fade-in"
+                    style={{
+                      animationDelay: `${index * 0.1}s`,
+                      animationFillMode: "forwards",
+                    }}
                   />
                 ))}
               </div>

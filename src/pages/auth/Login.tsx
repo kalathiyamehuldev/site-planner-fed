@@ -32,8 +32,8 @@ const Login = () => {
 
   const form = useForm<LoginDto>({
     defaultValues: {
-      email: "",
-      password: "",
+      email: "admin@designflow.com",
+      password: "admin",
       accountId: "",
       role: "root",
     },
@@ -114,6 +114,7 @@ const Login = () => {
                     <FormControl>
                       <div className="relative">
                         <Input
+                          defaultValue="admin@designflow.com"
                           placeholder="Enter your email"
                           type="email"
                           {...field}
