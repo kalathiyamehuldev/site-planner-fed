@@ -54,15 +54,115 @@ Design and deliver a web-based Project Management Suite for interior-design firm
 3. Pipeline phases: **Planning → Design → Gov Approval → Execution → Handover**.  
 
 ### 4.3 Gov Approval Flow (High Priority)  
-1. **Stage 0** – Prepare Quotation  
-2. **Stage 1** – Key Plan Drawing  
-3. **Stage 2** – Working Plan / Approval Drawings  
-4. **Stage 3** – Assign to Approval Team & Site Manager  
-5. **Stage 4** – Review & Comment Loop (versioned submissions, inline comments)  
-6. **Stage 5** – Authority Submission & Timeline Tracking  
-7. SLA timers and reminder notifications per stage.  
-8. Parallel sub-flows allowed (e.g., Fire Dept vs. Municipality).  
-9. Audit trail immutable; exportable PDF.
+
+#### Technical Implementation Details  
+- **Frontend**: Dedicated Gov Approval page with multi-stage wizard interface  
+- **State Management**: Redux slice (`govApprovalSlice.ts`) for workflow state  
+- **Document Integration**: Extends existing document management for drawing versioning  
+- **Task Integration**: Auto-generates tasks in task management system for each stage  
+- **Permission Integration**: Leverages existing role-based access control  
+
+#### Workflow Stages  
+
+1. **Stage 1** – Key Plan Drawing  
+   • Upload initial architectural drawings and plans  
+   • Basic project layout and design concepts  
+   • File validation and versioned storage  
+
+2. **Stage 2** – Working Plan / Approval Drawings  
+   • Detailed technical drawings for authority submission  
+   • Compliance with local building codes and regulations  
+   • AI-assisted document tagging and compliance checking  
+
+3. **Stage 3** – Assignment & Team Setup  
+   • Assign to Approval Team (internal reviewers)  
+   • If no dedicated approval users available, auto-assign to Super Admin or Project Admin  
+   • Assign to Site Manager (execution lead)  
+   • Set roles and permissions for review process  
+
+4. **Stage 4** – Internal Review & Quality Check  
+   • Approval team reviews submission drawings  
+   • Inline comments and annotations on drawings  
+   • Resubmission option with versioned document tracking  
+   • Approval team estimates timeline for authority approval process  
+   • Quality gates before external submission  
+
+5. **Stage 5** – Authority Submission & Tracking  
+   • Submit approved drawings to relevant authorities  
+   • Track submission status and authority responses  
+   • Timeline monitoring based on team estimates  
+   • Handle parallel submissions (Fire Dept, Municipality, etc.)  
+
+6. **Stage 6** – Authority Response & Resubmission Management  
+   • Receive authority feedback and requirements  
+   • Manage resubmission cycles if needed  
+   • Final approval tracking and documentation  
+
+#### Technical Implementation Details  
+
+**Stage 1 - Key Plan Drawing:**  
+- UI Components: File upload component with drag-and-drop for DWG/PDF files  
+- Validation: File format validation, size limits (max 50MB per file)  
+- Storage: Versioned storage in document management system  
+- Tasks: Auto-create "Review Key Plan" task for assigned designers  
+- Permissions: Only users with `UPLOAD_DRAWINGS` permission can upload  
+
+**Stage 2 - Working Plan / Approval Drawings:**  
+- Document Types: Technical drawings, compliance certificates, structural plans  
+- Validation: Compliance checklist integration with local building codes  
+- Version Control: Automatic versioning with diff tracking for drawings  
+- Integration: Link to existing ProductLibrary for material specifications  
+- AI Assistance: AI document tagging and compliance checking  
+
+**Stage 3 - Assignment & Team Setup:**  
+- User Management: Integration with existing user hierarchy (Company Staff)  
+- Role Assignment: Dedicated Gov Approval Team role with specific permissions  
+- Fallback Assignment Logic: If no users with `GOV_APPROVAL_REVIEWER` role exist, auto-assign to:  
+  - Super Admin (isSuperAdmin = true) as primary fallback  
+  - Project Admin as secondary fallback  
+- Site Manager: Link to existing project management and site engineer roles  
+- Notification System: Email/in-app notifications for team assignments  
+- Calendar Integration: Schedule review meetings and deadlines  
+
+**Stage 4 - Internal Review & Quality Check:**  
+- Review Interface: Annotation tools for drawings with commenting system  
+- Task Management: Integration with existing task board for review activities  
+- Timeline Estimation: Form-based timeline input with dropdown for authority types  
+- Quality Gates: Checklist-based approval before authority submission  
+- Document Comparison: Side-by-side view of document versions  
+- Approval Workflow: Multi-level approval with digital signatures  
+
+**Stage 5 - Authority Submission & Tracking:**  
+- External Integration: API connections to government portals (where available)  
+- Submission Package: Automated PDF generation with all required documents  
+- Tracking Dashboard: Real-time status updates and submission tracking  
+- Timeline Monitoring: Visual timeline with milestone tracking  
+- Parallel Processing: Support for multiple authority submissions simultaneously  
+- Document Templates: Pre-configured submission templates by region/authority  
+
+**Stage 6 - Authority Response & Resubmission Management:**  
+- Response Processing: Upload and categorize authority feedback  
+- Change Management: Track changes required vs. changes implemented  
+- Resubmission Workflow: Automated resubmission package generation  
+- Audit Trail: Complete history of all submissions and responses  
+- Final Approval: Integration with project status updates  
+- Certificate Management: Storage and access control for approval certificates  
+
+#### Technical Features  
+- **SLA Timers**: Automated countdown timers with escalation notifications  
+- **Parallel Sub-flows**: Support for concurrent approval processes (Fire Dept, Municipality, Environmental, etc.)  
+- **Audit Trail**: Immutable log of all actions, timestamps, and user interactions  
+- **PDF Export**: Comprehensive project approval report generation  
+- **Mobile Support**: Responsive design for site managers and field staff  
+- **Real-time Updates**: WebSocket integration for live status updates  
+- **Integration Points**: Connects with Tasks, Documents, TimeTracking, and Dashboard modules  
+
+#### Database Schema Extensions  
+- **gov_approval_stages**: Stage definitions and current status  
+- **gov_approval_submissions**: Submission history and versions  
+- **gov_approval_comments**: Review comments and annotations  
+- **gov_approval_timelines**: Timeline estimates and actual durations  
+- **gov_approval_authorities**: Authority contact information and requirements
 
 ### 4.4 Tasks & Sub-Tasks  
 • Kanban & Calendar views.  
