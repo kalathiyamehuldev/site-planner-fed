@@ -334,7 +334,6 @@ const VendorManagement: React.FC = () => {
               <tr className="border-b">
                 <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Company</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
@@ -343,13 +342,13 @@ const VendorManagement: React.FC = () => {
             <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-8">
+                <td colSpan={5} className="text-center py-8">
                   Loading vendors...
                 </td>
               </tr>
             ) : filteredVendors.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-8">
+                <td colSpan={5} className="text-center py-8">
                   No vendors found
                 </td>
               </tr>
@@ -364,10 +363,14 @@ const VendorManagement: React.FC = () => {
                   }}
                 >
                   <td className="p-4">
-                    <span className="font-medium">{`${vendor.firstName} ${vendor.lastName}`}</span>
+                    <span className="font-medium text-sm">{`${vendor.firstName} ${vendor.lastName}`}</span>
                   </td>
-                  <td className="p-4">{vendor.email}</td>
-                  <td className="p-4">{vendor.phone || '-'}</td>
+                  <td className="p-4">
+                    <span className="text-sm">{vendor.email}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm">{vendor.phone || '-'}</span>
+                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       vendor.isActive 

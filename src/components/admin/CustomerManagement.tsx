@@ -377,11 +377,17 @@ const CustomerManagement: React.FC = () => {
                     }}
                   >
                     <td className="p-4">
-                      <span className="font-medium">{`${customer.firstName} ${customer.lastName}`}</span>
+                      <span className="font-medium text-sm">{`${customer.firstName} ${customer.lastName}`}</span>
                     </td>
-                    <td className="p-4">{customer.email}</td>
-                    <td className="p-4">{customer.companyName || '-'}</td>
-                    <td className="p-4">{customer.phone || '-'}</td>
+                    <td className="p-4">
+                      <span className="text-sm">{customer.email}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm">{customer.companyName || '-'}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm">{customer.phone || '-'}</span>
+                    </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.isActive 

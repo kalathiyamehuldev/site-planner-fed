@@ -414,12 +414,20 @@ const MemberManagement: React.FC = () => {
                   }}
                 >
                   <td className="p-4">
-                    <span className="font-medium">{member.firstName} {member.lastName}</span>
+                    <span className="font-medium text-sm">{member.firstName} {member.lastName}</span>
                   </td>
-                  <td className="p-4">{member.email}</td>
-                  <td className="p-4">{member.phone || '-'}</td>
-                  <td className="p-4">{member.address || '-'}</td>
-                  <td className="p-4">{member.role}</td>
+                  <td className="p-4">
+                    <span className="text-sm">{member.email}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm">{member.phone || '-'}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm">{member.address || '-'}</span>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-sm">{member.role}</span>
+                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       member.isActive 
