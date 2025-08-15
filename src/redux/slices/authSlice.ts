@@ -6,10 +6,7 @@ import {
     CreateCompanyDto,
     ForgotPasswordDto,
     ResetPasswordDto,
-    CompanySelectionDto,
-    UserType,
-    Company,
-    UserCompany
+    CompanySelectionDto
 } from '@/common/types/auth.types';
 import { authService } from '@/services/auth.service';
 import { toast } from "sonner";
@@ -40,7 +37,7 @@ export const login = createAsyncThunk(
                 };
             } else if (response.user.userCompanies && response.user.userCompanies.length === 1) {
                 // Auto-select the only company
-                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]?.company?.id));
+                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]));
                 return {
                     user: response.user,
                     selectedCompany: response.user.userCompanies[0],
@@ -87,7 +84,7 @@ export const selectCompany = createAsyncThunk(
                 return rejectWithValue('Company not found');
             }
 
-            localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany?.company?.id));
+            localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
             return selectedCompany;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Company selection failed');
@@ -160,8 +157,12 @@ export const initializeAuth = createAsyncThunk(
         try {
             const token = localStorage.getItem('token');
             const selectedCompanyStr = localStorage.getItem('selectedCompany');
+            
+            console.log('InitializeAuth - Token:', !!token);
+            console.log('InitializeAuth - SelectedCompany:', selectedCompanyStr);
 
             if (!token) {
+                console.log('InitializeAuth - No token found');
                 return { isAuthenticated: false };
             }
 
@@ -169,13 +170,23 @@ export const initializeAuth = createAsyncThunk(
             const profileResponse = await authService.getProfile();
             const selectedCompany = selectedCompanyStr ? JSON.parse(selectedCompanyStr) : null;
 
+            // Check if user has multiple companies and needs to select one
+            const userCompanies = profileResponse.user.userCompanies || [];
+            const needsCompanySelection = userCompanies.length > 1 && !selectedCompany;
+            
+            console.log('InitializeAuth - User companies:', userCompanies.length);
+            console.log('InitializeAuth - Needs company selection:', needsCompanySelection);
+            console.log('InitializeAuth - Selected company:', selectedCompany);
+
             return {
                 isAuthenticated: true,
                 user: profileResponse.user,
                 selectedCompany,
-                needsCompanySelection: false
+                needsCompanySelection,
+                availableCompanies: userCompanies
             };
         } catch (error: any) {
+            console.log('InitializeAuth - Error:', error.message);
             // Token is invalid, clear localStorage
             localStorage.removeItem('token');
             localStorage.removeItem('selectedCompany');
@@ -315,11 +326,13 @@ const authSlice = createSlice({
                     state.user = action.payload.user;
                     state.selectedCompany = action.payload.selectedCompany;
                     state.needsCompanySelection = action.payload.needsCompanySelection;
+                    state.availableCompanies = action.payload.availableCompanies || [];
                 } else {
                     state.isAuthenticated = false;
                     state.user = null;
                     state.selectedCompany = null;
                     state.needsCompanySelection = false;
+                    state.availableCompanies = [];
                 }
                 state.error = null;
             })
@@ -329,6 +342,7 @@ const authSlice = createSlice({
                 state.user = null;
                 state.selectedCompany = null;
                 state.needsCompanySelection = false;
+                state.availableCompanies = [];
                 state.error = null;
             });
     }

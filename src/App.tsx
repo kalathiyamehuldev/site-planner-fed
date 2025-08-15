@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAppSelector } from "@/redux/hooks";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import AppSidebar from "@/components/layout/AppSidebar";
 import { Provider } from "react-redux";
 import { store } from "@/redux/store";
+import { useEffect } from "react";
+import { initializeAuth } from "@/redux/slices/authSlice";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -35,21 +37,14 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, selectedCompany, needsCompanySelection } = useAppSelector((state) => state.auth);
-
-  // Check if user is authenticated
-  if (!isAuthenticated || !user || !localStorage.getItem("token")) {
+  const token = localStorage.getItem("token");
+  const selectedCompany = localStorage.getItem("selectedCompany");
+  if (!token) {
     return <Navigate to="/auth/login" />;
   }
-
-  // If user needs to select a company, redirect to company selection
-  if (needsCompanySelection) {
-    return <Navigate to="/auth/login" />; // Login component handles company selection
-  }
-
-  // If user is authenticated but no company is selected, redirect to login
+  // If ser needs to select a company, redirect to company selection
   if (!selectedCompany) {
-    return <Navigate to="/auth/login" />;
+    return <Navigate to="/auth/login" />; // Login component handles company selection
   }
 
   return <>{children}</>;

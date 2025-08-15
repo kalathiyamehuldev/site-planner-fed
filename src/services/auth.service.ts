@@ -150,6 +150,7 @@ class AuthService {
     async logout(): Promise<void> {
         localStorage.removeItem('token');
         localStorage.removeItem('selectedCompany');
+        window.location.href = '/auth/login';
     }
 }
 
