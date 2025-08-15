@@ -174,7 +174,7 @@ export const createMember = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.post(`/company/members?companyId=${companyId}`, {
+      const response = await api.post(`/company/members`, {
          ...memberData,
          companyId
        });
@@ -194,7 +194,7 @@ export const updateMember = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.put(`/company/members/${id}?companyId=${companyId}`, data);
+      const response = await api.patch(`/company/members/${id}?companyId=${companyId}`, data);
        return response as unknown as Member;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
@@ -246,7 +246,7 @@ export const createVendor = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.post(`/company/vendors?companyId=${companyId}`, {
+      const response = await api.post(`/company/vendors`, {
          ...vendorData,
          companyId
        });
@@ -266,7 +266,7 @@ export const updateVendor = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.put(`/company/vendors/${id}?companyId=${companyId}`, data);
+      const response = await api.patch(`/company/vendors/${id}?companyId=${companyId}`, data);
        return response as unknown as Vendor;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
@@ -338,7 +338,7 @@ export const updateCustomer = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.put(`/company/customers/${id}?companyId=${companyId}`, data);
+      const response = await api.patch(`/company/customers/${id}?companyId=${companyId}`, data);
        return response as unknown as Customer;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');

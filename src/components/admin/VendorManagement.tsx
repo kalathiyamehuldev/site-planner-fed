@@ -152,9 +152,10 @@ const VendorManagement: React.FC = () => {
 
   const filteredVendors = vendors.filter(
     (vendor) =>
-      `${vendor.firstName} ${vendor.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      
+      `${vendor.firstName} ${vendor.lastName}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      vendor.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
