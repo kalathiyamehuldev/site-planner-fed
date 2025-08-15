@@ -104,24 +104,30 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   updatedAt: apiTask.updatedAt,
 });
 
-// Async thunks
-export const fetchTasks = createAsyncThunk(
-  'tasks/fetchTasks',
-  async (params: TaskFilterParams | undefined, { rejectWithValue }) => {
+// Helper function to get selected company ID from state
+const getSelectedCompanyId = (getState: any) => {
+  const state = getState();
+  return state.auth.selectedCompany?.id || JSON.parse(localStorage.getItem('selectedCompany') || '{}')?.id;
+};
+
+export const fetchAllTasksByCompany = createAsyncThunk(
+  'tasks/fetchAllTasksByCompany',
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const response = await api.get('/tasks', { params }) as ApiResponse<{ tasks: ApiTask[]; total: number; page: number; limit: number }>;
-      if (response.status === 'success' && response.data) {
-        return {
-          tasks: response.data.tasks.map(transformApiTask),
-          total: response.data.total,
-          page: response.data.page,
-          limit: response.data.limit,
-        };
-      } else {
-        return rejectWithValue(response.message || 'Failed to fetch tasks');
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
       }
+
+      const response = await api.get(`/tasks?companyId=${companyId}`);
+      if (response.data.status === 'error') {
+        return rejectWithValue(response.data.error || response.data.message || 'Failed to fetch tasks');
+      }
+
+      return response.data.items.map(transformApiTask);
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch tasks');
+      console.log("error", error)
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch tasks');
     }
   }
 );
@@ -261,22 +267,6 @@ export const tasksSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch tasks
-      .addCase(fetchTasks.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchTasks.fulfilled, (state, action) => {
-        state.loading = false;
-        state.tasks = action.payload.tasks;
-        state.total = action.payload.total;
-        state.page = action.payload.page;
-        state.limit = action.payload.limit;
-      })
-      .addCase(fetchTasks.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
       // Fetch tasks by project
       .addCase(fetchTasksByProject.pending, (state) => {
         state.loading = true;
@@ -287,6 +277,19 @@ export const tasksSlice = createSlice({
         state.projectTasks = action.payload;
       })
       .addCase(fetchTasksByProject.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch all tasks by company
+      .addCase(fetchAllTasksByCompany.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllTasksByCompany.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tasks = action.payload;
+      })
+      .addCase(fetchAllTasksByCompany.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

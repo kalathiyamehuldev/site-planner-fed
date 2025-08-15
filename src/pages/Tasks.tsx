@@ -10,7 +10,7 @@ import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
-  fetchTasks,
+  fetchAllTasksByCompany,
   setSelectedTask,
   deleteTaskAsync,
 } from "@/redux/slices/tasksSlice";
@@ -39,7 +39,7 @@ const Tasks = () => {
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
-    dispatch(fetchTasks(null));
+    dispatch(fetchAllTasksByCompany());
   }, [dispatch]);
 
 
@@ -118,7 +118,7 @@ const Tasks = () => {
           description: "Task deleted successfully!",
         });
         // Refresh tasks list
-        dispatch(fetchTasks(null));
+        dispatch(fetchAllTasksByCompany());
       } else {
         throw new Error(result.payload as string || 'Failed to delete task');
       }
@@ -137,7 +137,7 @@ const Tasks = () => {
   const handleEditSuccess = () => {
     setEditingTask(null);
     // Refresh tasks list
-    dispatch(fetchTasks(null));
+    dispatch(fetchAllTasksByCompany());
   };
 
   return (

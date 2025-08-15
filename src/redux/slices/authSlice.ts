@@ -26,7 +26,6 @@ export const login = createAsyncThunk(
     async (credentials: LoginDto, { rejectWithValue }) => {
         try {
             const response: any = await api.post('/auth/login', credentials);
-            console.log("response", response)
             if (response.status != "success") {
                 throw new Error(response.error || 'Login failed');
             }

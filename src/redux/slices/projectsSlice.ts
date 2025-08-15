@@ -103,13 +103,10 @@ export const fetchProjects = createAsyncThunk(
       if (!companyId) {
         throw new Error('No company selected');
       }
-      
       const response: any = await api.get(`/projects?companyId=${companyId}`);
-      
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch projects');
       }
-      console.log("response", response)
       return (response?.items || []).map(transformApiProject);
     } catch (error: any) {
       // Handle axios error response

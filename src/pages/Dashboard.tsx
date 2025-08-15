@@ -11,7 +11,11 @@ import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
-import { selectAllTasks, fetchTasks, deleteTaskAsync } from "@/redux/slices/tasksSlice";
+import {
+  selectAllTasks,
+  deleteTaskAsync,
+  fetchAllTasksByCompany,
+} from "@/redux/slices/tasksSlice";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -38,7 +42,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     dispatch(fetchProjects());
-    dispatch(fetchTasks(null));
+    dispatch(fetchAllTasksByCompany());
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
@@ -62,22 +66,25 @@ const Dashboard = () => {
 
     try {
       const result = await dispatch(deleteTaskAsync(deletingTaskId));
-      
+
       if (deleteTaskAsync.fulfilled.match(result)) {
         toast({
           title: "Success",
           description: "Task deleted successfully!",
         });
         // Refresh tasks list
-        dispatch(fetchTasks(null));
+        dispatch(fetchAllTasksByCompany());
       } else {
-        throw new Error(result.payload as string || 'Failed to delete task');
+        throw new Error((result.payload as string) || "Failed to delete task");
       }
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete task. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -88,7 +95,7 @@ const Dashboard = () => {
   const handleEditSuccess = () => {
     setEditingTask(null);
     // Refresh tasks list
-    dispatch(fetchTasks(null));
+    dispatch(fetchAllTasksByCompany());
   };
 
   // Get upcoming tasks (3 most urgent)
@@ -377,23 +384,30 @@ const Dashboard = () => {
       <AddTaskDialog
         open={!!editingTask}
         onOpenChange={(open) => !open && setEditingTask(null)}
-        projectId={editingTask?.project?.id || ''}
+        projectId={editingTask?.project?.id || ""}
         task={editingTask}
         onSuccess={handleEditSuccess}
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
+      <AlertDialog
+        open={!!deletingTaskId}
+        onOpenChange={(open) => !open && setDeletingTaskId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the task.
+              This action cannot be undone. This will permanently delete the
+              task.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmDeleteTask}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
