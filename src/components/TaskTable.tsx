@@ -49,7 +49,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       status: statusMap[task.status] || 'Not Started',
       priority: priorityMap[task.priority] || 'Medium',
       projectName: task.project?.name || 'Unknown Project',
-      assignedTo: task.assignee || task.member?.firstName + ' ' + task.member?.lastName || 'Unassigned',
+      assignedTo: task.assignee || (task.member?.firstName && task.member?.lastName ? `${task.member.firstName} ${task.member.lastName}` : 'N/A'),
       dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric',
@@ -133,7 +133,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   <td className="p-4">
                     <span
                       className={cn(
-                        "text-xs px-2.5 py-1 rounded-full font-medium",
+                        "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
                         statusColors[transformedTask.status]
                       )}
                     >
@@ -143,7 +143,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   <td className="p-4">
                     <span
                       className={cn(
-                        "text-xs px-2.5 py-1 rounded-full font-medium",
+                        "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
                         priorityColors[transformedTask.priority]
                       )}
                     >

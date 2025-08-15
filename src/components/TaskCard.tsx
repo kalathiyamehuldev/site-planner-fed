@@ -60,7 +60,7 @@ const TaskCard = ({
           <div className="flex flex-wrap gap-2">
             <span
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full font-medium",
+                "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
                 statusColors[status]
               )}
             >
@@ -68,7 +68,7 @@ const TaskCard = ({
             </span>
             <span
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full font-medium",
+                "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
                 priorityColors[priority]
               )}
             >

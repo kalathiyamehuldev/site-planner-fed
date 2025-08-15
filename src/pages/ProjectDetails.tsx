@@ -26,6 +26,7 @@ import {
   fetchProjectById,
   selectSelectedProject,
   selectProjectLoading,
+  getProjectMembers,
 } from "@/redux/slices/projectsSlice";
 import {
   fetchTasksByProject,
@@ -108,6 +109,7 @@ const ProjectDetails = () => {
     if (id) {
       dispatch(fetchProjectById(id));
       dispatch(fetchTasksByProject(id));
+      dispatch(getProjectMembers(id));
     }
   }, [dispatch, id]);
 
@@ -535,6 +537,7 @@ const ProjectDetails = () => {
       {project?.id && (
         <AddTaskDialog
           open={addTaskDialogOpen}
+          fromProject={true}
           onOpenChange={setAddTaskDialogOpen}
           projectId={project.id}
           onSuccess={handleTaskCreated}
@@ -542,26 +545,34 @@ const ProjectDetails = () => {
       )}
 
       {/* Edit Task Dialog */}
-       <AddTaskDialog
-         open={!!editingTask}
-         onOpenChange={(open) => !open && setEditingTask(null)}
-         projectId={id || ''}
-         task={editingTask}
-         onSuccess={handleEditSuccess}
-       />
+      <AddTaskDialog
+        open={!!editingTask}
+        fromProject={true}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+        projectId={id || ""}
+        task={editingTask}
+        onSuccess={handleEditSuccess}
+      />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
+      <AlertDialog
+        open={!!deletingTaskId}
+        onOpenChange={(open) => !open && setDeletingTaskId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the task.
+              This action cannot be undone. This will permanently delete the
+              task.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTask} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmDeleteTask}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

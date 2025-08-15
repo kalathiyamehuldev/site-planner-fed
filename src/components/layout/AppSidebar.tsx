@@ -139,28 +139,23 @@ const AppSidebar: React.FC = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
               <Link to="/settings">
-                <Settings size={18} className={cn(
-                  "transition-colors duration-200",
-                  isActive("/settings") ? "text-white" : "text-slate-600"
-                )} />
+                <Settings
+                  size={18}
+                  className={cn(
+                    "transition-colors duration-200",
+                    isActive("/settings") ? "text-white" : "text-slate-600"
+                  )}
+                />
                 <span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Help">
-              <Link to="/help">
-                <HelpCircle size={18} className={cn(
-                  "transition-colors duration-200",
-                  isActive("/help") ? "text-white" : "text-amber-600"
-                )} />
-                <span>Need Help?</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
             <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
-              <LogOut size={18} className="text-red-600 transition-colors duration-200" />
+              <LogOut
+                size={18}
+                className="text-red-600 transition-colors duration-200"
+              />
               <span>Log Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
