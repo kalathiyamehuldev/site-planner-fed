@@ -38,16 +38,25 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="members" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-transparent border-0 rounded-none p-1 gap-2">
+          <TabsTrigger 
+            value="members" 
+            className="flex items-center gap-2 bg-gray-100 border-0 rounded-full px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-blue-100 data-[state=active]:text-white data-[state=active]:bg-blue-600 transition-all duration-200 font-medium"
+          >
             <Users className="h-4 w-4" />
             Members
           </TabsTrigger>
-          <TabsTrigger value="vendors" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="vendors" 
+            className="flex items-center gap-2 bg-gray-100 border-0 rounded-full px-6 py-3 text-gray-600 hover:text-green-600 hover:bg-green-100 data-[state=active]:text-white data-[state=active]:bg-green-600 transition-all duration-200 font-medium"
+          >
             <Building2 className="h-4 w-4" />
             Vendors
           </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="customers" 
+            className="flex items-center gap-2 bg-gray-100 border-0 rounded-full px-6 py-3 text-gray-600 hover:text-purple-600 hover:bg-purple-100 data-[state=active]:text-white data-[state=active]:bg-purple-600 transition-all duration-200 font-medium"
+          >
             <UserCheck className="h-4 w-4" />
             Customers
           </TabsTrigger>

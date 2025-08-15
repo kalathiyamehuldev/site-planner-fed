@@ -1,6 +1,14 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import api from '@/lib/axios';
 
+// API Response interface
+interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
 // Types
 export interface Member {
   id: string;
@@ -157,9 +165,19 @@ export const fetchMembers = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.get(`/company/members?companyId=${companyId}`);
-       return response as unknown as Member[];
-    } catch (error) {
+      const response = await api.get(`/company/members?companyId=${companyId}`) as ApiResponse<Member[]>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch members');
+      }
+      
+      return response.data || [];
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch members');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -177,9 +195,19 @@ export const createMember = createAsyncThunk(
       const response = await api.post(`/company/members`, {
          ...memberData,
          companyId
-       });
-       return response as unknown as Member;
-    } catch (error) {
+       }) as ApiResponse<Member>;
+       
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create member');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to create member');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -194,9 +222,19 @@ export const updateMember = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.patch(`/company/members/${id}?companyId=${companyId}`, data);
-       return response as unknown as Member;
-    } catch (error) {
+      const response = await api.patch(`/company/members/${id}?companyId=${companyId}`, data) as ApiResponse<Member>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update member');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to update member');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -211,9 +249,19 @@ export const deleteMember = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      await api.delete(`/company/members/${id}?companyId=${companyId}`);
+      const response = await api.delete(`/company/members/${id}?companyId=${companyId}`) as ApiResponse<null>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to delete member');
+      }
+      
       return id;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to delete member');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -229,9 +277,19 @@ export const fetchVendors = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.get(`/company/vendors?companyId=${companyId}`);
-       return response as unknown as Vendor[];
-    } catch (error) {
+      const response = await api.get(`/company/vendors?companyId=${companyId}`) as ApiResponse<Vendor[]>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch vendors');
+      }
+      
+      return response.data || [];
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch vendors');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -249,9 +307,19 @@ export const createVendor = createAsyncThunk(
       const response = await api.post(`/company/vendors`, {
          ...vendorData,
          companyId
-       });
-       return response as unknown as Vendor;
-    } catch (error) {
+       }) as ApiResponse<Vendor>;
+       
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create vendor');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to create vendor');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -259,11 +327,26 @@ export const createVendor = createAsyncThunk(
 
 export const updateVendor = createAsyncThunk(
   'admin/updateVendor',
-  async ({ id, data }: { id: string; data: UpdateVendorData }, { rejectWithValue }) => {
+  async ({ id, data }: { id: string; data: UpdateVendorData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.patch(`/company/vendors/${id}`, data);
-       return response as unknown as Vendor;
-    } catch (error) {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response = await api.patch(`/company/vendors/${id}?companyId=${companyId}`, data) as ApiResponse<Vendor>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update vendor');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to update vendor');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -271,11 +354,26 @@ export const updateVendor = createAsyncThunk(
 
 export const deleteVendor = createAsyncThunk(
   'admin/deleteVendor',
-  async (id: string, { rejectWithValue }) => {
+  async (id: string, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/company/vendors/${id}`);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response = await api.delete(`/company/vendors/${id}?companyId=${companyId}`) as ApiResponse<null>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to delete vendor');
+      }
+      
       return id;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to delete vendor');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -291,9 +389,19 @@ export const fetchCustomers = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.get(`/company/customers?companyId=${companyId}`);
-       return response as unknown as Customer[];
-    } catch (error) {
+      const response = await api.get(`/company/customers?companyId=${companyId}`) as ApiResponse<Customer[]>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch customers');
+      }
+      
+      return response.data || [];
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch customers');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -308,12 +416,22 @@ export const createCustomer = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.post(`/company/customers?companyId=${companyId}`, {
+      const response = await api.post(`/company/customers`, {
          ...customerData,
          companyId
-       });
-       return response as unknown as Customer;
-    } catch (error) {
+       }) as ApiResponse<Customer>;
+       
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create customer');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to create customer');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -321,11 +439,26 @@ export const createCustomer = createAsyncThunk(
 
 export const updateCustomer = createAsyncThunk(
   'admin/updateCustomer',
-  async ({ id, data }: { id: string; data: UpdateCustomerData }, { rejectWithValue }) => {
+  async ({ id, data }: { id: string; data: UpdateCustomerData }, { rejectWithValue, getState }) => {
     try {
-      const response = await api.patch(`/company/customers/${id}`, data);
-       return response as unknown as Customer;
-    } catch (error) {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response = await api.patch(`/company/customers/${id}?companyId=${companyId}`, data) as ApiResponse<Customer>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update customer');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to update customer');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -333,11 +466,26 @@ export const updateCustomer = createAsyncThunk(
 
 export const deleteCustomer = createAsyncThunk(
   'admin/deleteCustomer',
-  async (id: string, { rejectWithValue }) => {
+  async (id: string, { rejectWithValue, getState }) => {
     try {
-      await api.delete(`/company/customers/${id}`);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response = await api.delete(`/company/customers/${id}?companyId=${companyId}`) as ApiResponse<null>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to delete customer');
+      }
+      
       return id;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle axios error response
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to delete customer');
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }

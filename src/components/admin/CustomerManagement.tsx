@@ -42,6 +42,13 @@ interface CustomerFormData {
   password: string;
 }
 
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+}
+
 const CustomerManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { items: customers, loading, error } = useSelector((state: RootState) => state.admin.customers);
@@ -56,7 +63,62 @@ const CustomerManagement: React.FC = () => {
     address: '',
     password: '',
   });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
+
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Validate form fields
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!editingCustomer && !formData.password.trim()) {
+      errors.password = 'Password is required';
+    } else if (!editingCustomer && formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Check if form is valid for button state
+  const isFormValid = (): boolean => {
+    const hasRequiredFields = formData.firstName.trim() && 
+                             formData.lastName.trim() && 
+                             formData.email.trim() && 
+                             emailRegex.test(formData.email) &&
+                             (!!editingCustomer || formData.password.trim());
+    
+    const hasValidPassword = !!editingCustomer || formData.password.length >= 6;
+    
+    return hasRequiredFields && hasValidPassword;
+  };
+
+  // Handle input changes with validation
+  const handleInputChange = (field: keyof CustomerFormData, value: string) => {
+    setFormData({ ...formData, [field]: value });
+    
+    // Clear specific field error when user starts typing
+    if (formErrors[field as keyof FormErrors]) {
+      setFormErrors({ ...formErrors, [field]: undefined });
+    }
+  };
   useEffect(() => {
     dispatch(fetchCustomers());
   }, [dispatch]);
@@ -74,6 +136,10 @@ const CustomerManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       if (editingCustomer) {
@@ -118,6 +184,7 @@ const CustomerManagement: React.FC = () => {
       setIsDialogOpen(false);
       setEditingCustomer(null);
       setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+      setFormErrors({});
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -133,6 +200,7 @@ const CustomerManagement: React.FC = () => {
       address: customer.address || '',
       password: '', // Don't populate password when editing
     });
+    setFormErrors({}); // Clear any existing errors
     setIsDialogOpen(true);
   };
 
@@ -173,6 +241,7 @@ const CustomerManagement: React.FC = () => {
             <Button onClick={() => {
               setEditingCustomer(null);
               setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+              setFormErrors({});
             }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Customer
@@ -191,33 +260,45 @@ const CustomerManagement: React.FC = () => {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className={formErrors.firstName ? 'border-red-500' : ''}
                       required
                     />
+                    {formErrors.firstName && (
+                      <p className="text-sm text-red-500">{formErrors.firstName}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">Last Name *</Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className={formErrors.lastName ? 'border-red-500' : ''}
                       required
                     />
+                    {formErrors.lastName && (
+                      <p className="text-sm text-red-500">{formErrors.lastName}</p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className={formErrors.email ? 'border-red-500' : ''}
                     required
                   />
+                  {formErrors.email && (
+                    <p className="text-sm text-red-500">{formErrors.email}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -225,7 +306,7 @@ const CustomerManagement: React.FC = () => {
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -233,24 +314,28 @@ const CustomerManagement: React.FC = () => {
                   <Input
                     id="address"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
                   />
                 </div>
                 {!editingCustomer && (
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Password *</Label>
                     <Input
                       id="password"
                       type="password"
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      className={formErrors.password ? 'border-red-500' : ''}
                       required
                     />
+                    {formErrors.password && (
+                      <p className="text-sm text-red-500">{formErrors.password}</p>
+                    )}
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || !isFormValid()}>
                   {loading ? 'Saving...' : editingCustomer ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>
