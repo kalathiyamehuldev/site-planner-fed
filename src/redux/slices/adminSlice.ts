@@ -259,14 +259,9 @@ export const createVendor = createAsyncThunk(
 
 export const updateVendor = createAsyncThunk(
   'admin/updateVendor',
-  async ({ id, data }: { id: string; data: UpdateVendorData }, { rejectWithValue, getState }) => {
+  async ({ id, data }: { id: string; data: UpdateVendorData }, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      const response = await api.patch(`/company/vendors/${id}?companyId=${companyId}`, data);
+      const response = await api.patch(`/company/vendors/${id}`, data);
        return response as unknown as Vendor;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
@@ -276,14 +271,9 @@ export const updateVendor = createAsyncThunk(
 
 export const deleteVendor = createAsyncThunk(
   'admin/deleteVendor',
-  async (id: string, { rejectWithValue, getState }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      await api.delete(`/company/vendors/${id}?companyId=${companyId}`);
+      await api.delete(`/company/vendors/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
@@ -331,14 +321,9 @@ export const createCustomer = createAsyncThunk(
 
 export const updateCustomer = createAsyncThunk(
   'admin/updateCustomer',
-  async ({ id, data }: { id: string; data: UpdateCustomerData }, { rejectWithValue, getState }) => {
+  async ({ id, data }: { id: string; data: UpdateCustomerData }, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      const response = await api.patch(`/company/customers/${id}?companyId=${companyId}`, data);
+      const response = await api.patch(`/company/customers/${id}`, data);
        return response as unknown as Customer;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
@@ -348,14 +333,9 @@ export const updateCustomer = createAsyncThunk(
 
 export const deleteCustomer = createAsyncThunk(
   'admin/deleteCustomer',
-  async (id: string, { rejectWithValue, getState }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      await api.delete(`/company/customers/${id}?companyId=${companyId}`);
+      await api.delete(`/company/customers/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
