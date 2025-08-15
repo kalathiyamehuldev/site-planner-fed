@@ -84,7 +84,7 @@ const AppSidebar: React.FC = () => {
               <Link to={item.path}>
                 <item.icon className={cn(
                   "transition-colors duration-200",
-                  isActive(item.path) ? "text-white" : item.color
+                  isActive(item.path) ? "text-slate-800" : item.color
                 )} />
                 <span>{item.name}</span>
               </Link>
@@ -143,7 +143,7 @@ const AppSidebar: React.FC = () => {
                   size={18}
                   className={cn(
                     "transition-colors duration-200",
-                    isActive("/settings") ? "text-white" : "text-slate-600"
+                    isActive("/settings") ? "text-primary-foreground" : "text-slate-600"
                   )}
                 />
                 <span>Settings</span>
