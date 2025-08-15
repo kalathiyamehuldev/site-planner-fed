@@ -29,8 +29,9 @@ class AuthService {
                 body: JSON.stringify(credentials)
             });
             const result = await response.json();
+            console.log("result", result)
             if (!response.ok || result.status != "success") {
-                throw new Error(result.message || 'Login failed');
+                throw new Error(result.error || 'Login failed');
             }
             return result.data;
         } catch (error) {
@@ -47,8 +48,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Company registration failed');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Company registration failed');
         }
 
         return result.data;
@@ -63,8 +64,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Company selection failed');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Company selection failed');
         }
 
         return result.data;
@@ -78,8 +79,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to fetch user companies');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Failed to fetch user companies');
         }
 
         return result.data;
@@ -94,8 +95,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to process forgot password request');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Failed to process forgot password request');
         }
 
         return result.data;
@@ -110,8 +111,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to reset password');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Failed to reset password');
         }
 
         return result.data;
@@ -125,8 +126,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to fetch profile');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Failed to fetch profile');
         }
 
         return result.data;
@@ -140,8 +141,8 @@ class AuthService {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to refresh token');
+        if (!response.ok || result.status != "success") {
+            throw new Error(result.error || 'Failed to refresh token');
         }
 
         return result.data;

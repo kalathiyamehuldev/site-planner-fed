@@ -99,6 +99,6 @@ export interface LoginResponse {
 export interface CompanyRegistrationResponse {
     access_token: string;
     user: User;
-    company: Company;
+    companies: Company[];
     message: string;
 }

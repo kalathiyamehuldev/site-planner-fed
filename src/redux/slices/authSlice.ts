@@ -29,18 +29,18 @@ export const login = createAsyncThunk(
             console.log("response", response)
             localStorage.setItem('token', response.access_token);
             // Check if user has multiple companies and needs to select one
-            if (response.user.userCompanies && response.user.userCompanies.length > 1) {
+            if (response.companies && response.companies.length > 1) {
                 return {
                     user: response.user,
-                    companies: response.user.userCompanies,
+                    companies: response.companies,
                     needsCompanySelection: true
                 };
-            } else if (response.user.userCompanies && response.user.userCompanies.length === 1) {
+            } else if (response.companies && response.companies.length === 1) {
                 // Auto-select the only company
-                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]));
+                localStorage.setItem('selectedCompany', JSON.stringify(response.companies[0]));
                 return {
                     user: response.user,
-                    selectedCompany: response.user.userCompanies[0],
+                    selectedCompany: response.companies[0],
                     needsCompanySelection: false
                 };
             }
@@ -61,11 +61,22 @@ export const registerCompany = createAsyncThunk(
     async (companyData: CreateCompanyDto, { rejectWithValue }) => {
         try {
             const response = await authService.registerCompany(companyData);
+            console.log("registerCompany response", response);
             localStorage.setItem('token', response.access_token);
-            localStorage.setItem('selectedCompany', JSON.stringify(response.company?.id));
+
+            // Since company registration creates a single company, auto-select it
+            if (response.companies && response.companies.length === 1) {
+                localStorage.setItem('selectedCompany', JSON.stringify(response.companies[0]));
+                return {
+                    user: response.user,
+                    selectedCompany: response.companies[0],
+                    needsCompanySelection: false
+                };
+            }
+
             return {
                 user: response.user,
-                company: response.company
+                needsCompanySelection: false
             };
         } catch (error: any) {
             return rejectWithValue(error.message || 'Company registration failed');
@@ -151,50 +162,6 @@ export const logout = createAsyncThunk(
     }
 );
 
-export const initializeAuth = createAsyncThunk(
-    'auth/initialize',
-    async (_, { rejectWithValue }) => {
-        try {
-            const token = localStorage.getItem('token');
-            const selectedCompanyStr = localStorage.getItem('selectedCompany');
-            
-            console.log('InitializeAuth - Token:', !!token);
-            console.log('InitializeAuth - SelectedCompany:', selectedCompanyStr);
-
-            if (!token) {
-                console.log('InitializeAuth - No token found');
-                return { isAuthenticated: false };
-            }
-
-            // Get user profile to verify token is still valid
-            const profileResponse = await authService.getProfile();
-            const selectedCompany = selectedCompanyStr ? JSON.parse(selectedCompanyStr) : null;
-
-            // Check if user has multiple companies and needs to select one
-            const userCompanies = profileResponse.user.userCompanies || [];
-            const needsCompanySelection = userCompanies.length > 1 && !selectedCompany;
-            
-            console.log('InitializeAuth - User companies:', userCompanies.length);
-            console.log('InitializeAuth - Needs company selection:', needsCompanySelection);
-            console.log('InitializeAuth - Selected company:', selectedCompany);
-
-            return {
-                isAuthenticated: true,
-                user: profileResponse.user,
-                selectedCompany,
-                needsCompanySelection,
-                availableCompanies: userCompanies
-            };
-        } catch (error: any) {
-            console.log('InitializeAuth - Error:', error.message);
-            // Token is invalid, clear localStorage
-            localStorage.removeItem('token');
-            localStorage.removeItem('selectedCompany');
-            return { isAuthenticated: false };
-        }
-    }
-);
-
 const authSlice = createSlice({
     name: 'auth',
     initialState,
@@ -211,7 +178,6 @@ const authSlice = createSlice({
                 state.isAuthenticated = true;
                 state.user = action.payload.user;
                 state.error = null;
-
                 if (action.payload.needsCompanySelection) {
                     state.needsCompanySelection = true;
                     state.availableCompanies = action.payload.companies as any[] || [];
@@ -236,8 +202,8 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.isAuthenticated = true;
                 state.user = action.payload.user;
-                state.selectedCompany = action.payload.company;
-                state.needsCompanySelection = false;
+                state.selectedCompany = action.payload.selectedCompany as any || null;
+                state.needsCompanySelection = action.payload.needsCompanySelection;
                 state.error = null;
                 toast.success('Company registration successful');
             })
@@ -315,36 +281,6 @@ const authSlice = createSlice({
                 state.error = null;
                 toast.success('Logout successful');
             })
-            // Initialize Auth
-            .addCase(initializeAuth.pending, (state) => {
-                state.isLoading = true;
-            })
-            .addCase(initializeAuth.fulfilled, (state, action) => {
-                state.isLoading = false;
-                if (action.payload.isAuthenticated) {
-                    state.isAuthenticated = true;
-                    state.user = action.payload.user;
-                    state.selectedCompany = action.payload.selectedCompany;
-                    state.needsCompanySelection = action.payload.needsCompanySelection;
-                    state.availableCompanies = action.payload.availableCompanies || [];
-                } else {
-                    state.isAuthenticated = false;
-                    state.user = null;
-                    state.selectedCompany = null;
-                    state.needsCompanySelection = false;
-                    state.availableCompanies = [];
-                }
-                state.error = null;
-            })
-            .addCase(initializeAuth.rejected, (state) => {
-                state.isLoading = false;
-                state.isAuthenticated = false;
-                state.user = null;
-                state.selectedCompany = null;
-                state.needsCompanySelection = false;
-                state.availableCompanies = [];
-                state.error = null;
-            });
     }
 });
 

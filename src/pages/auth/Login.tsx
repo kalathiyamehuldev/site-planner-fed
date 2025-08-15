@@ -49,7 +49,6 @@ const Login = () => {
 
   const onSubmit = async (data: LoginDto) => {
     const result = await dispatch(login(data));
-    console.log(result);
     if (login.fulfilled.match(result)) {
       if (!result.payload.needsCompanySelection) {
         navigate("/");

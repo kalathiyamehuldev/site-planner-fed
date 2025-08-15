@@ -5,12 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import AppSidebar from "@/components/layout/AppSidebar";
 import { Provider } from "react-redux";
 import { store } from "@/redux/store";
-import { useEffect } from "react";
-import { initializeAuth } from "@/redux/slices/authSlice";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
