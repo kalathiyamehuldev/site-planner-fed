@@ -4,6 +4,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
+import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -11,16 +12,31 @@ import {
   selectAllTasks,
   fetchTasks,
   setSelectedTask,
+  deleteTaskAsync,
 } from "@/redux/slices/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const allTasks = useAppSelector(selectAllTasks);
 
   const [filter, setFilter] = useState<
     "all" | "mine" | "high-priority" | "upcoming"
   >("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchTasks(null));
@@ -82,6 +98,48 @@ const Tasks = () => {
     dispatch(setSelectedTask(taskId));
   };
 
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setDeletingTaskId(taskId);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!deletingTaskId) return;
+
+    try {
+      const result = await dispatch(deleteTaskAsync(deletingTaskId));
+      
+      if (deleteTaskAsync.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Task deleted successfully!",
+        });
+        // Refresh tasks list
+        dispatch(fetchTasks(null));
+      } else {
+        throw new Error(result.payload as string || 'Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingTask(null);
+    // Refresh tasks list
+    dispatch(fetchTasks(null));
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -127,9 +185,38 @@ const Tasks = () => {
         <TaskTable
           tasks={filteredTasks}
           onTaskClick={handleTaskClick}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
           className="animate-fade-in"
           showProject={true}
         />
+
+        {/* Edit Task Dialog */}
+      <AddTaskDialog
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+        projectId={editingTask?.project?.id || ''}
+        task={editingTask}
+        onSuccess={handleEditSuccess}
+      />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the task.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteTask} className="bg-red-600 hover:bg-red-700">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PageContainer>
   );

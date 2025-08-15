@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { createTaskAsync, selectTaskLoading, selectTaskError } from '@/redux/slices/tasksSlice';
+import { createTaskAsync, updateTaskAsync, selectTaskLoading, selectTaskError } from '@/redux/slices/tasksSlice';
 import { getProjectMembers, ProjectMember } from '@/redux/slices/projectsSlice';
-import { CreateTaskData } from '@/redux/slices/tasksSlice';
+import { CreateTaskData, UpdateTaskData } from '@/redux/slices/tasksSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ interface AddTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  task?: any; // For edit mode
   onSuccess?: () => void;
 }
 
@@ -65,7 +66,8 @@ const TASK_PRIORITIES = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
-const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, projectId, onSuccess }) => {
+const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, projectId, task, onSuccess }) => {
+  const isEditMode = !!task;
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const loading = useAppSelector(selectTaskLoading);
@@ -81,7 +83,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
     priority: '',
     dueDate: '',
     estimatedHours: '',
-    memberId: '',
+    memberId: 'unassigned',
   });
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -102,21 +104,33 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
     }
   }, [open, projectId, dispatch]);
 
-  // Reset form when dialog opens/closes
+  // Reset form when dialog opens/closes or populate with task data for edit
   useEffect(() => {
     if (open) {
-      setFormData({
-        title: '',
-        description: '',
-        status: '',
-        priority: '',
-        dueDate: '',
-        estimatedHours: '',
-        memberId: '',
-      });
+      if (isEditMode && task) {
+        setFormData({
+          title: task.title || '',
+          description: task.description || '',
+          status: task.status || '',
+          priority: task.priority || '',
+          dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+          estimatedHours: task.estimatedHours ? task.estimatedHours.toString() : '',
+          memberId: task.assignedTo?.id || 'unassigned',
+        });
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          status: '',
+          priority: '',
+          dueDate: '',
+          estimatedHours: '',
+          memberId: 'unassigned',
+        });
+      }
       setFormErrors({});
     }
-  }, [open]);
+  }, [open, isEditMode, task]);
 
   // Handle form field changes
   const handleInputChange = (field: keyof TaskFormData, value: string) => {
@@ -164,27 +178,52 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
     }
 
     try {
-      const taskData: CreateTaskData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
-        status: formData.status as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED',
-        priority: formData.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT',
-        dueDate: formData.dueDate || undefined,
-        estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
-        memberId: formData.memberId || undefined,
-        projectId,
-      };
+      if (isEditMode) {
+        const updateData: UpdateTaskData = {
+          title: formData.title.trim(),
+          description: formData.description.trim() || undefined,
+          status: formData.status as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED',
+          priority: formData.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT',
+          dueDate: formData.dueDate || undefined,
+          estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
+          memberId: formData.memberId && formData.memberId !== 'unassigned' ? formData.memberId : undefined,
+        };
 
-      const result = await dispatch(createTaskAsync(taskData));
-      if (createTaskAsync.fulfilled.match(result)) {
-        toast({
-          title: 'Success',
-          description: 'Task created successfully',
-        });
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          onOpenChange(false);
+        const result = await dispatch(updateTaskAsync({ id: task.id, taskData: updateData }));
+        if (updateTaskAsync.fulfilled.match(result)) {
+          toast({
+            title: 'Success',
+            description: 'Task updated successfully',
+          });
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            onOpenChange(false);
+          }
+        }
+      } else {
+        const taskData: CreateTaskData = {
+          title: formData.title.trim(),
+          description: formData.description.trim() || undefined,
+          status: formData.status as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED',
+          priority: formData.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT',
+          dueDate: formData.dueDate || undefined,
+          estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
+          memberId: formData.memberId && formData.memberId !== 'unassigned' ? formData.memberId : undefined,
+          projectId,
+        };
+
+        const result = await dispatch(createTaskAsync(taskData));
+        if (createTaskAsync.fulfilled.match(result)) {
+          toast({
+            title: 'Success',
+            description: 'Task created successfully',
+          });
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            onOpenChange(false);
+          }
         }
       }
     } catch (error) {
@@ -207,9 +246,9 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Task' : 'Create New Task'}</DialogTitle>
           <DialogDescription>
-            Add a new task to the project. Fill in the details below.
+            {isEditMode ? 'Update the task details below.' : 'Add a new task to the project. Fill in the details below.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -315,6 +354,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
                   <SelectValue placeholder={membersLoading ? "Loading members..." : "Select a team member"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {projectMembers.map((member) => (
                     <SelectItem key={member.user.id} value={member.user.id}>
                       {member.user.firstName} {member.user.lastName} ({member.user.email})
@@ -351,7 +391,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, proje
               Cancel
             </Button>
             <Button type="submit" disabled={loading || membersLoading}>
-              {loading ? 'Creating...' : 'Create Task'}
+              {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Task' : 'Create Task')}
             </Button>
           </DialogFooter>
         </form>

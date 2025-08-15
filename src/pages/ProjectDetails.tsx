@@ -5,6 +5,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
+import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -19,7 +20,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
-import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
@@ -31,7 +31,19 @@ import {
   fetchTasksByProject,
   selectProjectTasks,
   selectTaskLoading,
+  deleteTaskAsync,
 } from "@/redux/slices/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Static data for progress (keeping as requested)
 const staticProjectData = {
@@ -72,6 +84,8 @@ const projectDocuments = [
 const ProjectDetails = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   // Handle task creation success - refetch project tasks
   const handleTaskCreated = () => {
@@ -83,6 +97,7 @@ const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const project = useAppSelector(selectSelectedProject);
   const loading = useAppSelector(selectProjectLoading);
   const projectTasks = useAppSelector(selectProjectTasks);
@@ -95,6 +110,52 @@ const ProjectDetails = () => {
       dispatch(fetchTasksByProject(id));
     }
   }, [dispatch, id]);
+
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setDeletingTaskId(taskId);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!deletingTaskId) return;
+
+    try {
+      const result = await dispatch(deleteTaskAsync(deletingTaskId));
+      
+      if (deleteTaskAsync.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Task deleted successfully!",
+        });
+        // Refresh project tasks list
+        if (id) {
+          dispatch(fetchTasksByProject(id));
+        }
+      } else {
+        throw new Error(result.payload as string || 'Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingTask(null);
+    // Refresh project tasks list
+    if (id) {
+      dispatch(fetchTasksByProject(id));
+    }
+  };
 
 
 
@@ -347,6 +408,8 @@ const ProjectDetails = () => {
               </div>
               <TaskTable
                 tasks={projectTasks.slice(0, 3)}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
                 className="animate-scale-in"
                 showProject={false}
               />
@@ -372,6 +435,8 @@ const ProjectDetails = () => {
             ) : (
               <TaskTable
                 tasks={projectTasks}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
                 className="animate-scale-in"
                 showProject={false}
               />
@@ -475,6 +540,33 @@ const ProjectDetails = () => {
           onSuccess={handleTaskCreated}
         />
       )}
+
+      {/* Edit Task Dialog */}
+       <AddTaskDialog
+         open={!!editingTask}
+         onOpenChange={(open) => !open && setEditingTask(null)}
+         projectId={id || ''}
+         task={editingTask}
+         onSuccess={handleEditSuccess}
+       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 };

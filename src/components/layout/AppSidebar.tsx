@@ -45,25 +45,25 @@ const AppSidebar: React.FC = () => {
   };
 
   const mainItems = [
-    { name: "Dashboard", path: "/", icon: LayoutGrid },
-    { name: "Projects", path: "/projects", icon: FileText },
-    { name: "Tasks", path: "/tasks", icon: CheckSquare },
-    { name: "Admin", path: "/admin", icon: Shield },
+    { name: "Dashboard", path: "/", icon: LayoutGrid, color: "text-blue-600" },
+    { name: "Projects", path: "/projects", icon: FileText, color: "text-green-600" },
+    { name: "Tasks", path: "/tasks", icon: CheckSquare, color: "text-purple-600" },
+    { name: "Admin", path: "/admin", icon: Shield, color: "text-red-600" },
   ];
 
   const toolItems = [
-    { name: "Time Tracking", path: "/time-tracking", icon: Clock },
-    { name: "To-Do List", path: "/todo", icon: CheckSquare },
-    // { name: "Invoices", path: "/invoices", icon: CreditCard },
-    // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag },
-    // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
-    // { name: "Documents", path: "/documents", icon: FolderArchive },
+    { name: "Time Tracking", path: "/time-tracking", icon: Clock, color: "text-orange-600" },
+    { name: "To-Do List", path: "/todo", icon: CheckSquare, color: "text-indigo-600" },
+    // { name: "Invoices", path: "/invoices", icon: CreditCard, color: "text-yellow-600" },
+    // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag, color: "text-pink-600" },
+    // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag, color: "text-teal-600" },
+    // { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" },
   ];
 
   const libraryItems = [
-    { name: "Address Book", path: "/address-book", icon: Users },
-    // { name: "Image Library", path: "/image-library", icon: FileImage },
-    // { name: "Product Library", path: "/product-library", icon: Package },
+    { name: "Address Book", path: "/address-book", icon: Users, color: "text-cyan-600" },
+    // { name: "Image Library", path: "/image-library", icon: FileImage, color: "text-emerald-600" },
+    // { name: "Product Library", path: "/product-library", icon: Package, color: "text-violet-600" },
   ];
 
   const isActive = (path: string) => {
@@ -71,7 +71,7 @@ const AppSidebar: React.FC = () => {
            (path !== "/" && location.pathname.startsWith(path));
   };
 
-  const SidebarMenuItems = ({ items }: { items: { name: string; path: string; icon: React.ElementType }[] }) => {
+  const SidebarMenuItems = ({ items }: { items: { name: string; path: string; icon: React.ElementType; color: string }[] }) => {
     return (
       <>
         {items.map((item) => (
@@ -82,7 +82,10 @@ const AppSidebar: React.FC = () => {
               tooltip={item.name}
             >
               <Link to={item.path}>
-                <item.icon />
+                <item.icon className={cn(
+                  "transition-colors duration-200",
+                  isActive(item.path) ? "text-white" : item.color
+                )} />
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>
@@ -136,7 +139,10 @@ const AppSidebar: React.FC = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
               <Link to="/settings">
-                <Settings size={18} />
+                <Settings size={18} className={cn(
+                  "transition-colors duration-200",
+                  isActive("/settings") ? "text-white" : "text-slate-600"
+                )} />
                 <span>Settings</span>
               </Link>
             </SidebarMenuButton>
@@ -144,14 +150,17 @@ const AppSidebar: React.FC = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Help">
               <Link to="/help">
-                <HelpCircle size={18} />
+                <HelpCircle size={18} className={cn(
+                  "transition-colors duration-200",
+                  isActive("/help") ? "text-white" : "text-amber-600"
+                )} />
                 <span>Need Help?</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
-              <LogOut size={18} />
+              <LogOut size={18} className="text-red-600 transition-colors duration-200" />
               <span>Log Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

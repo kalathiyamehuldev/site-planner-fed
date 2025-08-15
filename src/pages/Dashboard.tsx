@@ -7,15 +7,30 @@ import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import ProjectCard from "@/components/ProjectCard";
 import TaskTable from "@/components/TaskTable";
+import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
-import { selectAllTasks, fetchTasks } from "@/redux/slices/tasksSlice";
+import { selectAllTasks, fetchTasks, deleteTaskAsync } from "@/redux/slices/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks">(
     "overview"
@@ -33,6 +48,48 @@ const Dashboard = () => {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     })
     .slice(0, 3);
+
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setDeletingTaskId(taskId);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!deletingTaskId) return;
+
+    try {
+      const result = await dispatch(deleteTaskAsync(deletingTaskId));
+      
+      if (deleteTaskAsync.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Task deleted successfully!",
+        });
+        // Refresh tasks list
+        dispatch(fetchTasks(null));
+      } else {
+        throw new Error(result.payload as string || 'Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingTask(null);
+    // Refresh tasks list
+    dispatch(fetchTasks(null));
+  };
 
   // Get upcoming tasks (3 most urgent)
   const upcomingTasks = [...allTasks]
@@ -263,6 +320,8 @@ const Dashboard = () => {
                 </div>
                 <TaskTable
                   tasks={upcomingTasks}
+                  onEditTask={handleEditTask}
+                  onDeleteTask={handleDeleteTask}
                   className="animate-fade-in"
                   showProject={true}
                 />
@@ -304,6 +363,8 @@ const Dashboard = () => {
               </div>
               <TaskTable
                 tasks={allTasks}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
                 className="animate-fade-in"
                 showProject={true}
               />
@@ -311,6 +372,33 @@ const Dashboard = () => {
           )}
         </section>
       </div>
+
+      {/* Edit Task Dialog */}
+      <AddTaskDialog
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+        projectId={editingTask?.project?.id || ''}
+        task={editingTask}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTask} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 };
