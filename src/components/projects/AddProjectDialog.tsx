@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { createProject, selectProjectLoading, selectProjectError } from '@/redux/slices/projectsSlice';
+import { createProject, updateProjectAsync, selectProjectLoading, selectProjectError, Project } from '@/redux/slices/projectsSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,8 @@ import { CreateProjectData } from '@/redux/slices/projectsSlice';
 interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editProject?: Project | null;
+  mode?: 'create' | 'edit';
 }
 
 interface ProjectFormData {
@@ -52,7 +54,7 @@ const PROJECT_STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
 ];
 
-const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange }) => {
+const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange, editProject, mode = 'create' }) => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const loading = useAppSelector(selectProjectLoading);
@@ -69,10 +71,30 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange 
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  // Reset form when dialog closes
-  // Reset form when dialog closes
+  // Initialize form data when dialog opens or edit project changes
   useEffect(() => {
-    if (!open) {
+    if (open && mode === 'edit' && editProject) {
+      // Convert API status to form status
+      const getFormStatus = (apiStatus: string) => {
+        switch (apiStatus) {
+          case 'In Progress': return 'IN_PROGRESS';
+          case 'Not Started': return 'NOT_STARTED';
+          case 'On Hold': return 'ON_HOLD';
+          case 'Completed': return 'COMPLETED';
+          default: return 'NOT_STARTED';
+        }
+      };
+
+      setFormData({
+        name: editProject.title || '',
+        description: editProject.description || '',
+        status: getFormStatus(editProject.status),
+        startDate: editProject.startDate || '',
+        endDate: editProject.endDate || '',
+        budget: editProject.budget ? editProject.budget.toString() : '',
+      });
+    } else if (open && mode === 'create') {
+      // Reset form for create mode
       setFormData({
         name: '',
         description: '',
@@ -81,9 +103,12 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange 
         endDate: '',
         budget: '',
       });
+    }
+    
+    if (!open) {
       setFormErrors({});
     }
-  }, [open]);
+  }, [open, mode, editProject]);
 
   // Handle form field changes
   const handleInputChange = (field: keyof ProjectFormData, value: string) => {
@@ -136,14 +161,25 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange 
         budget: formData.budget ? Number(formData.budget) : undefined,
       };
 
-      const result = await dispatch(createProject(projectData));
-      
-      if (createProject.fulfilled.match(result)) {
-        toast({
-          title: 'Success',
-          description: 'Project created successfully',
-        });
-        onOpenChange(false);
+      let result;
+      if (mode === 'edit' && editProject) {
+        result = await dispatch(updateProjectAsync({ id: editProject.id, projectData }));
+        if (updateProjectAsync.fulfilled.match(result)) {
+          toast({
+            title: 'Success',
+            description: 'Project updated successfully',
+          });
+          onOpenChange(false);
+        }
+      } else {
+        result = await dispatch(createProject(projectData));
+        if (createProject.fulfilled.match(result)) {
+          toast({
+            title: 'Success',
+            description: 'Project created successfully',
+          });
+          onOpenChange(false);
+        }
       }
     } catch (error) {
       // Error handling is done in Redux and will show via error state
@@ -165,9 +201,11 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Project' : 'Create New Project'}</DialogTitle>
           <DialogDescription>
-            Add a new project to your portfolio. Fill in the details below.
+            {mode === 'edit' 
+              ? 'Update the project details below.' 
+              : 'Add a new project to your portfolio. Fill in the details below.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -288,7 +326,9 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange 
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Project'}
+              {loading 
+                ? (mode === 'edit' ? 'Updating...' : 'Creating...') 
+                : (mode === 'edit' ? 'Update Project' : 'Create Project')}
             </Button>
           </DialogFooter>
         </form>

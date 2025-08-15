@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -12,19 +12,14 @@ import {
   Image, ShoppingBag, Edit, ArrowLeft, Plus 
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import AddProjectDialog from "@/components/projects/AddProjectDialog";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchProjectById, selectSelectedProject, selectProjectLoading } from "@/redux/slices/projectsSlice";
 
-// Mock data for demo
-const projectDetails = {
-  id: "p1",
-  title: "Modern Loft Redesign",
-  client: "Jane Cooper",
-  status: "In Progress" as const,
-  startDate: "June 15, 2023",
-  dueDate: "August 24, 2023",
-  budget: "$45,000",
+// Static data for progress and team (keeping as requested)
+const staticProjectData = {
   team: ["Alex Jones", "Sarah Smith", "Robert Lee"],
   progress: 65,
-  description: "Complete renovation of a 2,000 sq ft loft space in downtown. The project includes new flooring, custom furniture, lighting design, and a complete kitchen overhaul. The client is looking for a modern, minimalist design with warm accents.",
 };
 
 const projectTasks = [
@@ -78,8 +73,51 @@ const projectDocuments = [
 ];
 
 const ProjectDetails = () => {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
+  const dispatch = useAppDispatch();
+  const project = useAppSelector(selectSelectedProject);
+  const loading = useAppSelector(selectProjectLoading);
+
+  // Fetch project data when component mounts or ID changes
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchProjectById(id));
+    }
+  }, [dispatch, id]);
+
+  // Create combined project details with API data and static data
+  const projectDetails = project ? {
+    ...project,
+    ...staticProjectData,
+    dueDate: project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }) : '',
+    client: 'Jane Cooper', // Keep static for now
+  } : null;
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-lg">Loading project details...</div>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (!projectDetails) {
+    return (
+      <PageContainer>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-lg text-muted-foreground">Project not found</div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
@@ -109,7 +147,12 @@ const ProjectDetails = () => {
             <p className="text-muted-foreground">Client: {projectDetails.client}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <MotionButton variant="outline" size="sm" motion="subtle">
+            <MotionButton 
+              variant="outline" 
+              size="sm" 
+              motion="subtle"
+              onClick={() => setEditDialogOpen(true)}
+            >
               <Edit size={16} className="mr-2" /> Edit Project
             </MotionButton>
             <MotionButton variant="default" size="sm" motion="subtle">
@@ -334,6 +377,13 @@ const ProjectDetails = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <AddProjectDialog 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen}
+        editProject={projectDetails}
+        mode="edit"
+      />
     </PageContainer>
   );
 };
