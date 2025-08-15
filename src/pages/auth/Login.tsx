@@ -22,13 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff, Mail, Users } from "lucide-react";
 
 const Login = () => {
@@ -86,25 +80,32 @@ const Login = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>User Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select user type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={UserType.USER}>
-                          Company User
-                        </SelectItem>
-                        <SelectItem value={UserType.CUSTOMER}>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant={field.value === UserType.USER ? "default" : "outline"}
+                          className="cursor-pointer px-4 py-2 text-sm"
+                          onClick={() => field.onChange(UserType.USER)}
+                        >
+                          <Users className="w-4 h-4 mr-1" />
+                          Member
+                        </Badge>
+                        <Badge
+                          variant={field.value === UserType.CUSTOMER ? "default" : "outline"}
+                          className="cursor-pointer px-4 py-2 text-sm"
+                          onClick={() => field.onChange(UserType.CUSTOMER)}
+                        >
                           Customer
-                        </SelectItem>
-                        <SelectItem value={UserType.VENDOR}>Vendor</SelectItem>
-                      </SelectContent>
-                    </Select>
+                        </Badge>
+                        <Badge
+                          variant={field.value === UserType.VENDOR ? "default" : "outline"}
+                          className="cursor-pointer px-4 py-2 text-sm"
+                          onClick={() => field.onChange(UserType.VENDOR)}
+                        >
+                          Vendor
+                        </Badge>
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
