@@ -27,9 +27,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
@@ -44,8 +46,6 @@ const Dashboard = () => {
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
   }, [dispatch]);
-
-
 
   // Get recent projects (3 most recent)
   const recentProjects = [...allProjects]
@@ -147,10 +147,25 @@ const Dashboard = () => {
     iconColor?: string;
   }) => (
     <GlassCard
-      className={cn("flex flex-col h-full animate-scale-in", bgColor, className)}
+      className={cn(
+        "flex flex-col h-full animate-scale-in",
+        bgColor,
+        className
+      )}
     >
       <div className="p-6 flex flex-col h-full">
-        <div className={cn("rounded-full w-10 h-10 flex items-center justify-center mb-4", bgColor === "bg-blue-50" ? "bg-blue-100" : bgColor === "bg-green-50" ? "bg-green-100" : bgColor === "bg-purple-50" ? "bg-purple-100" : "bg-orange-100")}>
+        <div
+          className={cn(
+            "rounded-full w-10 h-10 flex items-center justify-center mb-4",
+            bgColor === "bg-blue-50"
+              ? "bg-blue-100"
+              : bgColor === "bg-green-50"
+              ? "bg-green-100"
+              : bgColor === "bg-purple-50"
+              ? "bg-purple-100"
+              : "bg-orange-100"
+          )}
+        >
           <Icon size={20} className={iconColor} />
         </div>
         <h3 className="text-muted-foreground font-medium text-sm mb-1">
@@ -175,12 +190,8 @@ const Dashboard = () => {
     <PageContainer>
       <div className="space-y-8">
         <section className="relative mb-12">
-          <AnimatedGradient
-            className="absolute inset-0 -z-10 rounded-2xl mask-radial-gradient opacity-30"
-            variant="accent"
-          />
           <div
-            className="py-12 px-6 md:px-10 opacity-0 animate-fade-in"
+            className="py-12 opacity-0 animate-fade-in"
             style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}
           >
             <h1 className="text-3xl md:text-4xl font-light mb-4">
@@ -193,7 +204,12 @@ const Dashboard = () => {
               seamlessly.
             </p>
             <div className="flex flex-wrap gap-4">
-              <MotionButton variant="default" size="lg" motion="subtle">
+              <MotionButton
+                onClick={() => navigate("/projects")}
+                variant="default"
+                size="lg"
+                motion="subtle"
+              >
                 Create New Project <Plus size={18} className="ml-2" />
               </MotionButton>
               <MotionButton variant="outline" size="lg" motion="subtle">

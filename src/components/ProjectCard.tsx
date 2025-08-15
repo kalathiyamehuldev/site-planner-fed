@@ -66,11 +66,19 @@ const ProjectCard = ({
     Completed: "bg-green-100 text-green-600",
   };
 
+  const borderColors = {
+    "Not Started": "border-gray-400",
+    "In Progress": "border-blue-500",
+    "On Hold": "border-amber-500",
+    Completed: "border-green-500",
+  };
+
   return (
     <GlassCard
       variant="default"
       className={cn(
-        "overflow-hidden group hover:shadow-md transition-all duration-300",
+        "overflow-hidden group hover:shadow-md transition-all duration-300 border-2 rounded-xl",
+        borderColors[status],
         className
       )}
       style={style}
