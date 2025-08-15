@@ -39,7 +39,6 @@ interface VendorFormData {
   email: string;
   phone: string;
   address: string;
-  companyName: string;
   password: string;
 }
 
@@ -55,7 +54,6 @@ const VendorManagement: React.FC = () => {
     email: '',
     phone: '',
     address: '',
-    companyName: '',
     password: '',
   });
   const { toast } = useToast();
@@ -119,7 +117,7 @@ const VendorManagement: React.FC = () => {
       
       setIsDialogOpen(false);
       setEditingVendor(null);
-      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', companyName: '', password: '' });
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -133,7 +131,6 @@ const VendorManagement: React.FC = () => {
       email: vendor.email,
       phone: vendor.phone || '',
       address: vendor.address || '',
-      companyName: vendor.companyName || '',
       password: '', // Don't populate password for editing
     });
     setIsDialogOpen(true);
@@ -157,7 +154,7 @@ const VendorManagement: React.FC = () => {
     (vendor) =>
       `${vendor.firstName} ${vendor.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (vendor.companyName && vendor.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+      
   );
 
   return (
@@ -176,7 +173,7 @@ const VendorManagement: React.FC = () => {
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingVendor(null);
-              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', companyName: '', password: '' });
+              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
             }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Vendor
@@ -240,14 +237,6 @@ const VendorManagement: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input
-                    id="companyName"
-                    value={formData.companyName}
-                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  />
-                </div>
                 {!editingVendor && (
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
@@ -303,7 +292,6 @@ const VendorManagement: React.FC = () => {
                     {`${vendor.firstName} ${vendor.lastName}`}
                   </TableCell>
                   <TableCell>{vendor.email}</TableCell>
-                  <TableCell>{vendor.companyName || '-'}</TableCell>
                   <TableCell>{vendor.phone || '-'}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
