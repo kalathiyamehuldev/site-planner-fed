@@ -3,7 +3,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
-import { FileText, Calendar, Users, Clock, ArrowRight } from "lucide-react";
+import { FileText, Calendar, Users, Clock, ArrowRight, Trash2 } from "lucide-react";
+import { useAppDispatch } from "@/redux/hooks";
+import { deleteProjectAsync } from "@/redux/slices/projectsSlice";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectCardProps {
   id: string;
@@ -15,6 +18,7 @@ interface ProjectCardProps {
   progress: number;
   className?: string;
   style?: React.CSSProperties;
+  onDelete?: (id: string) => void;
 }
 
 const ProjectCard = ({
@@ -27,7 +31,34 @@ const ProjectCard = ({
   progress,
   className,
   style,
+  onDelete,
 }: ProjectCardProps) => {
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await dispatch(deleteProjectAsync(id)).unwrap();
+      toast({
+        title: "Success",
+        description: "Project deleted successfully",
+      });
+      onDelete?.(id);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",
@@ -50,14 +81,23 @@ const ProjectCard = ({
             <h3 className="text-xl font-medium">{title}</h3>
             <p className="text-muted-foreground text-sm">{client}</p>
           </div>
-          <span
-            className={cn(
-              "text-xs px-3 py-1 rounded-full font-medium",
-              statusColors[status]
-            )}
-          >
-            {status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "text-xs px-3 py-1 rounded-full font-medium",
+                statusColors[status]
+              )}
+            >
+              {status}
+            </span>
+            <button
+              onClick={handleDelete}
+              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+              title="Delete project"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4">

@@ -9,6 +9,7 @@ import { Plus, Search, Filter, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, selectProjectLoading, selectProjectError, fetchProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
+import ProjectCard from "@/components/ProjectCard";
 
 const Projects = () => {
   const dispatch = useAppDispatch();
@@ -178,100 +179,35 @@ const Projects = () => {
         {!loading && !error && filteredProjects.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in animation-delay-[0.2s]">
             {filteredProjects.map((project, index) => (
-              <Link
+              <ProjectCard
                 key={project.id}
-                to={`/projects/${project.id}`}
-                className="transform transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
-                onClick={() => handleProjectClick(project.id)}
-              >
-                <GlassCard
-                  className={cn("h-full p-6 opacity-0 animate-scale-in border-2 rounded-xl", {
-                    "animation-delay-[0.1s]": index % 3 === 0,
-                    "animation-delay-[0.2s]": index % 3 === 1,
-                    "animation-delay-[0.3s]": index % 3 === 2,
-                    // Status-based border colors
-                    "border-blue-500": project.status === "In Progress",
-                    "border-gray-400": project.status === "Not Started",
-                    "border-amber-500": project.status === "On Hold",
-                    "border-green-500": project.status === "Completed",
-                  })}
-                  style={{ animationFillMode: "forwards" }}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-medium text-lg mb-1">
-                        {project.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {project.client}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs px-2 py-1 rounded-full font-medium",
-                        project.status === "In Progress" &&
-                          "bg-blue-100 text-blue-600",
-                        project.status === "Not Started" &&
-                          "bg-gray-100 text-gray-600",
-                        project.status === "On Hold" &&
-                          "bg-amber-100 text-amber-600",
-                        project.status === "Completed" &&
-                          "bg-green-100 text-green-600"
-                      )}
-                    >
-                      {project.status}
-                    </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{project.progress}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center mt-4">
-                    <div className="flex -space-x-2">
-                      {project.team.slice(0, 3).map((member, i) => (
-                        <div
-                          key={i}
-                          className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-medium border-2 border-white"
-                        >
-                          {member
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </div>
-                      ))}
-                      {project.team.length > 3 && (
-                        <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-medium border-2 border-white">
-                          +{project.team.length - 3}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Due:{" "}
-                      {new Date(project.endDate)?.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-border flex justify-end">
-                    <div className="text-primary flex items-center text-sm font-medium">
-                      View Details <ArrowRight size={14} className="ml-1" />
-                    </div>
-                  </div>
-                </GlassCard>
-              </Link>
+                id={project.id}
+                title={project.title}
+                client={project.client}
+                status={project.status}
+                dueDate={new Date(project.endDate)?.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                team={project.team}
+                progress={project.progress}
+                className={cn("opacity-0 animate-scale-in border-2 rounded-xl", {
+                  "animation-delay-[0.1s]": index % 3 === 0,
+                  "animation-delay-[0.2s]": index % 3 === 1,
+                  "animation-delay-[0.3s]": index % 3 === 2,
+                  // Status-based border colors
+                  "border-blue-500": project.status === "In Progress",
+                  "border-gray-400": project.status === "Not Started",
+                  "border-amber-500": project.status === "On Hold",
+                  "border-green-500": project.status === "Completed",
+                })}
+                style={{ animationFillMode: "forwards" }}
+                onDelete={() => {
+                  // Refresh projects list after deletion
+                  dispatch(fetchProjects());
+                }}
+              />
             ))}
           </div>
         )}
