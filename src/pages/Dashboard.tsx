@@ -135,19 +135,23 @@ const Dashboard = () => {
     value,
     trend,
     className,
+    bgColor = "bg-blue-50",
+    iconColor = "text-blue-600",
   }: {
     icon: React.ElementType;
     label: string;
     value: string;
     trend?: { value: string; positive: boolean };
     className?: string;
+    bgColor?: string;
+    iconColor?: string;
   }) => (
     <GlassCard
-      className={cn("flex flex-col h-full animate-scale-in", className)}
+      className={cn("flex flex-col h-full animate-scale-in", bgColor, className)}
     >
       <div className="p-6 flex flex-col h-full">
-        <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10 mb-4">
-          <Icon size={20} className="text-primary" />
+        <div className={cn("rounded-full w-10 h-10 flex items-center justify-center mb-4", bgColor === "bg-blue-50" ? "bg-blue-100" : bgColor === "bg-green-50" ? "bg-green-100" : bgColor === "bg-purple-50" ? "bg-purple-100" : "bg-orange-100")}>
+          <Icon size={20} className={iconColor} />
         </div>
         <h3 className="text-muted-foreground font-medium text-sm mb-1">
           {label}
@@ -212,6 +216,8 @@ const Dashboard = () => {
                 .length.toString()}
               trend={{ value: "20%", positive: true }}
               className="animation-delay-[0.1s]"
+              bgColor="bg-blue-50"
+              iconColor="text-blue-600"
             />
             <StatCard
               icon={CheckSquare}
@@ -219,6 +225,8 @@ const Dashboard = () => {
               value={allTasks.length.toString()}
               trend={{ value: "5%", positive: false }}
               className="animation-delay-[0.2s]"
+              bgColor="bg-green-50"
+              iconColor="text-green-600"
             />
             <StatCard
               icon={Clock}
@@ -226,6 +234,8 @@ const Dashboard = () => {
               value="187"
               trend={{ value: "12%", positive: true }}
               className="animation-delay-[0.3s]"
+              bgColor="bg-purple-50"
+              iconColor="text-purple-600"
             />
             <StatCard
               icon={LayoutGrid}
@@ -235,6 +245,8 @@ const Dashboard = () => {
                 .length.toString()}
               trend={{ value: "30%", positive: true }}
               className="animation-delay-[0.4s]"
+              bgColor="bg-orange-50"
+              iconColor="text-orange-600"
             />
           </div>
         </section>
