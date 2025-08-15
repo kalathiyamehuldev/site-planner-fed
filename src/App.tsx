@@ -35,9 +35,20 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, selectedCompany, needsCompanySelection } = useAppSelector((state) => state.auth);
 
-  if (!localStorage.getItem("token")) {
+  // Check if user is authenticated
+  if (!isAuthenticated || !user || !localStorage.getItem("token")) {
+    return <Navigate to="/auth/login" />;
+  }
+
+  // If user needs to select a company, redirect to company selection
+  if (needsCompanySelection) {
+    return <Navigate to="/auth/login" />; // Login component handles company selection
+  }
+
+  // If user is authenticated but no company is selected, redirect to login
+  if (!selectedCompany) {
     return <Navigate to="/auth/login" />;
   }
 

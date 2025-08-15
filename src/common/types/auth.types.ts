@@ -1,48 +1,94 @@
 
+export enum UserRole {
+    SUPER_ADMIN = 'SUPER_ADMIN',
+    ADMIN = 'ADMIN',
+    VIEWER = 'VIEWER'
+}
+
+export enum UserType {
+    USER = 'USER',
+    CUSTOMER = 'CUSTOMER',
+    VENDOR = 'VENDOR'
+}
+
+export interface Company {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface User {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
-    accountId: string;
-    role: 'root' | 'team_member';
+    userType: UserType;
+    role: UserRole;
+    companyId?: string;
+    company?: Company;
+    userCompanies?: Company[];
     createdAt: string;
     updatedAt: string;
 }
 
+// Company Registration DTO (for signup)
+export interface CreateCompanyDto {
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+}
+
+// Universal Login DTO
 export interface LoginDto {
     email: string;
     password: string;
-    accountId: string;
-    role: 'root' | 'team_member';
+    userType: UserType;
 }
 
-export interface SignupDto {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    accountId: string;
-    role: 'root' | 'team_member';
+// Company Selection DTO (after login for multi-company users)
+export interface CompanySelectionDto {
+    companyId: string;
 }
 
 export interface ForgotPasswordDto {
     email: string;
-    accountId: string;
-    role: 'root';
 }
 
 export interface ResetPasswordDto {
     email: string;
-    accountId: string;
     otp: string;
     newPassword: string;
-    role: 'root';
 }
 
 export interface AuthState {
     user: User | null;
+    selectedCompany: Company | null;
+    availableCompanies: Company[];
     isAuthenticated: boolean;
+    needsCompanySelection: boolean;
     isLoading: boolean;
     error: string | null;
+}
+
+// API Response types
+export interface LoginResponse {
+    access_token: string;
+    user: User;
+    companies?: Company[];
+    message: string;
+}
+
+export interface CompanyRegistrationResponse {
+    access_token: string;
+    user: User;
+    company: Company;
+    message: string;
 }

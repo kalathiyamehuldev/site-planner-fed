@@ -1,9 +1,9 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
-import { useAppDispatch } from "@/redux/hooks";
-import { signup } from "@/redux/slices/authSlice";
-import { SignupDto } from "@/common/types/auth.types";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { registerCompany } from "@/redux/slices/authSlice";
+import { CreateCompanyDto } from "@/common/types/auth.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,145 +22,199 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, User, Key } from "lucide-react";
+import { Eye, EyeOff, Mail, User, Building, Phone, MapPin } from "lucide-react";
 
 const Signup = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { isLoading } = useAppSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const form = useForm<SignupDto>({
+  const form = useForm<CreateCompanyDto>({
     defaultValues: {
+      // Company details
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      // Super admin details
       firstName: "",
       lastName: "",
-      email: "",
       password: "",
-      accountId: "",
-      role: "root", // Always admin for signup
     },
   });
 
-  const onSubmit = async (data: SignupDto) => {
-    // Always set role as root for admin signup
-    data.role = "root";
-
-    // For dummy implementation, just navigate to home
-    // Later this will call the actual signup API
-    console.log("Signup data:", data);
-    navigate("/");
-
-    // Uncomment when ready to implement actual signup
-    // const result = await dispatch(signup(data));
-    // if (signup.fulfilled.match(result)) {
-    //   navigate('/');
-    // }
+  const onSubmit = async (data: CreateCompanyDto) => {
+    const result = await dispatch(registerCompany(data));
+    if (registerCompany.fulfilled.match(result)) {
+      navigate('/dashboard');
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Create Admin Account</CardTitle>
-          <CardDescription>Sign up as an admin</CardDescription>
+          <CardTitle>Register Your Company</CardTitle>
+          <CardDescription>Create your company account and admin user</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input placeholder="Enter your first name" {...field} />
-                        <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Company Information */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Company Information</h3>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input placeholder="Enter company name" {...field} />
+                          <Building className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input placeholder="Enter your last name" {...field} />
-                        <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            placeholder="Enter company email"
+                            type="email"
+                            {...field}
+                          />
+                          <Mail className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="Enter your email"
-                          type="email"
-                          {...field}
-                        />
-                        <Mail className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Phone (Optional)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input placeholder="Enter company phone" {...field} />
+                          <Phone className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="Enter your password"
-                          type={showPassword ? "text" : "password"}
-                          {...field}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-2.5"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-5 w-5 text-gray-400" />
-                          ) : (
-                            <Eye className="h-5 w-5 text-gray-400" />
-                          )}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Address (Optional)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input placeholder="Enter company address" {...field} />
+                          <MapPin className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <Button type="submit" className="w-full">
-                Create Admin Account
+              {/* Admin User Information */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Admin User Information</h3>
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input placeholder="Enter your first name" {...field} />
+                          <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input placeholder="Enter your last name" {...field} />
+                          <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            placeholder="Enter your password"
+                            type={showPassword ? "text" : "password"}
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-2.5"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <Eye className="h-5 w-5 text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Creating Company..." : "Register Company"}
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter>
           <div className="text-sm text-gray-500">
-            Already have an account?{" "}
+            Already have a company account?{" "}
             <Link to="/auth/login" className="text-primary hover:underline">
               Sign in
             </Link>

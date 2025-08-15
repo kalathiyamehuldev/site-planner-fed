@@ -1,9 +1,9 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { login } from "@/redux/slices/authSlice";
-import { LoginDto } from "@/common/types/auth.types";
+import { LoginDto, UserType } from "@/common/types/auth.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,88 +22,94 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Key, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, EyeOff, Mail, Users } from "lucide-react";
 
 const Login = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { isLoading, needsCompanySelection } = useAppSelector(
+    (state) => state.auth
+  );
   const [showPassword, setShowPassword] = React.useState(false);
-  const [loginType, setLoginType] = React.useState<"admin" | "team">("admin");
 
   const form = useForm<LoginDto>({
     defaultValues: {
-      email: "admin@designflow.com",
-      password: "admin",
-      accountId: "",
-      role: "root",
+      email: "",
+      password: "",
+      userType: UserType.USER,
     },
   });
 
   const onSubmit = async (data: LoginDto) => {
-    // Set role based on login type
-    data.role = loginType === "admin" ? "root" : "team_member";
-
-    // For dummy implementation, just navigate to home
-    // Later this will call the actual login API
-    console.log("Login data:", data);
-    localStorage.setItem("token", "1234567890");
-    navigate("/");
-
-    // Uncomment when ready to implement actual login
-    // const result = await dispatch(login(data));
-    // if (login.fulfilled.match(result)) {
-    //   navigate('/');
-    // }
+    const result = await dispatch(login(data));
+    console.log(result);
+    if (login.fulfilled.match(result)) {
+      if (!result.payload.needsCompanySelection) {
+        navigate("/");
+      }
+      // If needsCompanySelection is true, the component will re-render and show company selection
+    }
   };
 
-  const handleLoginTypeSwitch = (type: "admin" | "team") => {
-    setLoginType(type);
-    // Reset form when switching
-    form.reset({
-      email: "",
-      password: "",
-      accountId: "",
-      role: type === "admin" ? "root" : "team_member",
-    });
-  };
+  // Show company selection if needed
+  if (needsCompanySelection) {
+    // Import CompanySelection component
+    const CompanySelection = React.lazy(
+      () => import("@/components/auth/CompanySelection")
+    );
+    return (
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <CompanySelection />
+      </React.Suspense>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>
-            {loginType === "admin" ? "Admin Login" : "Team Login"}
-          </CardTitle>
-          <CardDescription>
-            {loginType === "admin"
-              ? "Sign in to your admin account"
-              : "Sign in to your team member account"}
-          </CardDescription>
+          <CardTitle>Sign In</CardTitle>
+          <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {loginType === "team" && (
-                <FormField
-                  control={form.control}
-                  name="accountId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account ID</FormLabel>
+              <FormField
+                control={form.control}
+                name="userType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            placeholder="Enter your account ID"
-                            {...field}
-                          />
-                          <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                        </div>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user type" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+                      <SelectContent>
+                        <SelectItem value={UserType.USER}>
+                          Company User
+                        </SelectItem>
+                        <SelectItem value={UserType.CUSTOMER}>
+                          Customer
+                        </SelectItem>
+                        <SelectItem value={UserType.VENDOR}>Vendor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -114,7 +120,6 @@ const Login = () => {
                     <FormControl>
                       <div className="relative">
                         <Input
-                          defaultValue="admin@designflow.com"
                           placeholder="Enter your email"
                           type="email"
                           {...field}
@@ -158,50 +163,26 @@ const Login = () => {
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
-          {loginType === "admin" && (
-            <Link
-              to="/auth/forgot-password"
-              className="text-sm text-primary hover:underline"
-            >
-              Forgot your password?
-            </Link>
-          )}
+          <Link
+            to="/auth/forgot-password"
+            className="text-sm text-primary hover:underline"
+          >
+            Forgot your password?
+          </Link>
 
           <div className="text-sm text-gray-500">
-            {loginType === "admin" ? (
-              <button
-                type="button"
-                onClick={() => handleLoginTypeSwitch("team")}
-                className="text-primary hover:underline cursor-pointer"
-              >
-                Team Login
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleLoginTypeSwitch("admin")}
-                className="text-primary hover:underline cursor-pointer"
-              >
-                Admin Login
-              </button>
-            )}
+            Don't have a company account?{" "}
+            <Link to="/auth/signup" className="text-primary hover:underline">
+              Register Company
+            </Link>
           </div>
-
-          {loginType === "admin" && (
-            <div className="text-sm text-gray-500">
-              Don't have an account?{" "}
-              <Link to="/auth/signup" className="text-primary hover:underline">
-                Sign up
-              </Link>
-            </div>
-          )}
         </CardFooter>
       </Card>
     </div>
