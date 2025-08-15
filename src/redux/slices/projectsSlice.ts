@@ -20,14 +20,10 @@ export interface ApiProject {
   startDate?: string;
   endDate?: string;
   budget?: number;
-  progress: number;
-  client?: string;
-  dueDate?: string;
   createdAt: string;
   updatedAt: string;
   companyId: string;
   members?: ProjectMember[];
-  contacts?: Contact[];
   tasks?: Task[];
 }
 
@@ -63,13 +59,9 @@ export interface CreateProjectData {
   name: string;
   description?: string;
   status: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date;
+  endDate?: Date;
   budget?: number;
-  progress?: number;
-  client?: string;
-  dueDate?: string;
-  contactIds?: string[];
 }
 
 export interface UpdateProjectData extends Partial<CreateProjectData> {}
@@ -84,19 +76,15 @@ const getSelectedCompanyId = (getState: any) => {
 const transformApiProject = (apiProject: ApiProject) => ({
   id: apiProject.id,
   title: apiProject.name,
-  client: apiProject.client || '',
+  client: '',
   status: apiProject.status === 'ACTIVE' ? 'In Progress' as const :
           apiProject.status === 'COMPLETED' ? 'Completed' as const :
           apiProject.status === 'ON_HOLD' ? 'On Hold' as const :
           apiProject.status === 'IN_PROGRESS' ? 'In Progress' as const :
           'Not Started' as const,
-  dueDate: apiProject.dueDate ? new Date(apiProject.dueDate).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  }) : '',
+  dueDate: '',
   team: apiProject.members?.map(member => `${member.user.firstName} ${member.user.lastName}`) || [],
-  progress: apiProject.progress || 0,
+  progress: 0,
   description: apiProject.description || '',
   budget: apiProject.budget || 0,
   startDate: apiProject.startDate || '',
@@ -116,13 +104,13 @@ export const fetchProjects = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.get(`/projects?companyId=${companyId}`) as ApiResponse<{ project: ApiProject[] }>;
+      const response: any = await api.get(`/projects?companyId=${companyId}`);
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch projects');
       }
-      
-      return (response.data?.project || []).map(transformApiProject);
+      console.log("response", response)
+      return (response?.items || []).map(transformApiProject);
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -170,7 +158,14 @@ export const createProject = createAsyncThunk(
         throw new Error('No company selected');
       }
       
-      const response = await api.post(`/projects?companyId=${companyId}`, projectData) as ApiResponse<{ project: ApiProject }>;
+      // Convert Date objects to ISO strings for API
+      const apiData = {
+        ...projectData,
+        startDate: projectData.startDate ? projectData.startDate.toISOString() : undefined,
+        endDate: projectData.endDate ? projectData.endDate.toISOString() : undefined,
+      };
+
+      const response = await api.post(`/projects?companyId=${companyId}`, apiData) as ApiResponse<{ project: ApiProject }>;
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to create project');
