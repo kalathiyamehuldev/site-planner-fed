@@ -9,26 +9,30 @@ import ProjectCard from "@/components/ProjectCard";
 import TaskCard from "@/components/TaskCard";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { selectAllProjects, getProjects } from "@/redux/slices/projectsSlice";
+import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
 import { selectAllTasks, getTasks } from "@/redux/slices/tasksSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
-  
-  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks">("overview");
+
+  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks">(
+    "overview"
+  );
 
   useEffect(() => {
-    dispatch(getProjects());
+    dispatch(fetchProjects());
     dispatch(getTasks());
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
-  const recentProjects = [...allProjects].sort((a, b) => {
-    // Sort by most recent start date
-    return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-  }).slice(0, 3);
+  const recentProjects = [...allProjects]
+    .sort((a, b) => {
+      // Sort by most recent start date
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    })
+    .slice(0, 3);
 
   // Get upcoming tasks (3 most urgent)
   const upcomingTasks = [...allTasks]
@@ -59,25 +63,37 @@ const Dashboard = () => {
     })
     .slice(0, 3);
 
-  const StatCard = ({ icon: Icon, label, value, trend, className }: {
+  const StatCard = ({
+    icon: Icon,
+    label,
+    value,
+    trend,
+    className,
+  }: {
     icon: React.ElementType;
     label: string;
     value: string;
     trend?: { value: string; positive: boolean };
     className?: string;
   }) => (
-    <GlassCard className={cn("flex flex-col h-full animate-scale-in", className)}>
+    <GlassCard
+      className={cn("flex flex-col h-full animate-scale-in", className)}
+    >
       <div className="p-6 flex flex-col h-full">
         <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10 mb-4">
           <Icon size={20} className="text-primary" />
         </div>
-        <h3 className="text-muted-foreground font-medium text-sm mb-1">{label}</h3>
+        <h3 className="text-muted-foreground font-medium text-sm mb-1">
+          {label}
+        </h3>
         <p className="text-2xl font-light mb-1">{value}</p>
         {trend && (
-          <p className={cn(
-            "text-xs font-medium mt-auto",
-            trend.positive ? "text-green-600" : "text-red-600"
-          )}>
+          <p
+            className={cn(
+              "text-xs font-medium mt-auto",
+              trend.positive ? "text-green-600" : "text-red-600"
+            )}
+          >
             {trend.positive ? "↑" : "↓"} {trend.value} from last month
           </p>
         )}
