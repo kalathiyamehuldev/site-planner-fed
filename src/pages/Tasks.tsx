@@ -7,42 +7,90 @@ import TaskCard from "@/components/TaskCard";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { selectAllTasks, getTasks, setSelectedTask } from "@/redux/slices/tasksSlice";
+import {
+  selectAllTasks,
+  fetchTasks,
+  setSelectedTask,
+} from "@/redux/slices/tasksSlice";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
   const allTasks = useAppSelector(selectAllTasks);
-  
-  const [filter, setFilter] = useState<"all" | "mine" | "high-priority" | "upcoming">("all");
+
+  const [filter, setFilter] = useState<
+    "all" | "mine" | "high-priority" | "upcoming"
+  >("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    dispatch(getTasks());
+    dispatch(fetchTasks(null));
   }, [dispatch]);
 
-  const filteredTasks = allTasks.filter(task => {
+  // Transform task data for TaskCard component
+  const transformTaskForCard = (task: any) => {
+    const statusMap = {
+      'TODO': 'Not Started' as const,
+      'IN_PROGRESS': 'In Progress' as const,
+      'DONE': 'Completed' as const,
+      'CANCELLED': 'On Hold' as const,
+    };
+    
+    const priorityMap = {
+      'LOW': 'Low' as const,
+      'MEDIUM': 'Medium' as const,
+      'HIGH': 'High' as const,
+      'URGENT': 'High' as const,
+    };
+    
+    return {
+      ...task,
+      status: statusMap[task.status] || 'Not Started',
+      priority: priorityMap[task.priority] || 'Medium',
+      projectName: task.project?.name || 'Unknown Project',
+      assignedTo: task.assignee || 'Unassigned',
+      dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      }) : 'No due date',
+    };
+  };
+
+  const filteredTasks = allTasks.filter((task) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
         task.title.toLowerCase().includes(term) ||
-        task.projectName.toLowerCase().includes(term) ||
-        task.assignedTo.toLowerCase().includes(term)
+        (task.project?.name || "").toLowerCase().includes(term) ||
+        (task.assignee || "").toLowerCase().includes(term)
       );
     }
-    
+
     switch (filter) {
       case "mine":
-        return task.assignedTo === "Alex Jones"; // For demo purposes
+        return task.assignee === "Alex Jones"; // For demo purposes
       case "high-priority":
-        return task.priority === "High";
+        return task.priority === "HIGH";
       case "upcoming":
-        return task.dueDate.includes("Tomorrow") || task.dueDate.includes("This week");
+        return (
+          task.dueDate && (
+            task.dueDate.includes("Tomorrow") ||
+            task.dueDate.includes("This week")
+          )
+        );
       default:
         return true;
     }
   });
 
-  const FilterButton = ({ label, value, icon: Icon }: { label: string; value: typeof filter; icon: React.ElementType }) => (
+  const FilterButton = ({
+    label,
+    value,
+    icon: Icon,
+  }: {
+    label: string;
+    value: typeof filter;
+    icon: React.ElementType;
+  }) => (
     <button
       onClick={() => setFilter(value)}
       className={cn(
@@ -108,7 +156,7 @@ const Tasks = () => {
             filteredTasks.map((task, index) => (
               <TaskCard
                 key={task.id}
-                {...task}
+                {...transformTaskForCard(task)}
                 className="animate-fade-in"
                 style={{
                   animationDelay: `${index * 0.1}s`,

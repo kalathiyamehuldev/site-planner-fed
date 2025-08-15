@@ -7,97 +7,141 @@ import { MotionButton } from "@/components/ui/motion-button";
 import TaskCard from "@/components/TaskCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { 
-  Calendar, Clock, Users, FileText, CheckSquare, 
-  Image, ShoppingBag, Edit, ArrowLeft, Plus 
+import {
+  Calendar,
+  Clock,
+  Users,
+  FileText,
+  ShoppingBag,
+  Edit,
+  ArrowLeft,
+  Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
+import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchProjectById, selectSelectedProject, selectProjectLoading } from "@/redux/slices/projectsSlice";
+import {
+  fetchProjectById,
+  selectSelectedProject,
+  selectProjectLoading,
+} from "@/redux/slices/projectsSlice";
+import {
+  fetchTasksByProject,
+  selectProjectTasks,
+  selectTaskLoading,
+} from "@/redux/slices/tasksSlice";
 
 // Static data for progress (keeping as requested)
 const staticProjectData = {
   progress: 65,
 };
 
-const projectTasks = [
-  {
-    id: "t1",
-    title: "Finalize floor plans",
-    projectName: "Modern Loft Redesign",
-    status: "In Progress" as const,
-    priority: "High" as const,
-    dueDate: "Tomorrow",
-    estimatedHours: 4,
-    assignedTo: "Alex Jones",
-  },
-  {
-    id: "t2",
-    title: "Source furniture options",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "This week",
-    estimatedHours: 8,
-    assignedTo: "Sarah Smith",
-  },
-  {
-    id: "t3",
-    title: "Client meeting for material selection",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Medium" as const,
-    dueDate: "Next Monday",
-    estimatedHours: 2,
-    assignedTo: "Alex Jones",
-  },
-  {
-    id: "t4",
-    title: "Lighting design plan",
-    projectName: "Modern Loft Redesign",
-    status: "Not Started" as const,
-    priority: "Low" as const,
-    dueDate: "Next week",
-    estimatedHours: 6,
-    assignedTo: "Robert Lee",
-  },
-];
-
 const projectDocuments = [
-  { id: "d1", name: "Initial Contract.pdf", type: "PDF", size: "1.2 MB", date: "June 15, 2023" },
-  { id: "d2", name: "Floor Plan v1.pdf", type: "PDF", size: "3.4 MB", date: "June 22, 2023" },
-  { id: "d3", name: "Client Requirements.docx", type: "DOCX", size: "845 KB", date: "June 18, 2023" },
-  { id: "d4", name: "Mood Board.jpg", type: "JPG", size: "5.1 MB", date: "June 30, 2023" },
+  {
+    id: "d1",
+    name: "Initial Contract.pdf",
+    type: "PDF",
+    size: "1.2 MB",
+    date: "June 15, 2023",
+  },
+  {
+    id: "d2",
+    name: "Floor Plan v1.pdf",
+    type: "PDF",
+    size: "3.4 MB",
+    date: "June 22, 2023",
+  },
+  {
+    id: "d3",
+    name: "Client Requirements.docx",
+    type: "DOCX",
+    size: "845 KB",
+    date: "June 18, 2023",
+  },
+  {
+    id: "d4",
+    name: "Mood Board.jpg",
+    type: "JPG",
+    size: "5.1 MB",
+    date: "June 30, 2023",
+  },
 ];
 
 const ProjectDetails = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+
+  // Handle task creation success - refetch project tasks
+  const handleTaskCreated = () => {
+    if (id) {
+      dispatch(fetchTasksByProject(id));
+    }
+    setAddTaskDialogOpen(false);
+  };
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectSelectedProject);
   const loading = useAppSelector(selectProjectLoading);
+  const projectTasks = useAppSelector(selectProjectTasks);
+  const tasksLoading = useAppSelector(selectTaskLoading);
 
-  // Fetch project data when component mounts or ID changes
+  // Fetch project data and tasks when component mounts or ID changes
   useEffect(() => {
     if (id) {
       dispatch(fetchProjectById(id));
+      dispatch(fetchTasksByProject(id));
     }
   }, [dispatch, id]);
 
+  // Transform task data for TaskCard component
+  const transformTaskForCard = (task: any) => {
+    const statusMap = {
+      TODO: "Not Started" as const,
+      IN_PROGRESS: "In Progress" as const,
+      DONE: "Completed" as const,
+      CANCELLED: "On Hold" as const,
+    };
+
+    const priorityMap = {
+      LOW: "Low" as const,
+      MEDIUM: "Medium" as const,
+      HIGH: "High" as const,
+      URGENT: "High" as const,
+    };
+
+    return {
+      ...task,
+      status: statusMap[task.status] || "Not Started",
+      priority: priorityMap[task.priority] || "Medium",
+      projectName: project?.title || "Unknown Project",
+      assignedTo: task.assignee || "Unassigned",
+      dueDate: task.dueDate
+        ? new Date(task.dueDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "No due date",
+    };
+  };
+
   // Create combined project details with API data and static data
-  const projectDetails = project ? {
-    ...project,
-    progress: staticProjectData.progress, // Use static progress for now
-    dueDate: project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    }) : '',
-    client: 'Jane Cooper', // Keep static for now
-  } : null;
+  const projectDetails = project
+    ? {
+        ...project,
+        progress: staticProjectData.progress, // Use static progress for now
+        dueDate: project.endDate
+          ? new Date(project.endDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "",
+        client: "Jane Cooper", // Keep static for now
+      }
+    : null;
 
   if (loading) {
     return (
@@ -123,7 +167,7 @@ const ProjectDetails = () => {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",
     "On Hold": "bg-amber-100 text-amber-600",
-    "Completed": "bg-green-100 text-green-600",
+    Completed: "bg-green-100 text-green-600",
   };
 
   return (
@@ -132,37 +176,52 @@ const ProjectDetails = () => {
         {/* Header */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div className="space-y-1">
-            <Link to="/projects" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2">
+            <Link
+              to="/projects"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
+            >
               <ArrowLeft size={16} className="mr-1" /> Back to Projects
             </Link>
             <div className="flex items-center flex-wrap gap-3">
               <h1 className="text-3xl font-light">{projectDetails.title}</h1>
-              <span className={cn(
-                "text-sm px-3 py-1 rounded-full font-medium",
-                statusColors[projectDetails.status]
-              )}>
+              <span
+                className={cn(
+                  "text-sm px-3 py-1 rounded-full font-medium",
+                  statusColors[projectDetails.status]
+                )}
+              >
                 {projectDetails.status}
               </span>
             </div>
-            <p className="text-muted-foreground">Client: {projectDetails.client}</p>
+            <p className="text-muted-foreground">
+              Client: {projectDetails.client}
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <MotionButton 
-              variant="outline" 
-              size="sm" 
+            <MotionButton
+              variant="outline"
+              size="sm"
               motion="subtle"
               onClick={() => setEditDialogOpen(true)}
             >
               <Edit size={16} className="mr-2" /> Edit Project
             </MotionButton>
-            <MotionButton variant="default" size="sm" motion="subtle">
+            <MotionButton
+              variant="default"
+              size="sm"
+              motion="subtle"
+              onClick={() => setAddTaskDialogOpen(true)}
+            >
               <Plus size={16} className="mr-2" /> Add Task
             </MotionButton>
           </div>
         </div>
 
         {/* Project Tabs */}
-        <Tabs defaultValue="overview" className="w-full animate-fade-in animation-delay-[0.2s]">
+        <Tabs
+          defaultValue="overview"
+          className="w-full animate-fade-in animation-delay-[0.2s]"
+        >
           <TabsList className="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -185,7 +244,7 @@ const ProjectDetails = () => {
                   </div>
                 </div>
               </GlassCard>
-              
+
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.2s]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
@@ -197,7 +256,7 @@ const ProjectDetails = () => {
                   </div>
                 </div>
               </GlassCard>
-              
+
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.3s]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
@@ -205,11 +264,13 @@ const ProjectDetails = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Team</p>
-                    <p className="font-medium">{projectDetails.team.length} members</p>
+                    <p className="font-medium">
+                      {projectDetails.team.length} members
+                    </p>
                   </div>
                 </div>
               </GlassCard>
-              
+
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.4s]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
@@ -228,30 +289,48 @@ const ProjectDetails = () => {
               <h2 className="text-xl font-medium mb-4">Project Details</h2>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                  <p className="text-foreground">{projectDetails.description}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Description
+                  </h3>
+                  <p className="text-foreground">
+                    {projectDetails.description}
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Timeline</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      Timeline
+                    </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Start Date:</span>
-                        <span className="font-medium">{projectDetails.startDate}</span>
+                        <span className="font-medium">
+                          {projectDetails.startDate}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Due Date:</span>
-                        <span className="font-medium">{projectDetails.dueDate}</span>
+                        <span className="font-medium">
+                          {projectDetails.dueDate}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Team Members</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      Team Members
+                    </h3>
                     <div className="space-y-2">
                       {projectDetails.team.map((member, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 text-sm"
+                        >
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                            {member.split(' ').map(n => n[0]).join('')}
+                            {member
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
                           </div>
                           <span>{member}</span>
                         </div>
@@ -260,14 +339,18 @@ const ProjectDetails = () => {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Progress</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Progress
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span>Overall Completion</span>
-                      <span className="font-medium">{projectDetails.progress}%</span>
+                      <span className="font-medium">
+                        {projectDetails.progress}%
+                      </span>
                     </div>
                     <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
                         style={{ width: `${projectDetails.progress}%` }}
                       />
@@ -281,10 +364,10 @@ const ProjectDetails = () => {
             <div className="animate-fade-in animation-delay-[0.4s]">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-medium">Recent Tasks</h2>
-                <MotionButton 
-                  variant="ghost" 
-                  size="sm" 
-                  motion="subtle" 
+                <MotionButton
+                  variant="ghost"
+                  size="sm"
+                  motion="subtle"
                   className="text-primary"
                   onClick={() => setActiveTab("tasks")}
                 >
@@ -293,11 +376,15 @@ const ProjectDetails = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {projectTasks.slice(0, 3).map((task, index) => (
-                  <TaskCard key={task.id} {...task} className={cn({
-                    "animation-delay-[0.1s]": index === 0,
-                    "animation-delay-[0.2s]": index === 1, 
-                    "animation-delay-[0.3s]": index === 2,
-                  })} />
+                  <TaskCard
+                    key={task.id}
+                    {...transformTaskForCard(task)}
+                    className={cn({
+                      "animation-delay-[0.1s]": index === 0,
+                      "animation-delay-[0.2s]": index === 1,
+                      "animation-delay-[0.3s]": index === 2,
+                    })}
+                  />
                 ))}
               </div>
             </div>
@@ -306,21 +393,40 @@ const ProjectDetails = () => {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">All Tasks</h2>
-              <MotionButton variant="default" size="sm" motion="subtle">
+              <MotionButton
+                variant="default"
+                size="sm"
+                motion="subtle"
+                onClick={() => setAddTaskDialogOpen(true)}
+              >
                 <Plus size={16} className="mr-2" /> Add Task
               </MotionButton>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projectTasks.map((task, index) => (
-                <TaskCard key={task.id} {...task} className={cn({
-                  "animate-scale-in": true,
-                  "animation-delay-[0.1s]": index === 0,
-                  "animation-delay-[0.2s]": index === 1,
-                  "animation-delay-[0.3s]": index === 2,
-                  "animation-delay-[0.4s]": index === 3,
-                })} />
-              ))}
-            </div>
+            {tasksLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <div className="text-lg">Loading tasks...</div>
+              </div>
+            ) : projectTasks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {projectTasks.map((task, index) => (
+                  <TaskCard
+                    key={task.id}
+                    {...transformTaskForCard(task)}
+                    className={cn({
+                      "animate-scale-in": true,
+                      "animation-delay-[0.1s]": index === 0,
+                      "animation-delay-[0.2s]": index === 1,
+                      "animation-delay-[0.3s]": index === 2,
+                      "animation-delay-[0.4s]": index === 3,
+                    })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center p-12 text-muted-foreground">
+                No tasks found for this project. Create your first task!
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
@@ -335,16 +441,29 @@ const ProjectDetails = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">Size</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
-                      <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">
+                        Name
+                      </th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">
+                        Type
+                      </th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">
+                        Size
+                      </th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">
+                        Date
+                      </th>
+                      <th className="text-right p-4 font-medium text-muted-foreground">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {projectDocuments.map((doc) => (
-                      <tr key={doc.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
+                      <tr
+                        key={doc.id}
+                        className="border-b last:border-0 hover:bg-secondary/30 transition-colors"
+                      >
                         <td className="p-4 flex items-center gap-2">
                           <FileText size={16} className="text-primary" />
                           {doc.name}
@@ -353,7 +472,12 @@ const ProjectDetails = () => {
                         <td className="p-4">{doc.size}</td>
                         <td className="p-4">{doc.date}</td>
                         <td className="p-4 text-right">
-                          <MotionButton variant="ghost" size="sm" motion="subtle" className="text-primary">
+                          <MotionButton
+                            variant="ghost"
+                            size="sm"
+                            motion="subtle"
+                            className="text-primary"
+                          >
                             Download
                           </MotionButton>
                         </td>
@@ -367,7 +491,9 @@ const ProjectDetails = () => {
 
           <TabsContent value="members" className="space-y-6">
             <GlassCard className="p-6 animate-fade-in">
-              {project?.id && <ProjectMemberManagement projectId={project.id} />}
+              {project?.id && (
+                <ProjectMemberManagement projectId={project.id} />
+              )}
             </GlassCard>
           </TabsContent>
 
@@ -384,13 +510,22 @@ const ProjectDetails = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
-      <AddProjectDialog 
-        open={editDialogOpen} 
+
+      <AddProjectDialog
+        open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         editProject={projectDetails}
         mode="edit"
       />
+
+      {project?.id && (
+        <AddTaskDialog
+          open={addTaskDialogOpen}
+          onOpenChange={setAddTaskDialogOpen}
+          projectId={project.id}
+          onSuccess={handleTaskCreated}
+        />
+      )}
     </PageContainer>
   );
 };

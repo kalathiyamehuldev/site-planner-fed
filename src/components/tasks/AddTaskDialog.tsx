@@ -1,0 +1,363 @@
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { createTaskAsync, selectTaskLoading, selectTaskError } from '@/redux/slices/tasksSlice';
+import { getProjectMembers, ProjectMember } from '@/redux/slices/projectsSlice';
+import { CreateTaskData } from '@/redux/slices/tasksSlice';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+
+interface AddTaskDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: string;
+  onSuccess?: () => void;
+}
+
+interface TaskFormData {
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  dueDate: string;
+  estimatedHours: string;
+  memberId: string;
+}
+
+interface FormErrors {
+  title?: string;
+  status?: string;
+  priority?: string;
+  dueDate?: string;
+  estimatedHours?: string;
+  memberId?: string;
+}
+
+
+
+const TASK_STATUSES = [
+  { value: 'TODO', label: 'To Do' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+  { value: 'DONE', label: 'Done' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+const TASK_PRIORITIES = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'URGENT', label: 'Urgent' },
+];
+
+const AddTaskDialog: React.FC<AddTaskDialogProps> = ({ open, onOpenChange, projectId, onSuccess }) => {
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+  const loading = useAppSelector(selectTaskLoading);
+  const error = useAppSelector(selectTaskError);
+  
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  const [formData, setFormData] = useState<TaskFormData>({
+    title: '',
+    description: '',
+    status: '',
+    priority: '',
+    dueDate: '',
+    estimatedHours: '',
+    memberId: '',
+  });
+
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+
+  // Fetch project members when dialog opens
+  useEffect(() => {
+    if (open && projectId) {
+      setMembersLoading(true);
+      dispatch(getProjectMembers(projectId))
+        .then((result) => {
+          if (getProjectMembers.fulfilled.match(result)) {
+            setProjectMembers(result.payload.members);
+          }
+        })
+        .finally(() => {
+          setMembersLoading(false);
+        });
+    }
+  }, [open, projectId, dispatch]);
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        title: '',
+        description: '',
+        status: '',
+        priority: '',
+        dueDate: '',
+        estimatedHours: '',
+        memberId: '',
+      });
+      setFormErrors({});
+    }
+  }, [open]);
+
+  // Handle form field changes
+  const handleInputChange = (field: keyof TaskFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (formErrors[field as keyof FormErrors]) {
+      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+
+    if (!formData.title.trim()) {
+      errors.title = 'Task title is required';
+    }
+
+    if (!formData.status) {
+      errors.status = 'Task status is required';
+    }
+
+    if (!formData.priority) {
+      errors.priority = 'Task priority is required';
+    }
+
+    if (formData.estimatedHours && (isNaN(Number(formData.estimatedHours)) || Number(formData.estimatedHours) < 0)) {
+      errors.estimatedHours = 'Estimated hours must be a valid positive number';
+    }
+
+    if (formData.dueDate && new Date(formData.dueDate) < new Date(new Date().toDateString())) {
+      errors.dueDate = 'Due date cannot be in the past';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const taskData: CreateTaskData = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        status: formData.status as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED',
+        priority: formData.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT',
+        dueDate: formData.dueDate || undefined,
+        estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
+        memberId: formData.memberId || undefined,
+        projectId,
+      };
+
+      const result = await dispatch(createTaskAsync(taskData));
+      if (createTaskAsync.fulfilled.match(result)) {
+        toast({
+          title: 'Success',
+          description: 'Task created successfully',
+        });
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          onOpenChange(false);
+        }
+      }
+    } catch (error) {
+      // Error handling is done in Redux and will show via error state
+    }
+  };
+
+  // Show error toast when error changes
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
+    }
+  }, [error, toast]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Task</DialogTitle>
+          <DialogDescription>
+            Add a new task to the project. Fill in the details below.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Task Title */}
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="title">Task Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="Enter task title"
+                className={formErrors.title ? 'border-red-500' : ''}
+              />
+              {formErrors.title && (
+                <p className="text-sm text-red-500">{formErrors.title}</p>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status *</Label>
+              <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <SelectTrigger className={formErrors.status ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select task status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUSES.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.status && (
+                <p className="text-sm text-red-500">{formErrors.status}</p>
+              )}
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority *</Label>
+              <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
+                <SelectTrigger className={formErrors.priority ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select task priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_PRIORITIES.map((priority) => (
+                    <SelectItem key={priority.value} value={priority.value}>
+                      {priority.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.priority && (
+                <p className="text-sm text-red-500">{formErrors.priority}</p>
+              )}
+            </div>
+
+            {/* Due Date */}
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                className={formErrors.dueDate ? 'border-red-500' : ''}
+              />
+              {formErrors.dueDate && (
+                <p className="text-sm text-red-500">{formErrors.dueDate}</p>
+              )}
+            </div>
+
+            {/* Estimated Hours */}
+            <div className="space-y-2">
+              <Label htmlFor="estimatedHours">Estimated Hours</Label>
+              <Input
+                id="estimatedHours"
+                type="number"
+                value={formData.estimatedHours}
+                onChange={(e) => handleInputChange('estimatedHours', e.target.value)}
+                placeholder="Enter estimated hours"
+                min="0"
+                step="0.5"
+                className={formErrors.estimatedHours ? 'border-red-500' : ''}
+              />
+              {formErrors.estimatedHours && (
+                <p className="text-sm text-red-500">{formErrors.estimatedHours}</p>
+              )}
+            </div>
+
+            {/* Assigned Member */}
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="memberId">Assign to Member</Label>
+              <Select 
+                value={formData.memberId} 
+                onValueChange={(value) => handleInputChange('memberId', value)}
+                disabled={membersLoading}
+              >
+                <SelectTrigger className={formErrors.memberId ? 'border-red-500' : ''}>
+                  <SelectValue placeholder={membersLoading ? "Loading members..." : "Select a team member"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectMembers.map((member) => (
+                    <SelectItem key={member.user.id} value={member.user.id}>
+                      {member.user.firstName} {member.user.lastName} ({member.user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.memberId && (
+                <p className="text-sm text-red-500">{formErrors.memberId}</p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Enter task description"
+                rows={3}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || membersLoading}>
+              {loading ? 'Creating...' : 'Create Task'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default AddTaskDialog;

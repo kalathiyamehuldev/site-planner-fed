@@ -10,7 +10,7 @@ import TaskCard from "@/components/TaskCard";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
-import { selectAllTasks, getTasks } from "@/redux/slices/tasksSlice";
+import { selectAllTasks, fetchTasks } from "@/redux/slices/tasksSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -23,7 +23,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     dispatch(fetchProjects());
-    dispatch(getTasks());
+    dispatch(fetchTasks(null));
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
