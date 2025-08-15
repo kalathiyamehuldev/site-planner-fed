@@ -8,7 +8,8 @@ import {
     ResetPasswordDto,
     CompanySelectionDto,
     UserType,
-    Company
+    Company,
+    UserCompany
 } from '@/common/types/auth.types';
 import { authService } from '@/services/auth.service';
 import { toast } from "sonner";
@@ -39,7 +40,7 @@ export const login = createAsyncThunk(
                 };
             } else if (response.user.userCompanies && response.user.userCompanies.length === 1) {
                 // Auto-select the only company
-                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]));
+                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]?.company?.id));
                 return {
                     user: response.user,
                     selectedCompany: response.user.userCompanies[0],
@@ -64,7 +65,7 @@ export const registerCompany = createAsyncThunk(
         try {
             const response = await authService.registerCompany(companyData);
             localStorage.setItem('token', response.access_token);
-            localStorage.setItem('selectedCompany', JSON.stringify(response.company));
+            localStorage.setItem('selectedCompany', JSON.stringify(response.company?.id));
             return {
                 user: response.user,
                 company: response.company
@@ -80,13 +81,13 @@ export const selectCompany = createAsyncThunk(
     async (companySelection: CompanySelectionDto, { rejectWithValue, getState }) => {
         try {
             const { auth } = getState() as { auth: AuthState };
-            const selectedCompany = auth.availableCompanies.find(c => c.id === companySelection.companyId);
+            const selectedCompany = auth.availableCompanies.find(c => c.companyId === companySelection.companyId);
 
             if (!selectedCompany) {
                 return rejectWithValue('Company not found');
             }
 
-            localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
+            localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany?.company?.id));
             return selectedCompany;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Company selection failed');
@@ -153,6 +154,36 @@ export const logout = createAsyncThunk(
     }
 );
 
+export const initializeAuth = createAsyncThunk(
+    'auth/initialize',
+    async (_, { rejectWithValue }) => {
+        try {
+            const token = localStorage.getItem('token');
+            const selectedCompanyStr = localStorage.getItem('selectedCompany');
+
+            if (!token) {
+                return { isAuthenticated: false };
+            }
+
+            // Get user profile to verify token is still valid
+            const profileResponse = await authService.getProfile();
+            const selectedCompany = selectedCompanyStr ? JSON.parse(selectedCompanyStr) : null;
+
+            return {
+                isAuthenticated: true,
+                user: profileResponse.user,
+                selectedCompany,
+                needsCompanySelection: false
+            };
+        } catch (error: any) {
+            // Token is invalid, clear localStorage
+            localStorage.removeItem('token');
+            localStorage.removeItem('selectedCompany');
+            return { isAuthenticated: false };
+        }
+    }
+);
+
 const authSlice = createSlice({
     name: 'auth',
     initialState,
@@ -172,10 +203,10 @@ const authSlice = createSlice({
 
                 if (action.payload.needsCompanySelection) {
                     state.needsCompanySelection = true;
-                    state.availableCompanies = action.payload.companies || [];
+                    state.availableCompanies = action.payload.companies as any[] || [];
                 } else {
                     state.needsCompanySelection = false;
-                    state.selectedCompany = action.payload.selectedCompany || null;
+                    state.selectedCompany = action.payload.selectedCompany as any || null;
                 }
 
                 toast.success('Login successful');
@@ -211,7 +242,7 @@ const authSlice = createSlice({
             })
             .addCase(selectCompany.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.selectedCompany = action.payload;
+                state.selectedCompany = action.payload as any;
                 state.needsCompanySelection = false;
                 state.error = null;
                 toast.success('Company selected successfully');
@@ -228,7 +259,7 @@ const authSlice = createSlice({
             })
             .addCase(getUserCompanies.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.availableCompanies = action.payload;
+                state.availableCompanies = action.payload as any;
                 state.error = null;
             })
             .addCase(getUserCompanies.rejected, (state, action) => {
@@ -267,8 +298,38 @@ const authSlice = createSlice({
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
                 state.isAuthenticated = false;
+                state.selectedCompany = null;
+                state.availableCompanies = [];
+                state.needsCompanySelection = false;
                 state.error = null;
                 toast.success('Logout successful');
+            })
+            // Initialize Auth
+            .addCase(initializeAuth.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(initializeAuth.fulfilled, (state, action) => {
+                state.isLoading = false;
+                if (action.payload.isAuthenticated) {
+                    state.isAuthenticated = true;
+                    state.user = action.payload.user;
+                    state.selectedCompany = action.payload.selectedCompany;
+                    state.needsCompanySelection = action.payload.needsCompanySelection;
+                } else {
+                    state.isAuthenticated = false;
+                    state.user = null;
+                    state.selectedCompany = null;
+                    state.needsCompanySelection = false;
+                }
+                state.error = null;
+            })
+            .addCase(initializeAuth.rejected, (state) => {
+                state.isLoading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.selectedCompany = null;
+                state.needsCompanySelection = false;
+                state.error = null;
             });
     }
 });

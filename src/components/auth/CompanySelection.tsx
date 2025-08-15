@@ -22,7 +22,7 @@ const CompanySelection = () => {
     if (selectedCompanyId) {
       const result = await dispatch(selectCompany({ companyId: selectedCompanyId }));
       if (selectCompany.fulfilled.match(result)) {
-        navigate('/dashboard');
+        navigate("/");
       }
     }
   };
@@ -38,30 +38,36 @@ const CompanySelection = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            {availableCompanies.map((company) => (
+            {availableCompanies.map((availableCompany) => (
               <div
-                key={company.id}
+                key={availableCompany.company.id}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedCompanyId === company.id
+                  selectedCompanyId === availableCompany.company.id
                     ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => setSelectedCompanyId(company.id)}
+                onClick={() =>
+                  setSelectedCompanyId(availableCompany.company.id)
+                }
               >
                 <div className="flex items-center space-x-3">
                   <Building className="h-5 w-5 text-gray-400" />
                   <div>
-                    <h3 className="font-medium">{company.name}</h3>
-                    <p className="text-sm text-gray-500">{company.email}</p>
+                    <h3 className="font-medium">
+                      {availableCompany.company.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {availableCompany.company.email}
+                    </p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          
-          <Button 
-            onClick={handleCompanySelect} 
-            className="w-full" 
+
+          <Button
+            onClick={handleCompanySelect}
+            className="w-full"
             disabled={!selectedCompanyId || isLoading}
           >
             {isLoading ? "Selecting..." : "Continue"}

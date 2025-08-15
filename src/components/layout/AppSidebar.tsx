@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAppDispatch } from "@/redux/hooks";
 import { cn } from "@/lib/utils";
 import { 
   LayoutGrid, 
@@ -16,8 +17,10 @@ import {
   BookOpen,
   Timer,
   CreditCard,
-  FolderArchive
+  FolderArchive,
+  LogOut
 } from "lucide-react";
+import { logout } from "@/redux/slices/authSlice";
 import {
   Sidebar,
   SidebarContent,
@@ -32,8 +35,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-const AppSidebar = () => {
+const AppSidebar: React.FC = () => {
   const location = useLocation();
+  const dispatch = useAppDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   const mainItems = [
     { name: "Dashboard", path: "/", icon: LayoutGrid },
@@ -137,6 +145,12 @@ const AppSidebar = () => {
                 <HelpCircle size={18} />
                 <span>Need Help?</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
+              <LogOut size={18} />
+              <span>Log Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

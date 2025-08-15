@@ -21,6 +21,16 @@ export interface Company {
     updatedAt: string;
 }
 
+export interface UserCompany {
+    id: string;
+    role: UserRole;
+    createdAt: string;
+    updatedAt: string;
+    userId: string;
+    companyId: string;
+    company: Company;
+}
+
 export interface User {
     id: string;
     firstName: string;
@@ -30,7 +40,7 @@ export interface User {
     role: UserRole;
     companyId?: string;
     company?: Company;
-    userCompanies?: Company[];
+    userCompanies?: UserCompany[];
     createdAt: string;
     updatedAt: string;
 }
@@ -71,7 +81,7 @@ export interface ResetPasswordDto {
 export interface AuthState {
     user: User | null;
     selectedCompany: Company | null;
-    availableCompanies: Company[];
+    availableCompanies: UserCompany[];
     isAuthenticated: boolean;
     needsCompanySelection: boolean;
     isLoading: boolean;
