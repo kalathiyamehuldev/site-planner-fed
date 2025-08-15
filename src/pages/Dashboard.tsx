@@ -243,40 +243,42 @@ const Dashboard = () => {
           className="mb-4 opacity-0 animate-fade-in"
           style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}
         >
-          <div className="flex space-x-2 border-b border-border pb-2">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={cn(
-                "py-2 px-4 text-sm font-medium rounded-t-lg transition-colors",
-                activeTab === "overview"
-                  ? "text-primary border-b-2 border-primary -mb-[2px]"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab("projects")}
-              className={cn(
-                "py-2 px-4 text-sm font-medium rounded-t-lg transition-colors",
-                activeTab === "projects"
-                  ? "text-primary border-b-2 border-primary -mb-[2px]"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Recent Projects
-            </button>
-            <button
-              onClick={() => setActiveTab("tasks")}
-              className={cn(
-                "py-2 px-4 text-sm font-medium rounded-t-lg transition-colors",
-                activeTab === "tasks"
-                  ? "text-primary border-b-2 border-primary -mb-[2px]"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Upcoming Tasks
-            </button>
+          <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
+            <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
+                  activeTab === "overview"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab("projects")}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
+                  activeTab === "projects"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                Recent Projects
+              </button>
+              <button
+                onClick={() => setActiveTab("tasks")}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
+                  activeTab === "tasks"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                Upcoming Tasks
+              </button>
+            </div>
           </div>
         </section>
 
