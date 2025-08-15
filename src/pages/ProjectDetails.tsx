@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
-import TaskCard from "@/components/TaskCard";
+import TaskTable from "@/components/TaskTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -96,36 +96,7 @@ const ProjectDetails = () => {
     }
   }, [dispatch, id]);
 
-  // Transform task data for TaskCard component
-  const transformTaskForCard = (task: any) => {
-    const statusMap = {
-      TODO: "Not Started" as const,
-      IN_PROGRESS: "In Progress" as const,
-      DONE: "Completed" as const,
-      CANCELLED: "On Hold" as const,
-    };
 
-    const priorityMap = {
-      LOW: "Low" as const,
-      MEDIUM: "Medium" as const,
-      HIGH: "High" as const,
-      URGENT: "High" as const,
-    };
-
-    return {
-      ...task,
-      status: statusMap[task.status] || "Not Started",
-      priority: priorityMap[task.priority] || "Medium",
-      projectName: project?.title || "Unknown Project",
-      assignedTo: task.assignee || "Unassigned",
-      dueDate: task.dueDate
-        ? new Date(task.dueDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })
-        : "No due date",
-    };
-  };
 
   // Create combined project details with API data and static data
   const projectDetails = project
@@ -374,19 +345,11 @@ const ProjectDetails = () => {
                   View All Tasks
                 </MotionButton>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projectTasks.slice(0, 3).map((task, index) => (
-                  <TaskCard
-                    key={task.id}
-                    {...transformTaskForCard(task)}
-                    className={cn({
-                      "animation-delay-[0.1s]": index === 0,
-                      "animation-delay-[0.2s]": index === 1,
-                      "animation-delay-[0.3s]": index === 2,
-                    })}
-                  />
-                ))}
-              </div>
+              <TaskTable
+                tasks={projectTasks.slice(0, 3)}
+                className="animate-scale-in"
+                showProject={false}
+              />
             </div>
           </TabsContent>
 
@@ -406,26 +369,12 @@ const ProjectDetails = () => {
               <div className="flex items-center justify-center p-12">
                 <div className="text-lg">Loading tasks...</div>
               </div>
-            ) : projectTasks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projectTasks.map((task, index) => (
-                  <TaskCard
-                    key={task.id}
-                    {...transformTaskForCard(task)}
-                    className={cn({
-                      "animate-scale-in": true,
-                      "animation-delay-[0.1s]": index === 0,
-                      "animation-delay-[0.2s]": index === 1,
-                      "animation-delay-[0.3s]": index === 2,
-                      "animation-delay-[0.4s]": index === 3,
-                    })}
-                  />
-                ))}
-              </div>
             ) : (
-              <div className="flex items-center justify-center p-12 text-muted-foreground">
-                No tasks found for this project. Create your first task!
-              </div>
+              <TaskTable
+                tasks={projectTasks}
+                className="animate-scale-in"
+                showProject={false}
+              />
             )}
           </TabsContent>
 

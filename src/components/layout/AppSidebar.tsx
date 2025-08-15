@@ -54,16 +54,16 @@ const AppSidebar: React.FC = () => {
   const toolItems = [
     { name: "Time Tracking", path: "/time-tracking", icon: Clock },
     { name: "To-Do List", path: "/todo", icon: CheckSquare },
-    { name: "Invoices", path: "/invoices", icon: CreditCard },
-    { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag },
-    { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
-    { name: "Documents", path: "/documents", icon: FolderArchive },
+    // { name: "Invoices", path: "/invoices", icon: CreditCard },
+    // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag },
+    // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
+    // { name: "Documents", path: "/documents", icon: FolderArchive },
   ];
 
   const libraryItems = [
     { name: "Address Book", path: "/address-book", icon: Users },
-    { name: "Image Library", path: "/image-library", icon: FileImage },
-    { name: "Product Library", path: "/product-library", icon: Package },
+    // { name: "Image Library", path: "/image-library", icon: FileImage },
+    // { name: "Product Library", path: "/product-library", icon: Package },
   ];
 
   const isActive = (path: string) => {

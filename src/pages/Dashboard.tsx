@@ -6,7 +6,7 @@ import { AnimatedGradient } from "@/components/ui/animated-gradient";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import ProjectCard from "@/components/ProjectCard";
-import TaskCard from "@/components/TaskCard";
+import TaskTable from "@/components/TaskTable";
 import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
@@ -261,19 +261,11 @@ const Dashboard = () => {
                     View All <ArrowRight size={16} className="ml-1" />
                   </MotionButton>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcomingTasks.map((task, index) => (
-                    <TaskCard
-                      key={task.id}
-                      {...task}
-                      className="animate-fade-in"
-                      style={{
-                        animationDelay: `${index * 0.1 + 0.2}s`,
-                        animationFillMode: "forwards",
-                      }}
-                    />
-                  ))}
-                </div>
+                <TaskTable
+                  tasks={upcomingTasks}
+                  className="animate-fade-in"
+                  showProject={true}
+                />
               </div>
             </div>
           )}
@@ -310,19 +302,11 @@ const Dashboard = () => {
                   New Task <Plus size={16} className="ml-1" />
                 </MotionButton>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {allTasks.map((task, index) => (
-                  <TaskCard
-                    key={task.id}
-                    {...task}
-                    className="animate-fade-in"
-                    style={{
-                      animationDelay: `${index * 0.1}s`,
-                      animationFillMode: "forwards",
-                    }}
-                  />
-                ))}
-              </div>
+              <TaskTable
+                tasks={allTasks}
+                className="animate-fade-in"
+                showProject={true}
+              />
             </div>
           )}
         </section>

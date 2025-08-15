@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
-import TaskCard from "@/components/TaskCard";
+import TaskTable from "@/components/TaskTable";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -26,34 +26,7 @@ const Tasks = () => {
     dispatch(fetchTasks(null));
   }, [dispatch]);
 
-  // Transform task data for TaskCard component
-  const transformTaskForCard = (task: any) => {
-    const statusMap = {
-      'TODO': 'Not Started' as const,
-      'IN_PROGRESS': 'In Progress' as const,
-      'DONE': 'Completed' as const,
-      'CANCELLED': 'On Hold' as const,
-    };
-    
-    const priorityMap = {
-      'LOW': 'Low' as const,
-      'MEDIUM': 'Medium' as const,
-      'HIGH': 'High' as const,
-      'URGENT': 'High' as const,
-    };
-    
-    return {
-      ...task,
-      status: statusMap[task.status] || 'Not Started',
-      priority: priorityMap[task.priority] || 'Medium',
-      projectName: task.project?.name || 'Unknown Project',
-      assignedTo: task.assignee || 'Unassigned',
-      dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      }) : 'No due date',
-    };
-  };
+
 
   const filteredTasks = allTasks.filter((task) => {
     if (searchTerm) {
@@ -151,43 +124,12 @@ const Tasks = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                {...transformTaskForCard(task)}
-                className="animate-fade-in"
-                style={{
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: "forwards",
-                }}
-                onClick={() => handleTaskClick(task.id)}
-              />
-            ))
-          ) : (
-            <div className="col-span-3 flex flex-col items-center justify-center py-16 text-center">
-              <GlassCard className="p-8 max-w-md mx-auto animate-scale-in">
-                <div className="text-3xl mb-4">✨</div>
-                <h3 className="text-xl font-medium mb-2">No tasks found</h3>
-                <p className="text-muted-foreground mb-6">
-                  {searchTerm
-                    ? "No tasks match your search criteria. Try a different search term."
-                    : "No tasks match the selected filter. Try a different filter."}
-                </p>
-                {searchTerm && (
-                  <MotionButton
-                    variant="outline"
-                    motion="subtle"
-                    onClick={() => setSearchTerm("")}
-                  >
-                    Clear Search
-                  </MotionButton>
-                )}
-              </GlassCard>
-            </div>
-          )}
-        </div>
+        <TaskTable
+          tasks={filteredTasks}
+          onTaskClick={handleTaskClick}
+          className="animate-fade-in"
+          showProject={true}
+        />
       </div>
     </PageContainer>
   );
