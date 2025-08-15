@@ -1,169 +1,450 @@
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { RootState } from '../store';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import api from '@/lib/axios';
 
-// Mock data for contacts
-const initialContacts = [
-  {
-    id: "c1",
-    name: "Jane Cooper",
-    type: "Client",
-    company: "Cooper Design Studio",
-    email: "jane.cooper@example.com",
-    phone: "(555) 123-4567",
-    address: "123 Main St, San Francisco, CA 94105",
-    isFavorite: true,
-    notes: "Prefers modern design styles",
-    website: "cooperdesign.com",
-    image: null
-  },
-  {
-    id: "c2",
-    name: "Michael Scott",
-    type: "Client",
-    company: "Dunder Mifflin",
-    email: "michael.scott@example.com",
-    phone: "(555) 234-5678",
-    address: "1725 Slough Ave, Scranton, PA 18503",
-    isFavorite: false,
-    notes: "Likes bold colors and statement pieces",
-    website: "dundermifflin.com",
-    image: null
-  },
-  {
-    id: "c3",
-    name: "Sarah Williams",
-    type: "Vendor",
-    company: "Modern Furnishings Inc.",
-    email: "sarah@modernfurnishings.com",
-    phone: "(555) 345-6789",
-    address: "456 Market St, Seattle, WA 98101",
-    isFavorite: true,
-    notes: "Great selection of contemporary furniture",
-    website: "modernfurnishings.com",
-    image: null
-  },
-  {
-    id: "c4",
-    name: "Robert Johnson",
-    type: "Contractor",
-    company: "Johnson & Sons Construction",
-    email: "robert@johnsonconst.com",
-    phone: "(555) 456-7890",
-    address: "789 Builder Ave, Portland, OR 97205",
-    isFavorite: false,
-    notes: "Specializes in high-end residential renovations",
-    website: "johnsonconst.com",
-    image: null
-  },
-  {
-    id: "c5",
-    name: "Emily Chen",
-    type: "Architect",
-    company: "Chen Architecture",
-    email: "emily@chenarch.com",
-    phone: "(555) 567-8901",
-    address: "321 Design Blvd, Chicago, IL 60601",
-    isFavorite: false,
-    notes: "Collaborative partner for complex projects",
-    website: "chenarchitecture.com",
-    image: null
-  },
-  {
-    id: "c6",
-    name: "David Miller",
-    type: "Vendor",
-    company: "Luxe Lighting Solutions",
-    email: "david@luxelighting.com",
-    phone: "(555) 678-9012",
-    address: "555 Illumination Way, Los Angeles, CA 90028",
-    isFavorite: true,
-    notes: "Custom lighting designs and fixtures",
-    website: "luxelighting.com",
-    image: null
-  },
-];
+// API Response interface
+interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
-export type Contact = typeof initialContacts[0];
+// Interfaces
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  position?: string;
+  type: 'client' | 'vendor' | 'partner';
+  isFavorite: boolean;
+  projects?: string[];
+  lastContact?: string;
+  notes?: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactApiResponse {
+  success: boolean;
+  message: string;
+  data: Contact;
+}
+
+export interface ContactsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    contacts: Contact[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface ContactFilterParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  type?: 'client' | 'vendor' | 'partner';
+  isFavorite?: boolean;
+}
+
+export interface CreateContactDto {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  position?: string;
+  type: 'client' | 'vendor' | 'partner';
+  isFavorite?: boolean;
+  notes?: string;
+  projectIds?: string[];
+}
+
+export interface UpdateContactDto extends Partial<CreateContactDto> { }
+
+// Helper functions
+const transformApiContact = (apiContact: any): Contact => {
+  return {
+    id: apiContact.id,
+    name: apiContact.name,
+    email: apiContact.email,
+    phone: apiContact.phone,
+    company: apiContact.company,
+    position: apiContact.position,
+    type: apiContact.type,
+    isFavorite: apiContact.isFavorite,
+    projects: apiContact.projects?.map((p: any) => p.name) || [],
+    lastContact: apiContact.lastContact,
+    notes: apiContact.notes,
+    companyId: apiContact.companyId,
+    createdAt: apiContact.createdAt,
+    updatedAt: apiContact.updatedAt,
+  };
+};
+
+const getSelectedCompanyId = (getState: any) => {
+  const state = getState();
+  return state.auth.selectedCompany?.id || JSON.parse(localStorage.getItem('selectedCompany') || '{}')?.id;
+};
+
+// Async thunks
+export const fetchAllContactsByCompany = createAsyncThunk(
+  'contacts/fetchAllContactsByCompany',
+  async (params: ContactFilterParams = {}, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+
+      const queryParams = new URLSearchParams({
+        page: (params.page || 1).toString(),
+        limit: (params.limit || 10).toString(),
+        companyId,
+        ...(params.search && { search: params.search }),
+        ...(params.type && { type: params.type }),
+        ...(params.isFavorite !== undefined && { isFavorite: params.isFavorite.toString() }),
+      });
+      const response = await api.get(`/contacts?${queryParams.toString()}`) as ApiResponse<{
+        items: Contact[];
+        total: number;
+        page: number;
+        limit: number;
+      }>;
+      if (response.status === 'success' && response.data) {
+        return {
+          contacts: response.data.items.map(transformApiContact),
+          total: response.data.total,
+          page: response.data.page,
+          limit: response.data.limit,
+        };
+      } else {
+        return rejectWithValue(response.message || 'Failed to fetch contacts');
+      }
+    } catch (error: any) {
+      console.log("error", error)
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch contacts');
+    }
+  }
+);
+
+export const fetchContactsByProject = createAsyncThunk(
+  'contacts/fetchContactsByProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/contacts/project/${projectId}`) as ApiResponse<Contact[]>;
+      if (response.status === 'success' && response.data) {
+        return response.data.map(transformApiContact);
+      } else {
+        return rejectWithValue(response.message || 'Failed to fetch project contacts');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch project contacts');
+    }
+  }
+);
+
+export const fetchContactById = createAsyncThunk(
+  'contacts/fetchContactById',
+  async (contactId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/contacts/${contactId}`) as ApiResponse<Contact>;
+      if (response.status === 'success' && response.data) {
+        return transformApiContact(response.data);
+      } else {
+        return rejectWithValue(response.message || 'Failed to fetch contact');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch contact');
+    }
+  }
+);
+
+export const createContactAsync = createAsyncThunk(
+  'contacts/createContact',
+  async (contactData: CreateContactDto, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      const response = await api.post('/contacts', {
+        ...contactData,
+        companyId
+      }) as ApiResponse<Contact>;
+      if (response.status === 'success' && response.data) {
+        return transformApiContact(response.data);
+      } else {
+        return rejectWithValue(response.message || 'Failed to create contact');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create contact');
+    }
+  }
+);
+
+export const updateContactAsync = createAsyncThunk(
+  'contacts/updateContact',
+  async ({ id, data }: { id: string; data: UpdateContactDto }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/contacts/${id}`, data) as ApiResponse<Contact>;
+      if (response.status === 'success' && response.data) {
+        return transformApiContact(response.data);
+      } else {
+        return rejectWithValue(response.message || 'Failed to update contact');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update contact');
+    }
+  }
+);
+
+export const deleteContactAsync = createAsyncThunk(
+  'contacts/deleteContact',
+  async (contactId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.delete(`/contacts/${contactId}`) as ApiResponse;
+      if (response.status === 'success') {
+        return contactId;
+      } else {
+        return rejectWithValue(response.message || 'Failed to delete contact');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete contact');
+    }
+  }
+);
+
+export const addContactToProjectAsync = createAsyncThunk(
+  'contacts/addContactToProject',
+  async ({ contactId, projectId }: { contactId: string; projectId: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/contacts/${contactId}/projects/${projectId}`) as ApiResponse<Contact>;
+      if (response.status === 'success' && response.data) {
+        return transformApiContact(response.data);
+      } else {
+        return rejectWithValue(response.message || 'Failed to add contact to project');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to add contact to project');
+    }
+  }
+);
+
+export const removeContactFromProjectAsync = createAsyncThunk(
+  'contacts/removeContactFromProject',
+  async ({ contactId, projectId }: { contactId: string; projectId: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.delete(`/contacts/${contactId}/projects/${projectId}`) as ApiResponse<Contact>;
+      if (response.status === 'success' && response.data) {
+        return transformApiContact(response.data);
+      } else {
+        return rejectWithValue(response.message || 'Failed to remove contact from project');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to remove contact from project');
+    }
+  }
+);
+
 export type ContactType = 'Client' | 'Vendor' | 'Contractor' | 'Architect' | 'Other';
 
 interface ContactsState {
   contacts: Contact[];
+  projectContacts: Contact[];
   selectedContact: Contact | null;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
+  total: number;
+  page: number;
+  limit: number;
 }
 
 const initialState: ContactsState = {
-  contacts: initialContacts,
+  contacts: [],
+  projectContacts: [],
   selectedContact: null,
-  loading: false,
-  error: null
+  isLoading: false,
+  error: null,
+  total: 0,
+  page: 1,
+  limit: 10,
 };
 
-export const contactsSlice = createSlice({
+const contactsSlice = createSlice({
   name: 'contacts',
   initialState,
   reducers: {
-    getContacts: (state) => {
-      state.loading = false;
-      state.error = null;
-    },
-    setSelectedContact: (state, action: PayloadAction<string>) => {
-      state.selectedContact = state.contacts.find(contact => contact.id === action.payload) || null;
+    setSelectedContact: (state, action: PayloadAction<Contact | null>) => {
+      state.selectedContact = action.payload;
     },
     clearSelectedContact: (state) => {
       state.selectedContact = null;
     },
-    addContact: (state, action: PayloadAction<Omit<Contact, 'id'>>) => {
-      const newContact = {
-        ...action.payload,
-        id: `c${state.contacts.length + 1}`,
-      };
-      state.contacts.push(newContact);
+    clearError: (state) => {
+      state.error = null;
     },
-    updateContact: (state, action: PayloadAction<{ id: string; contact: Partial<Contact> }>) => {
-      const { id, contact } = action.payload;
-      const index = state.contacts.findIndex(c => c.id === id);
-      if (index !== -1) {
-        state.contacts[index] = { ...state.contacts[index], ...contact };
-        if (state.selectedContact?.id === id) {
-          state.selectedContact = state.contacts[index];
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch all contacts by company
+      .addCase(fetchAllContactsByCompany.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllContactsByCompany.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.contacts = action.payload.contacts;
+        state.total = action.payload.total;
+        state.page = action.payload.page;
+        state.limit = action.payload.limit;
+      })
+      .addCase(fetchAllContactsByCompany.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to fetch contacts';
+      })
+      // Fetch contacts by project
+      .addCase(fetchContactsByProject.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchContactsByProject.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.projectContacts = action.payload;
+      })
+      .addCase(fetchContactsByProject.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to fetch project contacts';
+      })
+      // Fetch contact by ID
+      .addCase(fetchContactById.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchContactById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.selectedContact = action.payload;
+      })
+      .addCase(fetchContactById.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to fetch contact';
+      })
+      // Create contact
+      .addCase(createContactAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(createContactAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.contacts.unshift(action.payload);
+        state.total += 1;
+      })
+      .addCase(createContactAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to create contact';
+      })
+      // Update contact
+      .addCase(updateContactAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateContactAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.contacts.findIndex(contact => contact.id === action.payload.id);
+        if (index !== -1) {
+          state.contacts[index] = action.payload;
         }
-      }
-    },
-    deleteContact: (state, action: PayloadAction<string>) => {
-      state.contacts = state.contacts.filter(contact => contact.id !== action.payload);
-      if (state.selectedContact?.id === action.payload) {
-        state.selectedContact = null;
-      }
-    },
-    toggleFavorite: (state, action: PayloadAction<string>) => {
-      const contact = state.contacts.find(c => c.id === action.payload);
-      if (contact) {
-        contact.isFavorite = !contact.isFavorite;
-      }
-    }
-  }
+        if (state.selectedContact?.id === action.payload.id) {
+          state.selectedContact = action.payload;
+        }
+      })
+      .addCase(updateContactAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to update contact';
+      })
+      // Delete contact
+      .addCase(deleteContactAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteContactAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.contacts = state.contacts.filter(contact => contact.id !== action.payload);
+        state.total -= 1;
+        if (state.selectedContact?.id === action.payload) {
+          state.selectedContact = null;
+        }
+      })
+      .addCase(deleteContactAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to delete contact';
+      })
+      // Add contact to project
+      .addCase(addContactToProjectAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(addContactToProjectAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.contacts.findIndex(contact => contact.id === action.payload.id);
+        if (index !== -1) {
+          state.contacts[index] = action.payload;
+        }
+        if (state.selectedContact?.id === action.payload.id) {
+          state.selectedContact = action.payload;
+        }
+      })
+      .addCase(addContactToProjectAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to add contact to project';
+      })
+      // Remove contact from project
+      .addCase(removeContactFromProjectAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(removeContactFromProjectAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.contacts.findIndex(contact => contact.id === action.payload.id);
+        if (index !== -1) {
+          state.contacts[index] = action.payload;
+        }
+        if (state.selectedContact?.id === action.payload.id) {
+          state.selectedContact = action.payload;
+        }
+      })
+      .addCase(removeContactFromProjectAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to remove contact from project';
+      });
+  },
 });
 
-export const { 
-  getContacts, 
-  setSelectedContact, 
-  clearSelectedContact, 
-  addContact, 
-  updateContact, 
-  deleteContact,
-  toggleFavorite
+export const {
+  setSelectedContact,
+  clearSelectedContact,
+  clearError,
 } = contactsSlice.actions;
 
-export const selectAllContacts = (state: RootState) => state.contacts.contacts;
-export const selectSelectedContact = (state: RootState) => state.contacts.selectedContact;
-export const selectContactById = (id: string) => (state: RootState) => 
-  state.contacts.contacts.find(contact => contact.id === id);
-export const selectContactsByType = (type: ContactType) => (state: RootState) => 
-  state.contacts.contacts.filter(contact => contact.type === type);
-export const selectFavoriteContacts = (state: RootState) => 
-  state.contacts.contacts.filter(contact => contact.isFavorite);
+// Selectors
+export const selectAllContacts = (state: any) => state.contacts.contacts;
+export const selectProjectContacts = (state: any) => state.contacts.projectContacts;
+export const selectSelectedContact = (state: any) => state.contacts.selectedContact;
+export const selectContactsLoading = (state: any) => state.contacts.isLoading;
+export const selectContactsError = (state: any) => state.contacts.error;
+export const selectContactsTotal = (state: any) => state.contacts.total;
+export const selectContactsPage = (state: any) => state.contacts.page;
+export const selectContactsLimit = (state: any) => state.contacts.limit;
+export const selectContactById = (id: string) => (state: any) =>
+  state.contacts.contacts.find((contact: Contact) => contact.id === id);
+export const selectContactsByType = (type: string) => (state: any) =>
+  state.contacts.contacts.filter((contact: Contact) => contact.type === type);
+export const selectFavoriteContacts = (state: any) =>
+  state.contacts.contacts.filter((contact: Contact) => contact.isFavorite);
 
 export default contactsSlice.reducer;

@@ -218,7 +218,7 @@ export const timeTrackingSlice = createSlice({
       const { id, status } = action.payload;
       const entry = state.timeEntries.find(e => e.id === id);
       if (entry) {
-        entry.status = status;
+        entry.status = status as any;
       }
     }
   }
