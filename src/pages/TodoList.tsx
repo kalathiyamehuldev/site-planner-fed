@@ -17,6 +17,7 @@ import {
   selectAllTodos,
   selectActiveTodos,
   selectCompletedTodos,
+  selectTodosByProject,
   fetchTodos,
   createTodo,
   updateTodo,
@@ -29,8 +30,7 @@ import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
 
 const TodoList = () => {
   const dispatch = useAppDispatch();
-  const activeTodos = useAppSelector(selectActiveTodos);
-  const completedTodos = useAppSelector(selectCompletedTodos);
+  const allTodos = useAppSelector(selectAllTodos);
   const projects = useAppSelector(selectAllProjects);
   const { loading, error } = useAppSelector((state) => state.todos);
 
@@ -40,15 +40,20 @@ const TodoList = () => {
   const [selectedDueDate, setSelectedDueDate] = useState("");
   const [editTodoId, setEditTodoId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  
+  // Filter todos based on selected project
+  const filteredTodos = selectedProject 
+    ? allTodos.filter(todo => todo.projectId === selectedProject)
+    : allTodos;
+  
+  const activeTodos = filteredTodos.filter(todo => !todo.completed);
+  const completedTodos = filteredTodos.filter(todo => todo.completed);
 
   useEffect(() => {
     dispatch(fetchProjects());
+    // Fetch all todos initially - we'll filter on frontend
+    dispatch(fetchTodos({}));
   }, [dispatch]);
-
-  useEffect(() => {
-    // Fetch all todos initially, then filter by project if selected
-    dispatch(fetchTodos(selectedProject ? { projectId: selectedProject } : {}));
-  }, [dispatch, selectedProject]);
 
   useEffect(() => {
     // Clear error after 5 seconds
