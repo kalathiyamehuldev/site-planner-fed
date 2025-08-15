@@ -96,7 +96,7 @@ const AppSidebar: React.FC = () => {
   };
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar variant="inset">
       <SidebarRail />
       <SidebarHeader className="pt-6 px-4">
         <div className="flex items-center gap-2 mb-6">
