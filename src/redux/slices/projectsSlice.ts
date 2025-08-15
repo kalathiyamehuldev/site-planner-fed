@@ -309,8 +309,6 @@ interface ProjectsState {
   selectedProject: Project | null;
   loading: boolean;
   error: string | null;
-  memberLoading: boolean;
-  memberError: string | null;
 }
 
 const initialState: ProjectsState = {
@@ -318,8 +316,6 @@ const initialState: ProjectsState = {
   selectedProject: null,
   loading: false,
   error: null,
-  memberLoading: false,
-  memberError: null
 };
 
 export const projectsSlice = createSlice({
@@ -334,9 +330,6 @@ export const projectsSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
-    },
-    clearMemberError: (state) => {
-      state.memberError = null;
     }
   },
   extraReducers: (builder) => {
@@ -424,64 +417,6 @@ export const projectsSlice = createSlice({
       .addCase(deleteProjectAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
-      // Add member to project
-      .addCase(addMemberToProject.pending, (state) => {
-        state.memberLoading = true;
-        state.memberError = null;
-      })
-      .addCase(addMemberToProject.fulfilled, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = null;
-        // Update project members if selected project matches
-        if (state.selectedProject?.id === action.meta.arg.projectId) {
-          const currentMembers = state.selectedProject.team || [];
-          const newMemberName = `${action.payload.user.firstName} ${action.payload.user.lastName}`;
-          if (!currentMembers.includes(newMemberName)) {
-            state.selectedProject.team = [...currentMembers, newMemberName];
-          }
-        }
-      })
-      .addCase(addMemberToProject.rejected, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = action.payload as string;
-      })
-      // Remove member from project
-      .addCase(removeMemberFromProject.pending, (state) => {
-        state.memberLoading = true;
-        state.memberError = null;
-      })
-      .addCase(removeMemberFromProject.fulfilled, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = null;
-        // Update project members if selected project matches
-        if (state.selectedProject?.id === action.payload.projectId) {
-          // Note: We would need user info to remove the specific member name
-          // This is a limitation of the current data structure
-        }
-      })
-      .addCase(removeMemberFromProject.rejected, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = action.payload as string;
-      })
-      // Get project members
-      .addCase(getProjectMembers.pending, (state) => {
-        state.memberLoading = true;
-        state.memberError = null;
-      })
-      .addCase(getProjectMembers.fulfilled, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = null;
-        // Update project members if selected project matches
-        if (state.selectedProject?.id === action.payload.projectId) {
-          state.selectedProject.team = action.payload.members.map(member => 
-            `${member.user.firstName} ${member.user.lastName}`
-          );
-        }
-      })
-      .addCase(getProjectMembers.rejected, (state, action) => {
-        state.memberLoading = false;
-        state.memberError = action.payload as string;
       });
   }
 });
@@ -489,8 +424,7 @@ export const projectsSlice = createSlice({
 export const { 
   setSelectedProject, 
   clearSelectedProject,
-  clearError,
-  clearMemberError
+  clearError
 } = projectsSlice.actions;
 
 // Selectors
@@ -500,8 +434,7 @@ export const selectProjectById = (id: string) => (state: RootState) =>
   state.projects.projects.find(project => project.id === id);
 export const selectProjectLoading = (state: RootState) => state.projects.loading;
 export const selectProjectError = (state: RootState) => state.projects.error;
-export const selectMemberLoading = (state: RootState) => state.projects.memberLoading;
-export const selectMemberError = (state: RootState) => state.projects.memberError;
+
 
 
 export default projectsSlice.reducer;

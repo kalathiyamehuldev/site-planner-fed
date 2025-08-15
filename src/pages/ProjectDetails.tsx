@@ -87,6 +87,8 @@ const ProjectDetails = () => {
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
 
   // Handle task creation success - refetch project tasks
   const handleTaskCreated = () => {
@@ -109,9 +111,27 @@ const ProjectDetails = () => {
     if (id) {
       dispatch(fetchProjectById(id));
       dispatch(fetchTasksByProject(id));
-      dispatch(getProjectMembers(id));
+      
+      // Fetch project members locally
+      setMembersLoading(true);
+      dispatch(getProjectMembers(id))
+         .unwrap()
+         .then((response) => {
+           setProjectMembers(response.members || []);
+         })
+        .catch((error) => {
+          console.error('Failed to fetch project members:', error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch project members",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setMembersLoading(false);
+        });
     }
-  }, [dispatch, id]);
+  }, [dispatch, id, toast]);
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
@@ -541,6 +561,8 @@ const ProjectDetails = () => {
           onOpenChange={setAddTaskDialogOpen}
           projectId={project.id}
           onSuccess={handleTaskCreated}
+          projectMembers={projectMembers}
+          membersLoading={membersLoading}
         />
       )}
 
@@ -552,6 +574,8 @@ const ProjectDetails = () => {
         projectId={id || ""}
         task={editingTask}
         onSuccess={handleEditSuccess}
+        projectMembers={projectMembers}
+        membersLoading={membersLoading}
       />
 
       {/* Delete Confirmation Dialog */}

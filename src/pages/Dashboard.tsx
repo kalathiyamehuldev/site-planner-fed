@@ -45,6 +45,8 @@ const Dashboard = () => {
     dispatch(fetchAllTasksByCompany());
   }, [dispatch]);
 
+
+
   // Get recent projects (3 most recent)
   const recentProjects = [...allProjects]
     .sort((a, b) => {

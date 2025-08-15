@@ -33,130 +33,149 @@ import {
   addMemberToProject,
   removeMemberFromProject,
   ProjectMember,
-} from '@/redux/slices/projectsSlice';
-import {
-  fetchMembers,
-  Member,
-} from '@/redux/slices/adminSlice';
+} from "@/redux/slices/projectsSlice";
+import { fetchMembers, Member } from "@/redux/slices/adminSlice";
 
 interface ProjectMemberManagementProps {
   projectId: string;
 }
 
-const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ projectId }) => {
+const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
+  projectId,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
-  
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('VIEWER');
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("VIEWER");
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-  
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+
   // Redux selectors
-  const { memberLoading, memberError } = useSelector((state: RootState) => state.projects);
-  const { members: { items: companyMembers, loading: membersLoading } } = useSelector((state: RootState) => state.admin);
-  
+  const {
+    members: { items: companyMembers, loading: membersLoading },
+  } = useSelector((state: RootState) => state.admin);
+
   // Fetch project members and company members on component mount
   useEffect(() => {
-    if (projectId) {
-      dispatch(getProjectMembers(projectId)).then((result) => {
-        if (getProjectMembers.fulfilled.match(result)) {
-          setProjectMembers(result.payload.members);
+    const fetchProjectMembers = async () => {
+      if (projectId) {
+        setMemberLoading(true);
+        setMemberError(null);
+        try {
+          const result = await dispatch(getProjectMembers(projectId));
+          if (getProjectMembers.fulfilled.match(result)) {
+            setProjectMembers(result.payload.members);
+          } else {
+            setMemberError(result.payload as string || 'Failed to fetch project members');
+          }
+        } catch (error) {
+          setMemberError('Failed to fetch project members');
+        } finally {
+          setMemberLoading(false);
         }
-      });
-    }
+      }
+    };
+
+    fetchProjectMembers();
     dispatch(fetchMembers());
   }, [dispatch, projectId]);
-  
+
   // Handle adding member to project
   const handleAddMember = async () => {
     if (!selectedUserId || !selectedRole) {
       toast({
-        title: 'Error',
-        description: 'Please select a user and role',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please select a user and role",
+        variant: "destructive",
       });
       return;
     }
-    
+
     try {
-      const result = await dispatch(addMemberToProject({
-        projectId,
-        userId: selectedUserId,
-        role: selectedRole,
-      }));
-      
+      const result = await dispatch(
+        addMemberToProject({
+          projectId,
+          userId: selectedUserId,
+          role: selectedRole,
+        })
+      );
+
       if (addMemberToProject.fulfilled.match(result)) {
         toast({
-          title: 'Success',
-          description: 'Member added to project successfully',
+          title: "Success",
+          description: "Member added to project successfully",
         });
-        
+
         // Refresh project members
-        const membersResult = await dispatch(getProjectMembers(projectId));
-        if (getProjectMembers.fulfilled.match(membersResult)) {
-          setProjectMembers(membersResult.payload.members);
+        const refreshResult = await dispatch(getProjectMembers(projectId));
+        if (getProjectMembers.fulfilled.match(refreshResult)) {
+          setProjectMembers(refreshResult.payload.members);
         }
-        
+
         setIsAddDialogOpen(false);
-        setSelectedUserId('');
-        setSelectedRole('VIEWER');
+        setSelectedUserId("");
+        setSelectedRole("VIEWER");
       } else {
         toast({
-          title: 'Error',
-          description: result.payload as string || 'Failed to add member',
-          variant: 'destructive',
+          title: "Error",
+          description: (result.payload as string) || "Failed to add member",
+          variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to add member to project',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add member to project",
+        variant: "destructive",
       });
     }
   };
-  
+
   // Handle removing member from project
   const handleRemoveMember = async (userId: string, memberName: string) => {
     try {
-      const result = await dispatch(removeMemberFromProject({
-        projectId,
-        userId,
-      }));
-      
+      const result = await dispatch(
+        removeMemberFromProject({
+          projectId,
+          userId,
+        })
+      );
+
       if (removeMemberFromProject.fulfilled.match(result)) {
         toast({
-          title: 'Success',
+          title: "Success",
           description: `${memberName} removed from project successfully`,
         });
-        
+
         // Refresh project members
-        const membersResult = await dispatch(getProjectMembers(projectId));
-        if (getProjectMembers.fulfilled.match(membersResult)) {
-          setProjectMembers(membersResult.payload.members);
+        const refreshResult = await dispatch(getProjectMembers(projectId));
+        if (getProjectMembers.fulfilled.match(refreshResult)) {
+          setProjectMembers(refreshResult.payload.members);
         }
       } else {
         toast({
-          title: 'Error',
-          description: result.payload as string || 'Failed to remove member',
-          variant: 'destructive',
+          title: "Error",
+          description: (result.payload as string) || "Failed to remove member",
+          variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to remove member from project',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to remove member from project",
+        variant: "destructive",
       });
     }
   };
-  
+
   // Filter available members (exclude already added members)
   const availableMembers = companyMembers.filter(
     (member) => !projectMembers.some((pm) => pm.user.id === member.id)
   );
-  
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -172,13 +191,17 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ proje
             <DialogHeader>
               <DialogTitle>Add Member to Project</DialogTitle>
               <DialogDescription>
-                Select a team member to add to this project and assign their role.
+                Select a team member to add to this project and assign their
+                role.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Select Member</label>
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <Select
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a member" />
                   </SelectTrigger>
@@ -216,13 +239,13 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ proje
                 onClick={handleAddMember}
                 disabled={memberLoading || !selectedUserId}
               >
-                {memberLoading ? 'Adding...' : 'Add Member'}
+                {memberLoading ? "Adding..." : "Add Member"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-      
+
       {memberLoading && projectMembers.length === 0 ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
@@ -231,8 +254,12 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ proje
       ) : projectMembers.length === 0 ? (
         <div className="text-center py-8">
           <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No members assigned to this project yet.</p>
-          <p className="text-sm text-gray-500 mt-1">Click "Add Member" to get started.</p>
+          <p className="text-gray-600">
+            No members assigned to this project yet.
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Click "Add Member" to get started.
+          </p>
         </div>
       ) : (
         <Table>
@@ -260,10 +287,12 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ proje
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRemoveMember(
-                      member.user.id,
-                      `${member.user.firstName} ${member.user.lastName}`
-                    )}
+                    onClick={() =>
+                      handleRemoveMember(
+                        member.user.id,
+                        `${member.user.firstName} ${member.user.lastName}`
+                      )
+                    }
                     disabled={memberLoading}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -274,11 +303,9 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({ proje
           </TableBody>
         </Table>
       )}
-      
+
       {memberError && (
-        <div className="text-red-600 text-sm mt-2">
-          Error: {memberError}
-        </div>
+        <div className="text-red-600 text-sm mt-2">Error: {memberError}</div>
       )}
     </div>
   );

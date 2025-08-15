@@ -14,6 +14,7 @@ import {
   setSelectedTask,
   deleteTaskAsync,
 } from "@/redux/slices/tasksSlice";
+import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -30,6 +31,7 @@ const Tasks = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const allTasks = useAppSelector(selectAllTasks);
+  const projects = useAppSelector(selectAllProjects);
 
   const [filter, setFilter] = useState<
     "all" | "mine" | "high-priority" | "upcoming"
@@ -37,10 +39,14 @@ const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
+    dispatch(fetchProjects());
   }, [dispatch]);
+
+
 
 
 
@@ -140,6 +146,12 @@ const Tasks = () => {
     dispatch(fetchAllTasksByCompany());
   };
 
+  const handleNewTaskSuccess = () => {
+    setShowNewTaskDialog(false);
+    // Refresh tasks list
+    dispatch(fetchAllTasksByCompany());
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -150,7 +162,11 @@ const Tasks = () => {
               Manage and track all your project tasks
             </p>
           </div>
-          <MotionButton variant="default" motion="subtle">
+          <MotionButton 
+            variant="default" 
+            motion="subtle"
+            onClick={() => setShowNewTaskDialog(true)}
+          >
             <Plus size={18} className="mr-2" /> New Task
           </MotionButton>
         </div>
@@ -191,14 +207,22 @@ const Tasks = () => {
           showProject={true}
         />
 
+        {/* New Task Dialog */}
+        <AddTaskDialog
+          open={showNewTaskDialog}
+          onOpenChange={(open) => !open && setShowNewTaskDialog(false)}
+          projectId={''}
+          onSuccess={handleNewTaskSuccess}
+        />
+
         {/* Edit Task Dialog */}
-      <AddTaskDialog
-        open={!!editingTask}
-        onOpenChange={(open) => !open && setEditingTask(null)}
-        projectId={editingTask?.project?.id || ''}
-        task={editingTask}
-        onSuccess={handleEditSuccess}
-      />
+        <AddTaskDialog
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+          projectId={editingTask?.project?.id || ''}
+          task={editingTask}
+          onSuccess={handleEditSuccess}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!deletingTaskId} onOpenChange={(open) => !open && setDeletingTaskId(null)}>
