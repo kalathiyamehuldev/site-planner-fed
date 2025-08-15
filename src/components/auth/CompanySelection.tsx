@@ -40,24 +40,20 @@ const CompanySelection = () => {
           <div className="space-y-2">
             {availableCompanies.map((availableCompany) => (
               <div
-                key={availableCompany.company.id}
+                key={availableCompany.id}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedCompanyId === availableCompany.company.id
+                  selectedCompanyId === availableCompany.id
                     ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() =>
-                  setSelectedCompanyId(availableCompany.company.id)
-                }
+                onClick={() => setSelectedCompanyId(availableCompany.id)}
               >
                 <div className="flex items-center space-x-3">
                   <Building className="h-5 w-5 text-gray-400" />
                   <div>
-                    <h3 className="font-medium">
-                      {availableCompany.company.name}
-                    </h3>
+                    <h3 className="font-medium">{availableCompany.name}</h3>
                     <p className="text-sm text-gray-500">
-                      {availableCompany.company.email}
+                      {availableCompany.email}
                     </p>
                   </div>
                 </div>

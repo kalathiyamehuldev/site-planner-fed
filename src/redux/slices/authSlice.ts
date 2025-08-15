@@ -8,7 +8,7 @@ import {
     ResetPasswordDto,
     CompanySelectionDto
 } from '@/common/types/auth.types';
-import { authService } from '@/services/auth.service';
+import api from '@/lib/axios';
 import { toast } from "sonner";
 
 const initialState: AuthState = {
@@ -25,28 +25,31 @@ export const login = createAsyncThunk(
     'auth/login',
     async (credentials: LoginDto, { rejectWithValue }) => {
         try {
-            const response = await authService.login(credentials);
+            const response: any = await api.post('/auth/login', credentials);
             console.log("response", response)
-            localStorage.setItem('token', response.access_token);
+            if (response.status != "success") {
+                throw new Error(response.error || 'Login failed');
+            }
+            const { data } = response;
+            localStorage.setItem('token', data.access_token);
             // Check if user has multiple companies and needs to select one
-            if (response.companies && response.companies.length > 1) {
+            if (data.companies && data.companies.length > 1) {
                 return {
-                    user: response.user,
-                    companies: response.companies,
+                    user: data.user,
+                    companies: data.companies,
                     needsCompanySelection: true
                 };
-            } else if (response.companies && response.companies.length === 1) {
+            } else if (data.companies && data.companies.length === 1) {
                 // Auto-select the only company
-                localStorage.setItem('selectedCompany', JSON.stringify(response.companies[0]));
+                localStorage.setItem('selectedCompany', JSON.stringify(data.companies[0]));
                 return {
-                    user: response.user,
-                    selectedCompany: response.companies[0],
+                    user: data.user,
+                    selectedCompany: data.companies[0],
                     needsCompanySelection: false
                 };
             }
-
             return {
-                user: response.user,
+                user: data.user,
                 needsCompanySelection: false
             };
         } catch (error: any) {
@@ -60,16 +63,18 @@ export const registerCompany = createAsyncThunk(
     'auth/registerCompany',
     async (companyData: CreateCompanyDto, { rejectWithValue }) => {
         try {
-            const response = await authService.registerCompany(companyData);
-            console.log("registerCompany response", response);
+            const response: any = await api.post('/auth/register-company', companyData);
+            if (response.status != "success") {
+                throw new Error(response.error || 'Company registration failed');
+            }
             localStorage.setItem('token', response.access_token);
 
             // Since company registration creates a single company, auto-select it
-            if (response.companies && response.companies.length === 1) {
-                localStorage.setItem('selectedCompany', JSON.stringify(response.companies[0]));
+            if (response.user.userCompanies && response.user.userCompanies.length === 1) {
+                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]));
                 return {
                     user: response.user,
-                    selectedCompany: response.companies[0],
+                    selectedCompany: response.user.userCompanies[0].company,
                     needsCompanySelection: false
                 };
             }
@@ -86,17 +91,18 @@ export const registerCompany = createAsyncThunk(
 
 export const selectCompany = createAsyncThunk(
     'auth/selectCompany',
-    async (companySelection: CompanySelectionDto, { rejectWithValue, getState }) => {
+    async (companyData: CompanySelectionDto, { rejectWithValue, getState }) => {
         try {
             const { auth } = getState() as { auth: AuthState };
-            const selectedCompany = auth.availableCompanies.find(c => c.companyId === companySelection.companyId);
-
+            const selectedCompany = auth.availableCompanies.find(c => c.id === companyData.companyId);
             if (!selectedCompany) {
-                return rejectWithValue('Company not found');
+                throw new Error('Company not found');
             }
-
             localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
-            return selectedCompany;
+            return {
+                selectedCompany,
+                needsCompanySelection: false
+            };
         } catch (error: any) {
             return rejectWithValue(error.message || 'Company selection failed');
         }
@@ -107,10 +113,22 @@ export const getUserCompanies = createAsyncThunk(
     'auth/getUserCompanies',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await authService.getUserCompanies();
+            const response = await api.get('/auth/companies');
             return response;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to fetch companies');
+        }
+    }
+);
+
+export const verifyToken = createAsyncThunk(
+    'auth/verifyToken',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await api.get('/auth/verify-token');
+            return response;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Token verification failed');
         }
     }
 );
@@ -119,8 +137,8 @@ export const forgotPassword = createAsyncThunk(
     'auth/forgotPassword',
     async (data: ForgotPasswordDto, { rejectWithValue }) => {
         try {
-            const response = await authService.forgotPassword(data);
-            return response.message;
+            const response = await api.post('/auth/forgot-password', data);
+            return response;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to send reset email');
         }
@@ -131,10 +149,10 @@ export const resetPassword = createAsyncThunk(
     'auth/resetPassword',
     async (data: ResetPasswordDto, { rejectWithValue }) => {
         try {
-            const response = await authService.resetPassword(data);
-            return response.message;
+            const response = await api.post('/auth/reset-password', data);
+            return response;
         } catch (error: any) {
-            return rejectWithValue(error.message || 'Password reset failed');
+            return rejectWithValue(error.message || 'Failed to reset password');
         }
     }
 );
@@ -143,10 +161,10 @@ export const getProfile = createAsyncThunk(
     'auth/getProfile',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await authService.getProfile();
-            return response.user;
+            const response = await api.get('/auth/profile');
+            return response;
         } catch (error: any) {
-            return rejectWithValue(error.message || 'Failed to fetch profile');
+            return rejectWithValue(error.message || 'Failed to get profile');
         }
     }
 );
@@ -155,9 +173,15 @@ export const logout = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
         try {
-            await authService.logout();
+            localStorage.removeItem('token');
+            localStorage.removeItem('selectedCompany');
+            window.location.href = '/auth/login';
+            return null;
         } catch (error: any) {
-            return rejectWithValue(error.message || 'Logout failed');
+            // Even if logout fails on server, clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('selectedCompany');
+            return null;
         }
     }
 );
