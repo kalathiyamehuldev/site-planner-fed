@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
+import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchProjectById, selectSelectedProject, selectProjectLoading } from "@/redux/slices/projectsSlice";
 
-// Static data for progress and team (keeping as requested)
+// Static data for progress (keeping as requested)
 const staticProjectData = {
-  team: ["Alex Jones", "Sarah Smith", "Robert Lee"],
   progress: 65,
 };
 
@@ -90,7 +90,7 @@ const ProjectDetails = () => {
   // Create combined project details with API data and static data
   const projectDetails = project ? {
     ...project,
-    ...staticProjectData,
+    progress: staticProjectData.progress, // Use static progress for now
     dueDate: project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -167,6 +167,7 @@ const ProjectDetails = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
           </TabsList>
 
@@ -361,6 +362,12 @@ const ProjectDetails = () => {
                   </tbody>
                 </table>
               </div>
+            </GlassCard>
+          </TabsContent>
+
+          <TabsContent value="members" className="space-y-6">
+            <GlassCard className="p-6 animate-fade-in">
+              {project?.id && <ProjectMemberManagement projectId={project.id} />}
             </GlassCard>
           </TabsContent>
 
