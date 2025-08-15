@@ -1,0 +1,333 @@
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { RootState, AppDispatch } from '@/redux/store';
+import {
+  fetchCustomers,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+  clearCustomersError,
+  Customer,
+  UpdateCustomerData,
+} from '@/redux/slices/adminSlice';
+
+interface CustomerFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  password: string;
+}
+
+const CustomerManagement: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { items: customers, loading, error } = useSelector((state: RootState) => state.admin.customers);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [formData, setFormData] = useState<CustomerFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    password: '',
+  });
+  const { toast } = useToast();
+  useEffect(() => {
+    dispatch(fetchCustomers());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
+      dispatch(clearCustomersError());
+    }
+  }, [error, dispatch, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (editingCustomer) {
+        // Update customer
+        const updatePayload: UpdateCustomerData = {};
+        
+        // Only include changed fields
+        if (formData.firstName !== editingCustomer.firstName) updatePayload.firstName = formData.firstName;
+        if (formData.lastName !== editingCustomer.lastName) updatePayload.lastName = formData.lastName;
+        if (formData.email !== editingCustomer.email) updatePayload.email = formData.email;
+        if (formData.phone !== editingCustomer.phone) updatePayload.phone = formData.phone;
+        if (formData.address !== editingCustomer.address) updatePayload.address = formData.address;
+        
+        await dispatch(updateCustomer({ 
+          id: editingCustomer.id, 
+          data: updatePayload 
+        })).unwrap();
+        
+        toast({
+          title: 'Success',
+          description: 'Customer updated successfully',
+        });
+      } else {
+        // Create customer
+        const createPayload = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          password: formData.password,
+        };
+        
+        await dispatch(createCustomer(createPayload)).unwrap();
+        
+        toast({
+          title: 'Success',
+          description: 'Customer created successfully',
+        });
+      }
+      
+      setIsDialogOpen(false);
+      setEditingCustomer(null);
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+    } catch (error) {
+      // Error handling is done in the Redux slice and useEffect
+    }
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone || '',
+      address: customer.address || '',
+      password: '', // Don't populate password when editing
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (customerId: string) => {
+    if (!confirm('Are you sure you want to delete this customer?')) return;
+
+    try {
+      await dispatch(deleteCustomer(customerId)).unwrap();
+      toast({
+        title: 'Success',
+        description: 'Customer deleted successfully',
+      });
+    } catch (error) {
+      // Error handling is done in the Redux slice and useEffect
+    }
+  };
+
+  const filteredCustomers = customers.filter(
+    (customer) =>
+      `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div className="relative w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => {
+              setEditingCustomer(null);
+              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+            }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Customer
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingCustomer ? 'Update customer information' : 'Add a new customer to your company'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
+                {!editingCustomer && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Saving...' : editingCustomer ? 'Update' : 'Create'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  Loading customers...
+                </TableCell>
+              </TableRow>
+            ) : filteredCustomers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  No customers found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCustomers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell>
+                    {`${customer.firstName} ${customer.lastName}`}
+                  </TableCell>
+                  <TableCell>{customer.email}</TableCell>
+                  <TableCell>{customer.companyName || '-'}</TableCell>
+                  <TableCell>{customer.phone || '-'}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      customer.isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {customer.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(customer)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(customer.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
+
+export default CustomerManagement;

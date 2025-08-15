@@ -18,7 +18,8 @@ import {
   Timer,
   CreditCard,
   FolderArchive,
-  LogOut
+  LogOut,
+  Shield
 } from "lucide-react";
 import { logout } from "@/redux/slices/authSlice";
 import {
@@ -47,6 +48,7 @@ const AppSidebar: React.FC = () => {
     { name: "Dashboard", path: "/", icon: LayoutGrid },
     { name: "Projects", path: "/projects", icon: FileText },
     { name: "Tasks", path: "/tasks", icon: CheckSquare },
+    { name: "Admin", path: "/admin", icon: Shield },
   ];
 
   const toolItems = [

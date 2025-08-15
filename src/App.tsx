@@ -29,6 +29,7 @@ import PurchaseOrders from "./pages/PurchaseOrders";
 import AddressBook from "./pages/AddressBook";
 import ImageLibrary from "./pages/ImageLibrary";
 import ProductLibrary from "./pages/ProductLibrary";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,7 @@ const App = () => (
                             path="/product-library"
                             element={<ProductLibrary />}
                           />
+                          <Route path="/admin" element={<Admin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </div>

@@ -10,6 +10,7 @@ import contactsReducer from './slices/contactsSlice';
 import imagesReducer from './slices/imagesSlice';
 import productsReducer from './slices/productsSlice';
 import authReducer from './slices/authSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     contacts: contactsReducer,
     images: imagesReducer,
     products: productsReducer,
+    admin: adminReducer,
   },
 });
 
