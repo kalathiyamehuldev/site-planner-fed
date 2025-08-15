@@ -10,14 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import {
   Dialog,
   DialogContent,
@@ -380,43 +373,51 @@ const MemberManagement: React.FC = () => {
         </Dialog>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Address</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Role</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+              <tr>
+                <td colSpan={7} className="text-center py-8">
                   Loading members...
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : filteredMembers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+              <tr>
+                <td colSpan={7} className="text-center py-8">
                   No members found
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    {member.firstName} {member.lastName}
-                  </TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{member.phone || '-'}</TableCell>
-                  <TableCell>{member.address || '-'}</TableCell>
-                  <TableCell>{member.role}</TableCell>
-                  <TableCell>
+              filteredMembers.map((member, index) => (
+                <tr
+                  key={member.id}
+                  className="border-b last:border-0 hover:bg-secondary/30 transition-colors animate-fade-in"
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: "forwards",
+                  }}
+                >
+                  <td className="p-4">
+                    <span className="font-medium">{member.firstName} {member.lastName}</span>
+                  </td>
+                  <td className="p-4">{member.email}</td>
+                  <td className="p-4">{member.phone || '-'}</td>
+                  <td className="p-4">{member.address || '-'}</td>
+                  <td className="p-4">{member.role}</td>
+                  <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       member.isActive 
                         ? 'bg-green-100 text-green-800' 
@@ -424,30 +425,33 @@ const MemberManagement: React.FC = () => {
                     }`}>
                       {member.isActive ? 'Active' : 'Inactive'}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
+                  </td>
+                  <td className="p-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(member)}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(member.id)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
