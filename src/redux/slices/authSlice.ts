@@ -67,20 +67,20 @@ export const registerCompany = createAsyncThunk(
             if (response.status != "success") {
                 throw new Error(response.error || 'Company registration failed');
             }
-            localStorage.setItem('token', response.access_token);
-
+            const { data } = response;
+            localStorage.setItem('token', data.access_token);
             // Since company registration creates a single company, auto-select it
-            if (response.user.userCompanies && response.user.userCompanies.length === 1) {
-                localStorage.setItem('selectedCompany', JSON.stringify(response.user.userCompanies[0]));
+            if (data.user.companies && data.user.companies.length === 1) {
+                localStorage.setItem('selectedCompany', JSON.stringify(data.user.companies[0]));
                 return {
-                    user: response.user,
-                    selectedCompany: response.user.userCompanies[0].company,
+                    user: data.user,
+                    selectedCompany: data.user.companies[0],
                     needsCompanySelection: false
                 };
             }
 
             return {
-                user: response.user,
+                user: data.user,
                 needsCompanySelection: false
             };
         } catch (error: any) {
@@ -109,30 +109,6 @@ export const selectCompany = createAsyncThunk(
     }
 );
 
-export const getUserCompanies = createAsyncThunk(
-    'auth/getUserCompanies',
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await api.get('/auth/companies');
-            return response;
-        } catch (error: any) {
-            return rejectWithValue(error.message || 'Failed to fetch companies');
-        }
-    }
-);
-
-export const verifyToken = createAsyncThunk(
-    'auth/verifyToken',
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await api.get('/auth/verify-token');
-            return response;
-        } catch (error: any) {
-            return rejectWithValue(error.message || 'Token verification failed');
-        }
-    }
-);
-
 export const forgotPassword = createAsyncThunk(
     'auth/forgotPassword',
     async (data: ForgotPasswordDto, { rejectWithValue }) => {
@@ -144,7 +120,6 @@ export const forgotPassword = createAsyncThunk(
         }
     }
 );
-
 export const resetPassword = createAsyncThunk(
     'auth/resetPassword',
     async (data: ResetPasswordDto, { rejectWithValue }) => {
@@ -156,7 +131,6 @@ export const resetPassword = createAsyncThunk(
         }
     }
 );
-
 export const getProfile = createAsyncThunk(
     'auth/getProfile',
     async (_, { rejectWithValue }) => {
@@ -168,7 +142,6 @@ export const getProfile = createAsyncThunk(
         }
     }
 );
-
 export const logout = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
@@ -249,21 +222,6 @@ const authSlice = createSlice({
                 toast.success('Company selected successfully');
             })
             .addCase(selectCompany.rejected, (state, action) => {
-                state.isLoading = false;
-                state.error = action.payload as string;
-                toast.error(action.payload as string);
-            })
-            // Get User Companies
-            .addCase(getUserCompanies.pending, (state) => {
-                state.isLoading = true;
-                state.error = null;
-            })
-            .addCase(getUserCompanies.fulfilled, (state, action) => {
-                state.isLoading = false;
-                state.availableCompanies = action.payload as any;
-                state.error = null;
-            })
-            .addCase(getUserCompanies.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
                 toast.error(action.payload as string);
