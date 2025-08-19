@@ -193,6 +193,13 @@ const ProjectDetails = () => {
               day: "numeric",
             })
           : "",
+          startDate: project.startDate
+          ? new Date(project.startDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "",
         client: "Jane Cooper", // Keep static for now
       }
     : null;

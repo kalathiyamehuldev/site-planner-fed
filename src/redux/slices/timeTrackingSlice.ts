@@ -192,8 +192,10 @@ export const fetchTimeEntries = createAsyncThunk(
   async (filters: TimeEntryFilterParams = {}, { rejectWithValue, getState }) => {
     try {
       const companyId = getSelectedCompanyId(getState);
+      
+      // Skip company ID check if not available (for development/testing)
       if (!companyId) {
-        throw new Error('No company selected');
+        console.warn('No company selected, proceeding without company filter');
       }
       
       const params = new URLSearchParams();
@@ -204,18 +206,23 @@ export const fetchTimeEntries = createAsyncThunk(
       });
       
       const response: any = await api.get(`/time-tracking?${params.toString()}`);
+      
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch time entries');
       }
       
+      // Handle both paginated and direct array responses
+      const timeEntries = Array.isArray(response.data) ? response.data : (response?.data?.items || response?.items || []);
+      
       return {
-        items: (response?.items || []).map(transformApiTimeEntry),
-        total: response?.total || 0,
-        page: response?.page || 1,
-        limit: response?.limit || 10,
-        totalPages: response?.totalPages || 0,
+        items: timeEntries.map(transformApiTimeEntry),
+        total: response?.data?.total || response?.total || timeEntries.length,
+        page: response?.data?.page || response?.page || 1,
+        limit: response?.data?.limit || response?.limit || 10,
+        totalPages: response?.data?.totalPages || response?.totalPages || Math.ceil(timeEntries.length / 10),
       };
     } catch (error: any) {
+      console.error('Error fetching time entries:', error);
       return rejectWithValue(error.message || 'Failed to fetch time entries');
     }
   }

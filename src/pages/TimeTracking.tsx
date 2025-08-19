@@ -87,11 +87,11 @@ const TimeTracking = () => {
 
   // Calculate total hours for the selected time range
   const totalHours =
-    timeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600; // Convert seconds to hours
+    timeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0); // Duration is already in hours
   const billableHours =
     timeEntries
       .filter((entry) => entry.isBillable)
-      .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+      .reduce((sum, entry) => sum + (entry.duration || 0), 0);
 
   const formatElapsedTime = (startTime: Date) => {
     const elapsedMs = Date.now() - startTime.getTime();
@@ -117,6 +117,8 @@ const TimeTracking = () => {
         return true;
     }
   });
+
+
 
   // Handle timer actions
   const handleStartTimer = async () => {
@@ -523,58 +525,70 @@ const TimeTracking = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredEntries.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="hover:bg-muted/20 border-b border-border last:border-0"
-                        >
-                          <td className="p-4">{entry.date}</td>
-                          <td className="p-4 font-medium">
-                            {entry.project?.name || "No project"}
-                          </td>
-                          <td className="p-4">
-                            {entry.task?.title || "No task"}
-                          </td>
-                          <td className="p-4">
-                            {entry.user
-                              ? `${entry.user.firstName} ${entry.user.lastName}`
-                              : "Unknown user"}
-                          </td>
-                          <td className="p-4 text-right tabular-nums">
-                            {((entry.duration || 0) / 3600).toFixed(1)}
-                          </td>
-                          <td className="p-4 text-center">
-                            {entry.isBillable ? (
-                              <span className="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
-                            ) : (
-                              <span className="inline-block w-4 h-4 bg-gray-300 rounded-full"></span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={cn(
-                                "text-xs px-2 py-1 rounded-full font-medium inline-block",
-                                entry.status === "Approved"
-                                  ? "bg-green-100 text-green-600"
-                                  : entry.status === "Rejected"
-                                  ? "bg-red-100 text-red-600"
-                                  : "bg-amber-100 text-amber-600"
+                      {filteredEntries.length > 0 ? (
+                        filteredEntries.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="hover:bg-muted/20 border-b border-border last:border-0"
+                          >
+                            <td className="p-4">{entry.date}</td>
+                            <td className="p-4 font-medium">
+                              {entry.project?.name || "No project"}
+                            </td>
+                            <td className="p-4">
+                              {entry.task?.title || "No task"}
+                            </td>
+                            <td className="p-4">
+                              {entry.user
+                                ? `${entry.user.firstName} ${entry.user.lastName}`
+                                : "Unknown user"}
+                            </td>
+                            <td className="p-4 text-right tabular-nums">
+                              {(entry.duration || 0).toFixed(1)}
+                            </td>
+                            <td className="p-4 text-center">
+                              {entry.isBillable ? (
+                                <span className="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
+                              ) : (
+                                <span className="inline-block w-4 h-4 bg-gray-300 rounded-full"></span>
                               )}
-                            >
-                              {entry.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <MotionButton
-                              variant="ghost"
-                              size="sm"
-                              motion="subtle"
-                            >
-                              Edit
-                            </MotionButton>
+                            </td>
+                            <td className="p-4">
+                              <span
+                                 className={cn(
+                                   "text-xs px-2 py-1 rounded-full font-medium inline-block",
+                                   entry.status === "Approved"
+                                     ? "bg-green-100 text-green-600"
+                                     : entry.status === "Rejected"
+                                     ? "bg-red-100 text-red-600"
+                                     : "bg-amber-100 text-amber-600"
+                                 )}
+                               >
+                                 {entry.status}
+                               </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <MotionButton
+                                variant="ghost"
+                                size="sm"
+                                motion="subtle"
+                              >
+                                Edit
+                              </MotionButton>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Clock size={48} className="opacity-50" />
+                              <p className="text-lg font-medium">No time entries found</p>
+                              <p className="text-sm">Start tracking your time or adjust your filters</p>
+                            </div>
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
