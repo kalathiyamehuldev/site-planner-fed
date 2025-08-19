@@ -100,11 +100,11 @@ const TimeTracking = () => {
 
   // Calculate total hours for the selected time range
   const totalHours =
-    timeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600; // Convert seconds to hours
+    timeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0); // Duration is already in hours
   const billableHours =
     timeEntries
       .filter((entry) => entry.isBillable)
-      .reduce((sum, entry) => sum + (entry.duration || 0), 0) / 3600;
+      .reduce((sum, entry) => sum + (entry.duration || 0), 0);
 
   const formatElapsedTime = (startTime: Date) => {
     const elapsedMs = Date.now() - startTime.getTime();
@@ -130,6 +130,8 @@ const TimeTracking = () => {
         return true;
     }
   });
+
+
 
   // Handle timer actions
   const handleStartTimer = async () => {

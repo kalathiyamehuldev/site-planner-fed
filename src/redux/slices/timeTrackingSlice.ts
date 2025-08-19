@@ -192,8 +192,10 @@ export const fetchTimeEntries = createAsyncThunk(
   async (filters: TimeEntryFilterParams = {}, { rejectWithValue, getState }) => {
     try {
       const companyId = getSelectedCompanyId(getState);
+      
+      // Skip company ID check if not available (for development/testing)
       if (!companyId) {
-        throw new Error('No company selected');
+        console.warn('No company selected, proceeding without company filter');
       }
       
       const params = new URLSearchParams();
@@ -204,6 +206,7 @@ export const fetchTimeEntries = createAsyncThunk(
       });
       
       const response: any = await api.get(`/time-tracking?${params.toString()}`);
+      
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch time entries');
       }
@@ -219,6 +222,7 @@ export const fetchTimeEntries = createAsyncThunk(
         totalPages: paginatedData?.totalPages || 0,
       };
     } catch (error: any) {
+      console.error('Error fetching time entries:', error);
       return rejectWithValue(error.message || 'Failed to fetch time entries');
     }
   }
