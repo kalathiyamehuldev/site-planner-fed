@@ -208,12 +208,15 @@ export const fetchTimeEntries = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to fetch time entries');
       }
       
+      // The backend returns data wrapped in ApiResponse.data
+      const paginatedData = response.data || {};
+      
       return {
-        items: (response?.items || []).map(transformApiTimeEntry),
-        total: response?.total || 0,
-        page: response?.page || 1,
-        limit: response?.limit || 10,
-        totalPages: response?.totalPages || 0,
+        items: (paginatedData?.items || []).map(transformApiTimeEntry),
+        total: paginatedData?.total || 0,
+        page: paginatedData?.page || 1,
+        limit: paginatedData?.limit || 10,
+        totalPages: paginatedData?.totalPages || 0,
       };
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch time entries');

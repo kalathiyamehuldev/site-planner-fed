@@ -57,6 +57,19 @@ const TimeTracking = () => {
   const projects = useAppSelector(selectAllProjects);
   const tasks = useAppSelector(selectAllTasks);
   const currentUser = useAppSelector((state) => state.auth.user);
+  const loading = useAppSelector(selectTimeTrackingLoading);
+  const error = useAppSelector(selectTimeTrackingError);
+  const pagination = useAppSelector(selectTimeTrackingPagination);
+
+  // Debug logging
+  console.log('TimeTracking Debug:', {
+    timeEntriesCount: timeEntries.length,
+    timeEntries,
+    loading,
+    error,
+    currentUser,
+    pagination
+  });
 
   // Local state
   const [selectedTimeRange, setSelectedTimeRange] = useState<
@@ -523,58 +536,98 @@ const TimeTracking = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredEntries.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="hover:bg-muted/20 border-b border-border last:border-0"
-                        >
-                          <td className="p-4">{entry.date}</td>
-                          <td className="p-4 font-medium">
-                            {entry.project?.name || "No project"}
-                          </td>
-                          <td className="p-4">
-                            {entry.task?.title || "No task"}
-                          </td>
-                          <td className="p-4">
-                            {entry.user
-                              ? `${entry.user.firstName} ${entry.user.lastName}`
-                              : "Unknown user"}
-                          </td>
-                          <td className="p-4 text-right tabular-nums">
-                            {((entry.duration || 0) / 3600).toFixed(1)}
-                          </td>
-                          <td className="p-4 text-center">
-                            {entry.isBillable ? (
-                              <span className="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
-                            ) : (
-                              <span className="inline-block w-4 h-4 bg-gray-300 rounded-full"></span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={cn(
-                                "text-xs px-2 py-1 rounded-full font-medium inline-block",
-                                entry.status === "Approved"
-                                  ? "bg-green-100 text-green-600"
-                                  : entry.status === "Rejected"
-                                  ? "bg-red-100 text-red-600"
-                                  : "bg-amber-100 text-amber-600"
-                              )}
-                            >
-                              {entry.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <MotionButton
-                              variant="ghost"
-                              size="sm"
-                              motion="subtle"
-                            >
-                              Edit
-                            </MotionButton>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                            <div className="flex items-center justify-center gap-2">
+                              <RefreshCw size={16} className="animate-spin" />
+                              Loading time entries...
+                            </div>
                           </td>
                         </tr>
-                      ))}
+                      ) : error ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-red-600">
+                            <div className="flex flex-col items-center gap-2">
+                              <span>Error loading time entries:</span>
+                              <span className="text-sm">{error}</span>
+                              <MotionButton
+                                variant="outline"
+                                size="sm"
+                                motion="subtle"
+                                onClick={() => dispatch(fetchTimeEntries({}))}
+                                className="mt-2"
+                              >
+                                <RefreshCw size={16} className="mr-2" />
+                                Retry
+                              </MotionButton>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredEntries.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Clock size={24} className="text-muted-foreground/50" />
+                              <span>No time entries found</span>
+                              <span className="text-sm">Start tracking time or adjust your filters</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredEntries.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="hover:bg-muted/20 border-b border-border last:border-0"
+                          >
+                            <td className="p-4">{entry.date}</td>
+                            <td className="p-4 font-medium">
+                              {entry.project?.name || "No project"}
+                            </td>
+                            <td className="p-4">
+                              {entry.task?.title || "No task"}
+                            </td>
+                            <td className="p-4">
+                              {entry.user
+                                ? `${entry.user.firstName} ${entry.user.lastName}`
+                                : "Unknown user"}
+                            </td>
+                            <td className="p-4 text-right tabular-nums">
+                              {((entry.duration || 0) / 3600).toFixed(1)}
+                            </td>
+                            <td className="p-4 text-center">
+                              {entry.isBillable ? (
+                                <span className="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
+                              ) : (
+                                <span className="inline-block w-4 h-4 bg-gray-300 rounded-full"></span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={cn(
+                                  "text-xs px-2 py-1 rounded-full font-medium inline-block",
+                                  entry.status === "Approved"
+                                    ? "bg-green-100 text-green-600"
+                                    : entry.status === "Rejected"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-amber-100 text-amber-600"
+                                )}
+                              >
+                                {entry.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <MotionButton
+                                variant="ghost"
+                                size="sm"
+                                motion="subtle"
+                              >
+                                Edit
+                              </MotionButton>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
