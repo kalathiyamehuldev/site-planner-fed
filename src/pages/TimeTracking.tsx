@@ -5,6 +5,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   Clock,
   Calendar,
@@ -38,6 +39,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchTimeEntries,
@@ -45,7 +57,6 @@ import {
   updateTimeEntry,
   startTimer,
   stopTimer,
-  getRunningTimer,
   fetchTimeEntrySummary,
   deleteTimeEntry,
   updateTimeEntryStatus,
@@ -97,8 +108,8 @@ const TimeTracking = () => {
 
   // Local state
   const [selectedTimeRange, setSelectedTimeRange] = useState<
-    "today" | "week" | "month" | "custom"
-  >("week");
+    "all" | "today" | "week" | "month" | "custom"
+  >("all");
   const [filter, setFilter] = useState<
     "all" | "billable" | "nonbillable" | "pending"
   >("all");
@@ -117,15 +128,115 @@ const TimeTracking = () => {
   const [editFormData, setEditFormData] = useState<
     Partial<UpdateTimeEntryData & { startTimeInput?: string; endTimeInput?: string; taskId?: string; projectId?: string }>
   >({});
+  
+  // Timer modal state
+  const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
+  const [timerFormData, setTimerFormData] = useState<
+    Partial<StartTimerData>
+  >({
+    isBillable: true,
+  });
+  
+  // Live timer state
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  
+  // Stop confirmation dialog state
+  const [isStopConfirmOpen, setIsStopConfirmOpen] = useState(false);
+  const [pendingStopData, setPendingStopData] = useState<any>(null);
+  
+  // Custom date range state
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [isCustomDatePickerOpen, setIsCustomDatePickerOpen] = useState(false);
+
+  // Helper functions for date ranges
+  const getDateRange = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (selectedTimeRange) {
+      case "today":
+        return {
+          startDate: today.toISOString(),
+          endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+        };
+      case "week":
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return {
+          startDate: startOfWeek.toISOString(),
+          endDate: endOfWeek.toISOString()
+        };
+      case "month":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+        return {
+          startDate: startOfMonth.toISOString(),
+          endDate: endOfMonth.toISOString()
+        };
+      case "custom":
+         if (customDateRange?.from && customDateRange?.to) {
+           const startDate = new Date(customDateRange.from);
+           const endDate = new Date(customDateRange.to);
+           endDate.setHours(23, 59, 59, 999);
+           return {
+             startDate: startDate.toISOString(),
+             endDate: endDate.toISOString()
+           };
+         }
+         return {};
+      case "all":
+        return {}; // No date filters - show all entries
+      default:
+        return {};
+    }
+  };
 
   // Load data on component mount
   useEffect(() => {
-    dispatch(fetchTimeEntries({}));
+    const dateRange = getDateRange();
+    dispatch(fetchTimeEntries(dateRange));
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
-    dispatch(getRunningTimer());
-    dispatch(fetchTimeEntrySummary({}));
+    dispatch(fetchTimeEntrySummary(dateRange));
   }, [dispatch]);
+  
+  // Fetch data when time range changes
+  useEffect(() => {
+    const dateRange = getDateRange();
+    if (selectedTimeRange === "all" || selectedTimeRange !== "custom" || (customDateRange?.from && customDateRange?.to)) {
+      dispatch(fetchTimeEntries(dateRange));
+      dispatch(fetchTimeEntrySummary(dateRange));
+    }
+  }, [selectedTimeRange, customDateRange, dispatch]);
+  
+  // Set timer start time when running timer is detected
+  useEffect(() => {
+    if (isTimerRunning && runningTimeEntry && !timerStartTime) {
+      // Always start fresh from current time, ignoring backend stored time
+      setTimerStartTime(Date.now());
+    } else if (!isTimerRunning && timerStartTime) {
+      // Clear timer start time when timer is not running
+      setTimerStartTime(null);
+    }
+  }, [isTimerRunning, runningTimeEntry, timerStartTime]);
+  
+  // Live timer update effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning]);
 
   // Calculate total hours for the selected time range
   const totalHours =
@@ -135,8 +246,20 @@ const TimeTracking = () => {
       .filter((entry) => entry.isBillable)
       .reduce((sum, entry) => sum + (entry.duration || 0), 0);
 
-  const formatElapsedTime = (startTime: Date) => {
-    const elapsedMs = Date.now() - startTime.getTime();
+  const formatElapsedTime = (startTime?: Date | number) => {
+    let elapsedMs: number;
+    
+    if (timerStartTime) {
+      // Always use frontend timer start time when available (for both new and existing timers)
+      elapsedMs = currentTime - timerStartTime;
+    } else {
+      // No timer running or no start time available
+      elapsedMs = 0;
+    }
+    
+    // Ensure non-negative elapsed time
+    elapsedMs = Math.max(0, elapsedMs);
+    
     const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
     const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
@@ -144,6 +267,22 @@ const TimeTracking = () => {
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  // Helper function to format duration from decimal hours to readable format
+  const formatDuration = (durationInHours: number) => {
+    if (!durationInHours || durationInHours === 0) return "0 minutes";
+    
+    const hours = Math.floor(durationInHours);
+    const minutes = Math.round((durationInHours - hours) * 60);
+    
+    if (hours === 0) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    } else if (minutes === 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    } else {
+      return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
   };
 
   // Filter time entries
@@ -163,8 +302,12 @@ const TimeTracking = () => {
 
 
   // Handle timer actions
-  const handleStartTimer = async () => {
-    if (!newTimeEntry.projectId && !newTimeEntry.taskId) {
+  const handleStartTimer = () => {
+    setIsTimerModalOpen(true);
+  };
+  
+  const handleStartTimerSubmit = async () => {
+    if (!timerFormData.projectId && !timerFormData.taskId) {
       toast({
         title: "Error",
         description: "Please select a project or task to start the timer",
@@ -174,19 +317,28 @@ const TimeTracking = () => {
     }
 
     const timerData: StartTimerData = {
-      projectId: newTimeEntry.projectId,
-      taskId: newTimeEntry.taskId,
-      description: newTimeEntry.description,
-      isBillable: newTimeEntry.isBillable,
-      hourlyRate: newTimeEntry.hourlyRate,
+      projectId: timerFormData.projectId,
+      taskId: timerFormData.taskId,
+      description: timerFormData.description,
+      isBillable: timerFormData.isBillable ?? true,
+      hourlyRate: timerFormData.hourlyRate,
     };
 
     try {
+      // Set timer start time to current moment
+      const startTime = Date.now();
+      setTimerStartTime(startTime);
+      setCurrentTime(startTime);
+      
       await dispatch(startTimer(timerData)).unwrap();
       toast({
         title: "Timer Started",
         description: "Time tracking has begun",
       });
+      setIsTimerModalOpen(false);
+      setTimerFormData({ isBillable: true });
+      // Refresh time entries to get the new running entry
+      dispatch(fetchTimeEntries({}));
     } catch (error) {
       toast({
         title: "Error",
@@ -207,24 +359,81 @@ const TimeTracking = () => {
     }
 
     try {
-      await dispatch(
-        stopTimer({ 
-          timeEntryId: runningTimeEntry.id,
-          description: newTimeEntry.description,
-          isBillable: newTimeEntry.isBillable,
-          hourlyRate: newTimeEntry.hourlyRate
-        })
-      ).unwrap();
-      toast({
-        title: "Timer Stopped",
-        description: "Time entry has been saved",
-      });
+      // Stop the timer first
+      const stopData = {
+        timeEntryId: runningTimeEntry.id,
+        description: runningTimeEntry.description,
+        isBillable: runningTimeEntry.isBillable,
+        hourlyRate: runningTimeEntry.hourlyRate
+      };
+      
+      await dispatch(stopTimer(stopData)).unwrap();
+      
+      // Reset timer start time
+      setTimerStartTime(null);
+      
+      // Store the stop data and show confirmation dialog for saving
+      setPendingStopData(stopData);
+      setIsStopConfirmOpen(true);
+      
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to stop timer",
         variant: "destructive",
       });
+    }
+  };
+
+  const confirmStopTimer = async () => {
+    if (!pendingStopData) return;
+
+    try {
+      toast({
+        title: "Timer Stopped",
+        description: "Time entry has been saved",
+      });
+      // Refresh time entries to show the completed entry
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save time entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
+    }
+  };
+
+  const cancelStopTimer = async () => {
+    if (!pendingStopData?.timeEntryId) {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
+      return;
+    }
+
+    try {
+      // Delete the time entry that was created when timer was stopped
+      await dispatch(deleteTimeEntry(pendingStopData.timeEntryId)).unwrap();
+      toast({
+        title: "Time Entry Discarded",
+        description: "The time entry has been discarded",
+      });
+      // Refresh time entries
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to discard time entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
     }
   };
 
@@ -424,6 +633,10 @@ const TimeTracking = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    dispatch(fetchTimeEntries({ page, limit: pagination.limit }));
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -477,8 +690,8 @@ const TimeTracking = () => {
 
             <div className="flex items-center gap-4">
               <div className="text-3xl font-light tabular-nums">
-                {isTimerRunning && activeTimer.startTime
-                  ? formatElapsedTime(new Date(activeTimer.startTime))
+                {isTimerRunning
+                  ? formatElapsedTime()
                   : "00:00:00"}
               </div>
 
@@ -505,7 +718,7 @@ const TimeTracking = () => {
                 Total Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{totalHours.toFixed(2)}</p>
+            <p className="text-3xl font-light">{formatDuration(totalHours)}</p>
             <div className="mt-2 text-sm">
               <span className="text-green-600 font-medium">↑ 12%</span> from
               last {selectedTimeRange}
@@ -521,7 +734,7 @@ const TimeTracking = () => {
                 Billable Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{billableHours.toFixed(2)}</p>
+            <p className="text-3xl font-light">{formatDuration(billableHours)}</p>
             <div className="mt-2 text-sm">
               <span className="text-green-600 font-medium">↑ 8%</span> from last{" "}
               {selectedTimeRange}
@@ -559,6 +772,18 @@ const TimeTracking = () => {
                   variant="outline"
                   size="sm"
                   motion="subtle"
+                  onClick={() => setSelectedTimeRange("all")}
+                  className={cn(
+                    selectedTimeRange === "all" &&
+                      "bg-primary/10 text-primary border-primary/30"
+                  )}
+                >
+                  All
+                </MotionButton>
+                <MotionButton
+                  variant="outline"
+                  size="sm"
+                  motion="subtle"
                   onClick={() => setSelectedTimeRange("today")}
                   className={cn(
                     selectedTimeRange === "today" &&
@@ -591,18 +816,42 @@ const TimeTracking = () => {
                 >
                   This Month
                 </MotionButton>
-                <MotionButton
-                  variant="outline"
-                  size="sm"
-                  motion="subtle"
-                  onClick={() => setSelectedTimeRange("custom")}
-                  className={cn(
-                    selectedTimeRange === "custom" &&
-                      "bg-primary/10 text-primary border-primary/30"
-                  )}
-                >
-                  <Calendar size={16} className="mr-1" /> Custom
-                </MotionButton>
+                <Popover open={isCustomDatePickerOpen} onOpenChange={setIsCustomDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <MotionButton
+                      variant="outline"
+                      size="sm"
+                      motion="subtle"
+                      onClick={() => {
+                        setSelectedTimeRange("custom");
+                        setIsCustomDatePickerOpen(true);
+                      }}
+                      className={cn(
+                        selectedTimeRange === "custom" &&
+                          "bg-primary/10 text-primary border-primary/30"
+                      )}
+                    >
+                      <Calendar size={16} className="mr-1" />
+                      {customDateRange?.from && customDateRange?.to
+                         ? `${format(customDateRange.from, "MMM d")} - ${format(customDateRange.to, "MMM d")}`
+                         : "Custom"}
+                    </MotionButton>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="range"
+                      defaultMonth={customDateRange?.from || new Date()}
+                      selected={customDateRange}
+                      onSelect={(range: DateRange | undefined) => {
+                        setCustomDateRange(range);
+                        if (range?.from && range?.to) {
+                          setIsCustomDatePickerOpen(false);
+                        }
+                      }}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -751,7 +1000,7 @@ const TimeTracking = () => {
                                 : "Unknown user"}
                             </td>
                             <td className="p-4 text-right tabular-nums">
-                              {(entry.duration || 0).toFixed(2)}
+                              {formatDuration(entry.duration || 0)}
                             </td>
                             <td className="p-4 text-center">
                               {entry.isBillable ? (
@@ -828,6 +1077,41 @@ const TimeTracking = () => {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="flex justify-center mt-6">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            className={pagination.page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNum)}
+                              isActive={pageNum === pagination.page}
+                              className="cursor-pointer"
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            className={pagination.page >= pagination.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </GlassCard>
             </TabsContent>
 
@@ -846,7 +1130,7 @@ const TimeTracking = () => {
                           <span className="font-medium">
                             Modern Loft Redesign
                           </span>
-                          <span>6.5 hrs</span>
+                          <span>6 hours 30 minutes</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -860,7 +1144,7 @@ const TimeTracking = () => {
                           <span className="font-medium">
                             Coastal Vacation Home
                           </span>
-                          <span>4.0 hrs</span>
+                          <span>4 hours</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -874,7 +1158,7 @@ const TimeTracking = () => {
                           <span className="font-medium">
                             Corporate Office Revamp
                           </span>
-                          <span>1.5 hrs</span>
+                          <span>1 hour 30 minutes</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -894,7 +1178,7 @@ const TimeTracking = () => {
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">Alex Jones</span>
-                          <span>9.5 hrs</span>
+                          <span>9 hours 30 minutes</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -906,7 +1190,7 @@ const TimeTracking = () => {
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">Sarah Smith</span>
-                          <span>1.0 hrs</span>
+                          <span>1 hour</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -918,7 +1202,7 @@ const TimeTracking = () => {
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">Robert Lee</span>
-                          <span>1.5 hrs</span>
+                          <span>1 hour 30 minutes</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -943,7 +1227,7 @@ const TimeTracking = () => {
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">Billable</span>
-                          <span>10.0 hrs</span>
+                          <span>10 hours</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -955,7 +1239,7 @@ const TimeTracking = () => {
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">Non-Billable</span>
-                          <span>2.0 hrs</span>
+                          <span>2 hours</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                           <div
@@ -1335,6 +1619,209 @@ const TimeTracking = () => {
               motion="subtle"
             >
               Update Entry
+            </MotionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Timer Start Modal */}
+      <Dialog open={isTimerModalOpen} onOpenChange={setIsTimerModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start Timer</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="timer-project">Project</Label>
+              <Select
+                value={timerFormData.projectId || ''}
+                onValueChange={(value) => setTimerFormData(prev => ({ ...prev, projectId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="timer-task">Task (Optional)</Label>
+              <Select
+                value={timerFormData.taskId || ''}
+                onValueChange={(value) => setTimerFormData(prev => ({ ...prev, taskId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tasks
+                    .filter(task => !timerFormData.projectId || task.project?.id === timerFormData.projectId)
+                    .map((task) => (
+                    <SelectItem key={task.id} value={task.id}>
+                      {task.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="timer-description">Description (Optional)</Label>
+              <Textarea
+                id="timer-description"
+                placeholder="What are you working on?"
+                value={timerFormData.description || ''}
+                onChange={(e) => setTimerFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="timer-hourly-rate">Hourly Rate (Optional)</Label>
+              <Input
+                id="timer-hourly-rate"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={timerFormData.hourlyRate || ''}
+                onChange={(e) => setTimerFormData(prev => ({ ...prev, hourlyRate: parseFloat(e.target.value) || undefined }))}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <input
+                id="timer-billable"
+                type="checkbox"
+                checked={timerFormData.isBillable || false}
+                onChange={(e) => setTimerFormData(prev => ({ ...prev, isBillable: e.target.checked }))}
+                className="rounded border-input"
+              />
+              <Label htmlFor="timer-billable">Billable</Label>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <MotionButton
+              variant="outline"
+              onClick={() => setIsTimerModalOpen(false)}
+              motion="subtle"
+            >
+              Cancel
+            </MotionButton>
+            <MotionButton
+              onClick={handleStartTimerSubmit}
+              motion="subtle"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Play size={16} className="mr-2" />
+              Start Timer
+            </MotionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Stop Timer Confirmation Dialog */}
+      <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Timer Stopped</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              The timer has been stopped. Would you like to save or discard this time entry?
+            </p>
+            
+            {pendingStopData && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium">Duration:</span> {formatElapsedTime()}
+                </div>
+                {pendingStopData.description && (
+                  <div className="text-sm">
+                    <span className="font-medium">Description:</span> {pendingStopData.description}
+                  </div>
+                )}
+                {pendingStopData.project && (
+                  <div className="text-sm">
+                    <span className="font-medium">Project:</span> {pendingStopData.project.name}
+                  </div>
+                )}
+                {pendingStopData.task && (
+                  <div className="text-sm">
+                    <span className="font-medium">Task:</span> {pendingStopData.task.title}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <MotionButton
+              variant="outline"
+              onClick={cancelStopTimer}
+              motion="subtle"
+            >
+              Discard
+            </MotionButton>
+            <MotionButton
+              onClick={confirmStopTimer}
+              motion="subtle"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Save Entry
+            </MotionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Stop Timer Confirmation Dialog */}
+      <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stop Timer</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Are you sure you want to stop the timer and save this time entry?
+            </p>
+            
+            {pendingStopData && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium">Task:</span> {pendingStopData.description || 'No description'}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Duration:</span> {formatElapsedTime(pendingStopData.elapsedTime)}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <MotionButton
+              variant="outline"
+              onClick={cancelStopTimer}
+              motion="subtle"
+            >
+              Cancel
+            </MotionButton>
+            <MotionButton
+              onClick={confirmStopTimer}
+              motion="subtle"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Pause size={16} className="mr-2" />
+              Stop & Save
             </MotionButton>
           </div>
         </DialogContent>

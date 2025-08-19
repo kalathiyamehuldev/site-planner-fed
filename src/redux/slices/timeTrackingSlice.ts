@@ -323,24 +323,7 @@ export const stopTimer = createAsyncThunk(
   }
 );
 
-export const getRunningTimer = createAsyncThunk(
-  'timeTracking/getRunningTimer',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response: any = await api.get('/time-tracking/timer/status');
-      if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to get timer status');
-      }
-      
-      return {
-        isRunning: response.data.isRunning,
-        timeEntry: response.data.timeEntry ? transformApiTimeEntry(response.data.timeEntry) : null,
-      };
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to get timer status');
-    }
-  }
-);
+
 
 export const fetchTimeEntrySummary = createAsyncThunk(
   'timeTracking/fetchTimeEntrySummary',
@@ -572,16 +555,6 @@ export const timeTrackingSlice = createSlice({
       .addCase(stopTimer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
-      // Get running timer
-      .addCase(getRunningTimer.fulfilled, (state, action) => {
-        state.activeTimer = {
-          taskId: action.payload.timeEntry?.taskId || null,
-          projectId: action.payload.timeEntry?.projectId || null,
-          startTime: action.payload.timeEntry?.startTime || null,
-          isRunning: action.payload.isRunning,
-          timeEntry: action.payload.timeEntry || null,
-        };
       })
       // Fetch summary
       .addCase(fetchTimeEntrySummary.fulfilled, (state, action) => {
