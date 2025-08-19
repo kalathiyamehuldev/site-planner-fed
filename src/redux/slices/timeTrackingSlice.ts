@@ -57,7 +57,14 @@ export interface CreateTimeEntryData {
   userId?: string;
 }
 
-export interface UpdateTimeEntryData extends Partial<CreateTimeEntryData> {
+export interface UpdateTimeEntryData {
+  description?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  isBillable?: boolean;
+  hourlyRate?: number;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
@@ -84,7 +91,10 @@ export interface StartTimerData {
 }
 
 export interface StopTimerData {
+  timeEntryId: string;
   description?: string;
+  isBillable?: boolean;
+  hourlyRate?: number;
 }
 
 export interface TimerStatus {
@@ -253,7 +263,7 @@ export const updateTimeEntry = createAsyncThunk(
   'timeTracking/updateTimeEntry',
   async ({ id, data }: { id: string; data: UpdateTimeEntryData }, { rejectWithValue }) => {
     try {
-      const response: any = await api.put(`/time-tracking/${id}`, data);
+      const response: any = await api.patch(`/time-tracking/${id}`, data);
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to update time entry');
       }
@@ -356,6 +366,22 @@ export const fetchTimeEntrySummary = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch summary');
+    }
+  }
+);
+
+export const updateTimeEntryStatus = createAsyncThunk(
+  'timeTracking/updateTimeEntryStatus',
+  async ({ id, status }: { id: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' }, { rejectWithValue }) => {
+    try {
+      const response: any = await api.patch(`/time-tracking/${id}/status`, { status });
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update status');
+      }
+      
+      return transformApiTimeEntry(response.data);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update status');
     }
   }
 );
@@ -560,6 +586,25 @@ export const timeTrackingSlice = createSlice({
       // Fetch summary
       .addCase(fetchTimeEntrySummary.fulfilled, (state, action) => {
         state.summary = action.payload;
+      })
+      // Update time entry status
+      .addCase(updateTimeEntryStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateTimeEntryStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.timeEntries.findIndex(entry => entry.id === action.payload.id);
+        if (index !== -1) {
+          state.timeEntries[index] = action.payload;
+          if (state.selectedEntry?.id === action.payload.id) {
+            state.selectedEntry = action.payload;
+          }
+        }
+      })
+      .addCase(updateTimeEntryStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });

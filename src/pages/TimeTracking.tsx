@@ -17,16 +17,38 @@ import {
   RefreshCw,
   ChevronDown,
   Hourglass,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchTimeEntries,
   createTimeEntry,
+  updateTimeEntry,
   startTimer,
   stopTimer,
   getRunningTimer,
   fetchTimeEntrySummary,
+  deleteTimeEntry,
+  updateTimeEntryStatus,
   selectAllTimeEntries,
   selectActiveTimer,
   selectTimeTrackingLoading,
@@ -36,7 +58,9 @@ import {
   selectIsTimerRunning,
   selectRunningTimeEntry,
   CreateTimeEntryData,
+  UpdateTimeEntryData,
   StartTimerData,
+  TimeEntryStatus,
 } from "@/redux/slices/timeTrackingSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import {
@@ -88,6 +112,11 @@ const TimeTracking = () => {
     startTimeInput: "09:00",
     endTimeInput: "17:00",
   });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState<
+    Partial<UpdateTimeEntryData & { startTimeInput?: string; endTimeInput?: string; taskId?: string; projectId?: string }>
+  >({});
 
   // Load data on component mount
   useEffect(() => {
@@ -168,9 +197,23 @@ const TimeTracking = () => {
   };
 
   const handleStopTimer = async () => {
+    if (!runningTimeEntry?.id) {
+      toast({
+        title: "Error",
+        description: "No active timer found. Please start a timer first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await dispatch(
-        stopTimer({ description: newTimeEntry.description })
+        stopTimer({ 
+          timeEntryId: runningTimeEntry.id,
+          description: newTimeEntry.description,
+          isBillable: newTimeEntry.isBillable,
+          hourlyRate: newTimeEntry.hourlyRate
+        })
       ).unwrap();
       toast({
         title: "Timer Stopped",
@@ -268,6 +311,119 @@ const TimeTracking = () => {
     }
   };
 
+  const handleDeleteTimeEntry = async (entryId: string) => {
+    try {
+      await dispatch(deleteTimeEntry(entryId)).unwrap();
+      toast({
+        title: "Success",
+        description: "Time entry deleted successfully",
+      });
+      // Refresh the time entries list
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete time entry",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusUpdate = async (entryId: string, newStatus: string) => {
+    try {
+      const apiStatus = newStatus === 'Pending' ? 'PENDING' : 
+                      newStatus === 'Approved' ? 'APPROVED' : 'REJECTED';
+      
+      await dispatch(updateTimeEntryStatus({ id: entryId, status: apiStatus })).unwrap();
+      toast({
+        title: "Success",
+        description: `Status updated to ${newStatus}`,
+      });
+      // Refresh the time entries list and summary
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditEntry = (entry: any) => {
+    setEditingEntry(entry);
+    setEditFormData({
+      description: entry.description || '',
+      date: entry.date || '',
+      startTimeInput: entry.startTime || '',
+      endTimeInput: entry.endTime || '',
+      duration: entry.duration || 0,
+      isBillable: entry.isBillable || false,
+      hourlyRate: entry.hourlyRate || 0,
+      taskId: entry.taskId || '',
+      projectId: entry.projectId || '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleUpdateTimeEntry = async () => {
+    if (!editingEntry?.id) return;
+
+    try {
+      // Calculate duration from start/end times if not provided
+      let calculatedDuration = editFormData.duration;
+      if (
+        !calculatedDuration &&
+        editFormData.startTimeInput &&
+        editFormData.endTimeInput
+      ) {
+        const [startHour, startMin] = editFormData.startTimeInput
+          .split(":")
+          .map(Number);
+        const [endHour, endMin] = editFormData.endTimeInput
+          .split(":")
+          .map(Number);
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+        calculatedDuration = (endMinutes - startMinutes) / 60; // Convert to hours
+      }
+
+      const updateData: UpdateTimeEntryData = {
+        description: editFormData.description,
+        date: editFormData.date,
+        startTime: editFormData.startTimeInput,
+        endTime: editFormData.endTimeInput,
+        duration: calculatedDuration,
+        isBillable: editFormData.isBillable,
+        hourlyRate: editFormData.hourlyRate,
+      };
+
+      await dispatch(updateTimeEntry({ id: editingEntry.id, data: updateData })).unwrap();
+      toast({
+        title: "Success",
+        description: "Time entry updated successfully",
+      });
+      setIsEditModalOpen(false);
+      setEditingEntry(null);
+      setEditFormData({});
+      // Refresh the time entries list and summary
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update time entry",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -349,7 +505,7 @@ const TimeTracking = () => {
                 Total Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{totalHours.toFixed(1)}</p>
+            <p className="text-3xl font-light">{totalHours.toFixed(2)}</p>
             <div className="mt-2 text-sm">
               <span className="text-green-600 font-medium">↑ 12%</span> from
               last {selectedTimeRange}
@@ -365,7 +521,7 @@ const TimeTracking = () => {
                 Billable Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{billableHours.toFixed(1)}</p>
+            <p className="text-3xl font-light">{billableHours.toFixed(2)}</p>
             <div className="mt-2 text-sm">
               <span className="text-green-600 font-medium">↑ 8%</span> from last{" "}
               {selectedTimeRange}
@@ -595,7 +751,7 @@ const TimeTracking = () => {
                                 : "Unknown user"}
                             </td>
                             <td className="p-4 text-right tabular-nums">
-                              {((entry.duration || 0) / 3600).toFixed(1)}
+                              {(entry.duration || 0).toFixed(2)}
                             </td>
                             <td className="p-4 text-center">
                               {entry.isBillable ? (
@@ -605,27 +761,66 @@ const TimeTracking = () => {
                               )}
                             </td>
                             <td className="p-4">
-                              <span
-                                className={cn(
-                                  "text-xs px-2 py-1 rounded-full font-medium inline-block",
-                                  entry.status === "Approved"
-                                    ? "bg-green-100 text-green-600"
-                                    : entry.status === "Rejected"
-                                    ? "bg-red-100 text-red-600"
-                                    : "bg-amber-100 text-amber-600"
-                                )}
+                              <Select
+                                value={entry.status}
+                                onValueChange={(value) => handleStatusUpdate(entry.id, value)}
                               >
-                                {entry.status}
-                              </span>
+                                <SelectTrigger className="w-32">
+                                  <SelectValue>
+                                    <span
+                                      className={cn(
+                                        "text-xs px-2 py-1 rounded-full font-medium inline-block",
+                                        entry.status === "Approved"
+                                          ? "bg-green-100 text-green-600"
+                                          : entry.status === "Rejected"
+                                          ? "bg-red-100 text-red-600"
+                                          : "bg-amber-100 text-amber-600"
+                                      )}
+                                    >
+                                      {entry.status}
+                                    </span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Pending">
+                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-600">
+                                      Pending
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="Approved">
+                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-600">
+                                      Approved
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="Rejected">
+                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-red-100 text-red-600">
+                                      Rejected
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </td>
                             <td className="p-4 text-right">
-                              <MotionButton
-                                variant="ghost"
-                                size="sm"
-                                motion="subtle"
-                              >
-                                Edit
-                              </MotionButton>
+                              <div className="flex items-center justify-end gap-2">
+                                <MotionButton
+                                  variant="ghost"
+                                  size="sm"
+                                  motion="subtle"
+                                  onClick={() => handleEditEntry(entry)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Pencil size={16} />
+                                </MotionButton>
+                                <MotionButton
+                                  variant="ghost"
+                                  size="sm"
+                                  motion="subtle"
+                                  onClick={() => handleDeleteTimeEntry(entry.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 size={16} />
+                                </MotionButton>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1001,6 +1196,149 @@ const TimeTracking = () => {
           </GlassCard>
         </div>
       </div>
+
+      {/* Edit Time Entry Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Time Entry</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                placeholder="What did you work on?"
+                value={editFormData.description || ''}
+                onChange={(e) => handleEditFormChange('description', e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editFormData.date || ''}
+                onChange={(e) => handleEditFormChange('date', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-project">Project</Label>
+              <Select
+                value={editFormData.projectId || ''}
+                onValueChange={(value) => handleEditFormChange('projectId', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-task">Task</Label>
+              <Select
+                value={editFormData.taskId || ''}
+                onValueChange={(value) => handleEditFormChange('taskId', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tasks
+                    .filter((task) => !editFormData.projectId || task.project?.id === editFormData.projectId)
+                    .map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-start-time">Start Time</Label>
+              <Input
+                id="edit-start-time"
+                type="time"
+                value={editFormData.startTimeInput || ''}
+                onChange={(e) => handleEditFormChange('startTimeInput', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-end-time">End Time</Label>
+              <Input
+                id="edit-end-time"
+                type="time"
+                value={editFormData.endTimeInput || ''}
+                onChange={(e) => handleEditFormChange('endTimeInput', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-duration">Duration (hours)</Label>
+              <Input
+                id="edit-duration"
+                type="number"
+                step="0.25"
+                min="0"
+                placeholder="0.0"
+                value={editFormData.duration || ''}
+                onChange={(e) => handleEditFormChange('duration', parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-hourly-rate">Hourly Rate</Label>
+              <Input
+                id="edit-hourly-rate"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={editFormData.hourlyRate || ''}
+                onChange={(e) => handleEditFormChange('hourlyRate', parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 md:col-span-2">
+              <input
+                id="edit-billable"
+                type="checkbox"
+                checked={editFormData.isBillable || false}
+                onChange={(e) => handleEditFormChange('isBillable', e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="edit-billable">Billable</Label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <MotionButton
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              motion="subtle"
+            >
+              Cancel
+            </MotionButton>
+            <MotionButton
+              onClick={handleUpdateTimeEntry}
+              motion="subtle"
+            >
+              Update Entry
+            </MotionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 };
