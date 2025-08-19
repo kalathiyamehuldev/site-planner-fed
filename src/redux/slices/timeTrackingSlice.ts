@@ -1,85 +1,181 @@
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
+import api from '@/lib/axios';
 
-// Mock data for time entries
-const initialTimeEntries = [
-  {
-    id: "time1",
-    taskId: "t1",
-    projectId: "p1",
-    userId: "user1",
-    description: "Working on floor plans",
-    date: "2023-08-15",
-    startTime: "09:00",
-    endTime: "12:30",
-    duration: 3.5,
-    isBillable: true,
-    hourlyRate: 85,
-    billableAmount: 297.5,
-    status: "Approved" as const,
-  },
-  {
-    id: "time2",
-    taskId: "t3",
-    projectId: "p1",
-    userId: "user1",
-    description: "Client call about material selection",
-    date: "2023-08-16",
-    startTime: "14:00",
-    endTime: "15:00",
-    duration: 1,
-    isBillable: true,
-    hourlyRate: 85,
-    billableAmount: 85,
-    status: "Approved" as const,
-  },
-  {
-    id: "time3",
-    taskId: "t2",
-    projectId: "p2",
-    userId: "user2",
-    description: "Researching furniture options",
-    date: "2023-08-16",
-    startTime: "10:00",
-    endTime: "13:00",
-    duration: 3,
-    isBillable: true,
-    hourlyRate: 75,
-    billableAmount: 225,
-    status: "Pending" as const,
-  },
-  {
-    id: "time4",
-    taskId: "t4",
-    projectId: "p1",
-    userId: "user3",
-    description: "Lighting design work",
-    date: "2023-08-17",
-    startTime: "09:30",
-    endTime: "12:30",
-    duration: 3,
-    isBillable: true,
-    hourlyRate: 80,
-    billableAmount: 240,
-    status: "Pending" as const,
-  },
-  {
-    id: "time5",
-    taskId: "t5",
-    projectId: "p3",
-    userId: "user2",
-    description: "Creating color schemes",
-    date: "2023-08-17",
-    startTime: "13:00",
-    endTime: "15:30",
-    duration: 2.5,
-    isBillable: true,
-    hourlyRate: 75,
-    billableAmount: 187.5,
-    status: "Approved" as const,
-  },
-];
+// API Response interface
+interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+// API interfaces
+export interface ApiTimeEntry {
+  id: string;
+  description?: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  isBillable: boolean;
+  hourlyRate?: number;
+  billableAmount?: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  isRunning: boolean;
+  taskId?: string;
+  projectId?: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  task?: {
+    id: string;
+    title: string;
+  };
+  project?: {
+    id: string;
+    name: string;
+  };
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface CreateTimeEntryData {
+  description?: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  isBillable: boolean;
+  hourlyRate?: number;
+  taskId?: string;
+  projectId?: string;
+  userId?: string;
+}
+
+export interface UpdateTimeEntryData extends Partial<CreateTimeEntryData> {
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+export interface TimeEntryFilterParams {
+  projectId?: string;
+  taskId?: string;
+  userId?: string;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  isBillable?: boolean;
+  isRunning?: boolean;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface StartTimerData {
+  taskId?: string;
+  projectId?: string;
+  description?: string;
+  isBillable?: boolean;
+  hourlyRate?: number;
+}
+
+export interface StopTimerData {
+  description?: string;
+}
+
+export interface TimerStatus {
+  isRunning: boolean;
+  timeEntry?: ApiTimeEntry;
+}
+
+export interface TimeEntrySummary {
+  totalHours: number;
+  billableHours: number;
+  totalAmount: number;
+  entriesCount: number;
+  byProject: Array<{
+    projectId: string;
+    projectName: string;
+    hours: number;
+    amount: number;
+  }>;
+  byStatus: Array<{
+    status: string;
+    count: number;
+    hours: number;
+    amount: number;
+  }>;
+}
+
+// Helper function to get selected company ID from state
+const getSelectedCompanyId = (getState: any) => {
+  const state = getState();
+  return state.auth.selectedCompany?.id || JSON.parse(localStorage.getItem('selectedCompany') || '{}')?.id;
+};
+
+// Frontend TimeEntry interface
+export interface TimeEntry {
+  id: string;
+  taskId: string;
+  projectId: string;
+  userId: string;
+  description: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  isBillable: boolean;
+  hourlyRate: number;
+  billableAmount: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  isRunning: boolean;
+  task?: {
+    id: string;
+    title: string;
+  };
+  project?: {
+    id: string;
+    name: string;
+  };
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TimeEntryStatus = 'Pending' | 'Approved' | 'Rejected';
+
+// Transform API time entry to frontend format
+const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
+  id: apiTimeEntry.id,
+  taskId: apiTimeEntry.taskId || '',
+  projectId: apiTimeEntry.projectId || '',
+  userId: apiTimeEntry.userId,
+  description: apiTimeEntry.description || '',
+  date: apiTimeEntry.date,
+  startTime: apiTimeEntry.startTime || '',
+  endTime: apiTimeEntry.endTime || '',
+  duration: apiTimeEntry.duration || 0,
+  isBillable: apiTimeEntry.isBillable,
+  hourlyRate: apiTimeEntry.hourlyRate || 0,
+  billableAmount: apiTimeEntry.billableAmount || 0,
+  status: apiTimeEntry.status === 'PENDING' ? 'Pending' as const :
+          apiTimeEntry.status === 'APPROVED' ? 'Approved' as const :
+          'Rejected' as const,
+  isRunning: apiTimeEntry.isRunning,
+  task: apiTimeEntry.task,
+  project: apiTimeEntry.project,
+  user: apiTimeEntry.user,
+  createdAt: apiTimeEntry.createdAt,
+  updatedAt: apiTimeEntry.updatedAt,
+});
 
 const users = [
   { id: "user1", name: "Alex Jones", hourlyRate: 85 },
@@ -88,9 +184,174 @@ const users = [
   { id: "user4", name: "Emma Watson", hourlyRate: 90 },
 ];
 
-export type TimeEntry = typeof initialTimeEntries[0];
-export type TimeEntryStatus = 'Pending' | 'Approved' | 'Rejected';
 export type User = typeof users[0];
+
+// Async thunks
+export const fetchTimeEntries = createAsyncThunk(
+  'timeTracking/fetchTimeEntries',
+  async (filters: TimeEntryFilterParams = {}, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+      
+      const response: any = await api.get(`/time-tracking?${params.toString()}`);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch time entries');
+      }
+      
+      return {
+        items: (response?.items || []).map(transformApiTimeEntry),
+        total: response?.total || 0,
+        page: response?.page || 1,
+        limit: response?.limit || 10,
+        totalPages: response?.totalPages || 0,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch time entries');
+    }
+  }
+);
+
+export const createTimeEntry = createAsyncThunk(
+  'timeTracking/createTimeEntry',
+  async (timeEntryData: CreateTimeEntryData, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: any = await api.post('/time-tracking', timeEntryData);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create time entry');
+      }
+      
+      return transformApiTimeEntry(response.data);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to create time entry');
+    }
+  }
+);
+
+export const updateTimeEntry = createAsyncThunk(
+  'timeTracking/updateTimeEntry',
+  async ({ id, data }: { id: string; data: UpdateTimeEntryData }, { rejectWithValue }) => {
+    try {
+      const response: any = await api.put(`/time-tracking/${id}`, data);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update time entry');
+      }
+      
+      return transformApiTimeEntry(response.data);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update time entry');
+    }
+  }
+);
+
+export const deleteTimeEntry = createAsyncThunk(
+  'timeTracking/deleteTimeEntry',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response: any = await api.delete(`/time-tracking/${id}`);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to delete time entry');
+      }
+      
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to delete time entry');
+    }
+  }
+);
+
+export const startTimer = createAsyncThunk(
+  'timeTracking/startTimer',
+  async (timerData: StartTimerData, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/time-tracking/timer/start', timerData);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to start timer');
+      }
+      
+      return transformApiTimeEntry(response.data);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to start timer');
+    }
+  }
+);
+
+export const stopTimer = createAsyncThunk(
+  'timeTracking/stopTimer',
+  async (stopData: StopTimerData, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/time-tracking/timer/stop', stopData);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to stop timer');
+      }
+      
+      return transformApiTimeEntry(response.data);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to stop timer');
+    }
+  }
+);
+
+export const getRunningTimer = createAsyncThunk(
+  'timeTracking/getRunningTimer',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response: any = await api.get('/time-tracking/timer/status');
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to get timer status');
+      }
+      
+      return {
+        isRunning: response.data.isRunning,
+        timeEntry: response.data.timeEntry ? transformApiTimeEntry(response.data.timeEntry) : null,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to get timer status');
+    }
+  }
+);
+
+export const fetchTimeEntrySummary = createAsyncThunk(
+  'timeTracking/fetchTimeEntrySummary',
+  async (filters: Omit<TimeEntryFilterParams, 'page' | 'limit'> = {}, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+      
+      const response: any = await api.get(`/time-tracking/summary?${params.toString()}`);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch summary');
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch summary');
+    }
+  }
+);
 
 interface TimeTrackingState {
   timeEntries: TimeEntry[];
@@ -100,22 +361,43 @@ interface TimeTrackingState {
     projectId: string | null;
     startTime: string | null;
     isRunning: boolean;
+    timeEntry?: TimeEntry | null;
   };
   selectedEntry: TimeEntry | null;
+  summary: TimeEntrySummary | null;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  filters: TimeEntryFilterParams;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: TimeTrackingState = {
-  timeEntries: initialTimeEntries,
+  timeEntries: [],
   users,
   activeTimer: {
     taskId: null,
     projectId: null,
     startTime: null,
     isRunning: false,
+    timeEntry: null,
   },
   selectedEntry: null,
+  summary: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  },
+  filters: {
+    page: 1,
+    limit: 10,
+  },
   loading: false,
   error: null
 };
@@ -124,87 +406,17 @@ export const timeTrackingSlice = createSlice({
   name: 'timeTracking',
   initialState,
   reducers: {
-    getTimeEntries: (state) => {
-      state.loading = false;
-      state.error = null;
-    },
     setSelectedTimeEntry: (state, action: PayloadAction<string>) => {
       state.selectedEntry = state.timeEntries.find(entry => entry.id === action.payload) || null;
     },
     clearSelectedTimeEntry: (state) => {
       state.selectedEntry = null;
     },
-    addTimeEntry: (state, action: PayloadAction<Omit<TimeEntry, 'id'>>) => {
-      const newEntry = {
-        ...action.payload,
-        id: `time${state.timeEntries.length + 1}`,
-      };
-      state.timeEntries.push(newEntry);
+    setFilters: (state, action: PayloadAction<Partial<TimeEntryFilterParams>>) => {
+      state.filters = { ...state.filters, ...action.payload };
     },
-    updateTimeEntry: (state, action: PayloadAction<{ id: string; entry: Partial<TimeEntry> }>) => {
-      const { id, entry } = action.payload;
-      const index = state.timeEntries.findIndex(e => e.id === id);
-      if (index !== -1) {
-        state.timeEntries[index] = { ...state.timeEntries[index], ...entry };
-        if (state.selectedEntry?.id === id) {
-          state.selectedEntry = state.timeEntries[index];
-        }
-      }
-    },
-    deleteTimeEntry: (state, action: PayloadAction<string>) => {
-      state.timeEntries = state.timeEntries.filter(entry => entry.id !== action.payload);
-      if (state.selectedEntry?.id === action.payload) {
-        state.selectedEntry = null;
-      }
-    },
-    startTimer: (state, action: PayloadAction<{ taskId: string; projectId: string }>) => {
-      const { taskId, projectId } = action.payload;
-      state.activeTimer = {
-        taskId,
-        projectId,
-        startTime: new Date().toISOString(),
-        isRunning: true,
-      };
-    },
-    stopTimer: (state, action: PayloadAction<{ description: string; isBillable: boolean; userId: string }>) => {
-      const { description, isBillable, userId } = action.payload;
-      
-      if (state.activeTimer.isRunning && state.activeTimer.taskId && state.activeTimer.startTime) {
-        const startTime = new Date(state.activeTimer.startTime);
-        const endTime = new Date();
-        const durationMs = endTime.getTime() - startTime.getTime();
-        const durationHours = durationMs / (1000 * 60 * 60);
-        const roundedDuration = Math.round(durationHours * 100) / 100; // Round to 2 decimal places
-        
-        const user = state.users.find(u => u.id === userId);
-        const hourlyRate = user ? user.hourlyRate : 0;
-        const billableAmount = isBillable ? roundedDuration * hourlyRate : 0;
-        
-        const newEntry: TimeEntry = {
-          id: `time${state.timeEntries.length + 1}`,
-          taskId: state.activeTimer.taskId,
-          projectId: state.activeTimer.projectId!,
-          userId,
-          description,
-          date: startTime.toISOString().split('T')[0],
-          startTime: startTime.toTimeString().split(' ')[0].substring(0, 5),
-          endTime: endTime.toTimeString().split(' ')[0].substring(0, 5),
-          duration: roundedDuration,
-          isBillable,
-          hourlyRate,
-          billableAmount,
-          status: 'Pending',
-        };
-        
-        state.timeEntries.push(newEntry);
-      }
-      
-      state.activeTimer = {
-        taskId: null,
-        projectId: null,
-        startTime: null,
-        isRunning: false,
-      };
+    clearFilters: (state) => {
+      state.filters = { page: 1, limit: 10 };
     },
     cancelTimer: (state) => {
       state.activeTimer = {
@@ -212,31 +424,148 @@ export const timeTrackingSlice = createSlice({
         projectId: null,
         startTime: null,
         isRunning: false,
+        timeEntry: null,
       };
     },
-    updateTimeEntryStatus: (state, action: PayloadAction<{ id: string; status: TimeEntryStatus }>) => {
-      const { id, status } = action.payload;
-      const entry = state.timeEntries.find(e => e.id === id);
-      if (entry) {
-        entry.status = status as any;
-      }
-    }
-  }
+  },
+  extraReducers: (builder) => {
+    // Fetch time entries
+    builder
+      .addCase(fetchTimeEntries.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchTimeEntries.fulfilled, (state, action) => {
+        state.loading = false;
+        state.timeEntries = action.payload.items;
+        state.pagination = {
+          total: action.payload.total,
+          page: action.payload.page,
+          limit: action.payload.limit,
+          totalPages: action.payload.totalPages,
+        };
+      })
+      .addCase(fetchTimeEntries.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Create time entry
+      .addCase(createTimeEntry.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createTimeEntry.fulfilled, (state, action) => {
+        state.loading = false;
+        state.timeEntries.unshift(action.payload);
+        state.pagination.total += 1;
+      })
+      .addCase(createTimeEntry.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Update time entry
+      .addCase(updateTimeEntry.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateTimeEntry.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.timeEntries.findIndex(entry => entry.id === action.payload.id);
+        if (index !== -1) {
+          state.timeEntries[index] = action.payload;
+          if (state.selectedEntry?.id === action.payload.id) {
+            state.selectedEntry = action.payload;
+          }
+        }
+      })
+      .addCase(updateTimeEntry.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Delete time entry
+      .addCase(deleteTimeEntry.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteTimeEntry.fulfilled, (state, action) => {
+        state.loading = false;
+        state.timeEntries = state.timeEntries.filter(entry => entry.id !== action.payload);
+        if (state.selectedEntry?.id === action.payload) {
+          state.selectedEntry = null;
+        }
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
+      })
+      .addCase(deleteTimeEntry.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Start timer
+      .addCase(startTimer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(startTimer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.activeTimer = {
+          taskId: action.payload.taskId || null,
+          projectId: action.payload.projectId || null,
+          startTime: action.payload.startTime || null,
+          isRunning: action.payload.isRunning,
+          timeEntry: action.payload,
+        };
+      })
+      .addCase(startTimer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Stop timer
+      .addCase(stopTimer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(stopTimer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.activeTimer = {
+          taskId: null,
+          projectId: null,
+          startTime: null,
+          isRunning: false,
+          timeEntry: null,
+        };
+        // Add the completed time entry to the list
+        state.timeEntries.unshift(action.payload);
+        state.pagination.total += 1;
+      })
+      .addCase(stopTimer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Get running timer
+      .addCase(getRunningTimer.fulfilled, (state, action) => {
+        state.activeTimer = {
+          taskId: action.payload.timeEntry?.taskId || null,
+          projectId: action.payload.timeEntry?.projectId || null,
+          startTime: action.payload.timeEntry?.startTime || null,
+          isRunning: action.payload.isRunning,
+          timeEntry: action.payload.timeEntry || null,
+        };
+      })
+      // Fetch summary
+      .addCase(fetchTimeEntrySummary.fulfilled, (state, action) => {
+        state.summary = action.payload;
+      });
+  },
 });
 
 export const { 
-  getTimeEntries, 
   setSelectedTimeEntry, 
   clearSelectedTimeEntry, 
-  addTimeEntry, 
-  updateTimeEntry, 
-  deleteTimeEntry,
-  startTimer,
-  stopTimer,
-  cancelTimer,
-  updateTimeEntryStatus 
+  setFilters,
+  clearFilters,
+  cancelTimer
 } = timeTrackingSlice.actions;
 
+// Selectors
 export const selectAllTimeEntries = (state: RootState) => state.timeTracking.timeEntries;
 export const selectSelectedTimeEntry = (state: RootState) => state.timeTracking.selectedEntry;
 export const selectTimeEntryById = (id: string) => (state: RootState) => 
@@ -251,5 +580,10 @@ export const selectActiveTimer = (state: RootState) => state.timeTracking.active
 export const selectUsers = (state: RootState) => state.timeTracking.users;
 export const selectTimeTrackingLoading = (state: RootState) => state.timeTracking.loading;
 export const selectTimeTrackingError = (state: RootState) => state.timeTracking.error;
+export const selectTimeTrackingPagination = (state: RootState) => state.timeTracking.pagination;
+export const selectTimeTrackingFilters = (state: RootState) => state.timeTracking.filters;
+export const selectTimeEntrySummary = (state: RootState) => state.timeTracking.summary;
+export const selectRunningTimeEntry = (state: RootState) => state.timeTracking.activeTimer.timeEntry;
+export const selectIsTimerRunning = (state: RootState) => state.timeTracking.activeTimer.isRunning;
 
 export default timeTrackingSlice.reducer;
