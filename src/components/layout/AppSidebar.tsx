@@ -57,7 +57,7 @@ const AppSidebar: React.FC = () => {
     // { name: "Invoices", path: "/invoices", icon: CreditCard, color: "text-yellow-600" },
     // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag, color: "text-pink-600" },
     // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag, color: "text-teal-600" },
-    // { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" },
+    { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" },
   ];
 
   const libraryItems = [

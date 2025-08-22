@@ -34,6 +34,11 @@ import {
   selectTaskLoading,
   deleteTaskAsync,
 } from "@/redux/slices/tasksSlice";
+import {
+  fetchDocumentsByProject,
+  selectProjectDocuments,
+  selectProjectDocumentsLoading,
+} from "@/redux/slices/documentsSlice";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -51,36 +56,7 @@ const staticProjectData = {
   progress: 65,
 };
 
-const projectDocuments = [
-  {
-    id: "d1",
-    name: "Initial Contract.pdf",
-    type: "PDF",
-    size: "1.2 MB",
-    date: "June 15, 2023",
-  },
-  {
-    id: "d2",
-    name: "Floor Plan v1.pdf",
-    type: "PDF",
-    size: "3.4 MB",
-    date: "June 22, 2023",
-  },
-  {
-    id: "d3",
-    name: "Client Requirements.docx",
-    type: "DOCX",
-    size: "845 KB",
-    date: "June 18, 2023",
-  },
-  {
-    id: "d4",
-    name: "Mood Board.jpg",
-    type: "JPG",
-    size: "5.1 MB",
-    date: "June 30, 2023",
-  },
-];
+// Remove static documents - will use API data instead
 
 const ProjectDetails = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -105,12 +81,15 @@ const ProjectDetails = () => {
   const loading = useAppSelector(selectProjectLoading);
   const projectTasks = useAppSelector(selectProjectTasks);
   const tasksLoading = useAppSelector(selectTaskLoading);
+  const projectDocuments = useAppSelector(selectProjectDocuments);
+  const documentsLoading = useAppSelector(selectProjectDocumentsLoading);
 
-  // Fetch project data and tasks when component mounts or ID changes
+  // Fetch project data, tasks, and documents when component mounts or ID changes
   useEffect(() => {
     if (id) {
       dispatch(fetchProjectById(id));
       dispatch(fetchTasksByProject(id));
+      dispatch(fetchDocumentsByProject(id));
       
       // Fetch project members locally
       setMembersLoading(true);
@@ -138,7 +117,18 @@ const ProjectDetails = () => {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setDeletingTaskId(taskId);
+    dispatch(deleteTaskAsync(taskId));
+  };
+
+  const handleDownloadDocument = (fileUrl: string, fileName: string) => {
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const confirmDeleteTask = async () => {
@@ -480,55 +470,66 @@ const ProjectDetails = () => {
               </MotionButton>
             </div>
             <GlassCard className="overflow-hidden animate-scale-in">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4 font-medium text-muted-foreground">
-                        Name
-                      </th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">
-                        Type
-                      </th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">
-                        Size
-                      </th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">
-                        Date
-                      </th>
-                      <th className="text-right p-4 font-medium text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projectDocuments.map((doc) => (
-                      <tr
-                        key={doc.id}
-                        className="border-b last:border-0 hover:bg-secondary/30 transition-colors"
-                      >
-                        <td className="p-4 flex items-center gap-2">
-                          <FileText size={16} className="text-primary" />
-                          {doc.name}
-                        </td>
-                        <td className="p-4">{doc.type}</td>
-                        <td className="p-4">{doc.size}</td>
-                        <td className="p-4">{doc.date}</td>
-                        <td className="p-4 text-right">
-                          <MotionButton
-                            variant="ghost"
-                            size="sm"
-                            motion="subtle"
-                            className="text-primary"
-                          >
-                            Download
-                          </MotionButton>
-                        </td>
+              {documentsLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <div className="text-lg">Loading documents...</div>
+                </div>
+              ) : projectDocuments.length === 0 ? (
+                <div className="flex items-center justify-center p-12 text-muted-foreground">
+                  No documents found for this project.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-4 font-medium text-muted-foreground">
+                          Name
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">
+                          Type
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">
+                          Size
+                        </th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">
+                          Date
+                        </th>
+                        <th className="text-right p-4 font-medium text-muted-foreground">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {projectDocuments.map((doc) => (
+                        <tr
+                          key={doc.id}
+                          className="border-b last:border-0 hover:bg-secondary/30 transition-colors"
+                        >
+                          <td className="p-4 flex items-center gap-2">
+                            <FileText size={16} className="text-primary" />
+                            {doc.title}
+                          </td>
+                          <td className="p-4">{doc.fileType}</td>
+                          <td className="p-4">-</td>
+                          <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
+                          <td className="p-4 text-right">
+                            <MotionButton
+                              variant="ghost"
+                              size="sm"
+                              motion="subtle"
+                              className="text-primary"
+                              onClick={() => handleDownloadDocument(doc.fileUrl, doc.title)}
+                            >
+                              Download
+                            </MotionButton>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </GlassCard>
           </TabsContent>
 

@@ -1,8 +1,89 @@
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
+import api from '@/lib/axios';
 
-// Mock data for documents
+// API Response interface
+interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+// API Document interface (from backend response)
+export interface ApiDocument {
+  id: string;
+  title: string;
+  content: string;
+  fileUrl: string;
+  fileType: string;
+  createdAt: string;
+  updatedAt: string;
+  projectId: string;
+  taskId?: string;
+  task?: {
+    id: string;
+    title: string;
+    description: string;
+    status: string;
+    priority: string;
+    dueDate: string;
+    estimatedHours: number;
+    createdAt: string;
+    updatedAt: string;
+    projectId: string;
+    memberId: string;
+  };
+}
+
+// Transform API document to frontend Document format
+const transformApiDocument = (apiDoc: ApiDocument): Document => ({
+  id: apiDoc.id,
+  name: apiDoc.title,
+  type: apiDoc.fileType.toUpperCase(),
+  size: 'Unknown', // API doesn't provide size, could be calculated
+  date: new Date(apiDoc.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }),
+  projectId: apiDoc.projectId,
+  project: '', // Could be populated from project data
+  userId: apiDoc.task?.memberId || '',
+  user: '', // Could be populated from member data
+  category: 'Documents', // Default category
+  description: apiDoc.content,
+  tags: [],
+  thumbnail: null,
+  url: apiDoc.fileUrl,
+  version: 1,
+  isShared: false,
+  // Add API-specific properties
+  title: apiDoc.title,
+  fileType: apiDoc.fileType,
+  fileUrl: apiDoc.fileUrl,
+  createdAt: apiDoc.createdAt,
+  updatedAt: apiDoc.updatedAt,
+  content: apiDoc.content,
+  taskId: apiDoc.taskId,
+  task: apiDoc.task
+});
+
+// Async thunks for API calls
+export const fetchDocumentsByProject = createAsyncThunk(
+  'documents/fetchByProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/documents/project/${projectId}`);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch documents');
+    }
+  }
+);
+
+// Mock data for documents (keeping for fallback)
 const initialDocuments = [
   {
     id: "d1",
@@ -150,19 +231,61 @@ const initialDocuments = [
   }
 ];
 
-export type Document = typeof initialDocuments[0];
+export interface Document {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  date: string;
+  projectId: string;
+  project: string;
+  userId: string;
+  user: string;
+  category: string;
+  description: string;
+  tags: string[];
+  thumbnail: any;
+  url: string;
+  version: number;
+  isShared: boolean;
+  // API-specific properties
+  title?: string;
+  fileType?: string;
+  fileUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  content?: string;
+  taskId?: string;
+  task?: {
+    id: string;
+    title: string;
+    description: string;
+    status: string;
+    priority: string;
+    dueDate: string;
+    estimatedHours: number;
+    createdAt: string;
+    updatedAt: string;
+    projectId: string;
+    memberId: string;
+  };
+}
 
 interface DocumentsState {
   documents: Document[];
+  projectDocuments: Document[];
   selectedDocument: Document | null;
   loading: boolean;
+  projectDocumentsLoading: boolean;
   error: string | null;
 }
 
 const initialState: DocumentsState = {
   documents: initialDocuments,
+  projectDocuments: [],
   selectedDocument: null,
   loading: false,
+  projectDocumentsLoading: false,
   error: null
 };
 
@@ -225,6 +348,25 @@ export const documentsSlice = createSlice({
         document.tags = tags;
       }
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch documents by project
+      .addCase(fetchDocumentsByProject.pending, (state) => {
+        state.projectDocumentsLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentsByProject.fulfilled, (state, action) => {
+        state.projectDocumentsLoading = false;
+        // action.payload is already the response data due to axios interceptor
+        const documents = Array.isArray(action.payload) ? action.payload : [];
+        state.projectDocuments = documents.map(transformApiDocument);
+        state.error = null;
+      })
+      .addCase(fetchDocumentsByProject.rejected, (state, action) => {
+        state.projectDocumentsLoading = false;
+        state.error = action.payload as string;
+      });
   }
 });
 
@@ -240,6 +382,8 @@ export const {
 } = documentsSlice.actions;
 
 export const selectAllDocuments = (state: RootState) => state.documents.documents;
+export const selectProjectDocuments = (state: RootState) => state.documents.projectDocuments;
+export const selectProjectDocumentsLoading = (state: RootState) => state.documents.projectDocumentsLoading;
 export const selectSelectedDocument = (state: RootState) => state.documents.selectedDocument;
 export const selectDocumentById = (id: string) => (state: RootState) => 
   state.documents.documents.find(doc => doc.id === id);
