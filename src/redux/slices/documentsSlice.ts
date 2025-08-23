@@ -64,6 +64,7 @@ export interface CreateDocumentData {
   fileType?: string;
   projectId?: string;
   taskId?: string;
+  file?: File;
 }
 
 export interface UpdateDocumentData extends Partial<CreateDocumentData> {}
@@ -211,14 +212,14 @@ export const createDocument = createAsyncThunk(
       let response: ApiResponse<ApiDocument>;
       
       // Check if file upload is included
-      if ((documentData as any).file) {
+      if (documentData.file) {
         // Create FormData for file upload
         const formData = new FormData();
         formData.append('title', documentData.title);
         if (documentData.content) formData.append('content', documentData.content);
         if (documentData.projectId) formData.append('projectId', documentData.projectId);
         if (documentData.taskId) formData.append('taskId', documentData.taskId);
-        formData.append('file', (documentData as any).file);
+        formData.append('file', documentData.file);
         
         response = await api.post('/documents', formData, {
           headers: {

@@ -69,6 +69,61 @@ const formatFileSize = (bytes: number | string): string => {
   return parseFloat((numBytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// Format file type to display simplified version
+const formatFileType = (type: string): string => {
+  if (!type) return 'Unknown';
+  
+  // If it's already a simple extension, return as is
+  if (!type.includes('/')) {
+    return type.toUpperCase();
+  }
+  
+  // Map common MIME types to simple extensions
+  const mimeTypeMap: { [key: string]: string } = {
+    'application/pdf': 'PDF',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
+    'application/msword': 'DOC',
+    'application/vnd.ms-excel': 'XLS',
+    'application/vnd.ms-powerpoint': 'PPT',
+    'image/jpeg': 'JPG',
+    'image/jpg': 'JPG',
+    'image/png': 'PNG',
+    'image/gif': 'GIF',
+    'image/svg+xml': 'SVG',
+    'text/plain': 'TXT',
+    'text/csv': 'CSV',
+    'application/zip': 'ZIP',
+    'application/x-zip-compressed': 'ZIP',
+    'application/json': 'JSON',
+    'text/html': 'HTML',
+    'text/css': 'CSS',
+    'application/javascript': 'JS',
+    'text/javascript': 'JS'
+  };
+  
+  // Return mapped type or extract extension from MIME type
+  if (mimeTypeMap[type]) {
+    return mimeTypeMap[type];
+  }
+  
+  // For other MIME types, try to extract a meaningful part
+  const parts = type.split('/');
+  if (parts.length === 2) {
+    const subtype = parts[1];
+    // Remove common prefixes and suffixes
+    const cleaned = subtype
+      .replace(/^vnd\./, '')
+      .replace(/^x-/, '')
+      .replace(/\+.*$/, '')
+      .toUpperCase();
+    return cleaned || 'FILE';
+  }
+  
+  return 'FILE';
+};
+
 const Documents = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
@@ -193,20 +248,33 @@ const Documents = () => {
   }, [dispatch, searchTerm, selectedFileType, selectedProject, selectedTask]);
   
   const getFileIcon = (type: string = "") => {
-    switch (type) {
+    const formattedType = formatFileType(type);
+    switch (formattedType) {
       case "PDF":
         return <FileText className="text-red-500" />;
       case "DOCX":
+      case "DOC":
         return <FileText className="text-blue-500" />;
       case "JPG":
       case "PNG":
+      case "GIF":
+      case "SVG":
         return <FileImage className="text-purple-500" />;
       case "XLSX":
+      case "XLS":
+      case "CSV":
         return <FileText className="text-green-500" />;
       case "PPTX":
+      case "PPT":
         return <FileText className="text-orange-500" />;
       case "ZIP":
         return <File className="text-gray-500" />;
+      case "TXT":
+      case "HTML":
+      case "CSS":
+      case "JS":
+      case "JSON":
+        return <FileText className="text-blue-400" />;
       default:
         return <File className="text-gray-400" />;
     }
@@ -404,7 +472,8 @@ const Documents = () => {
                           {doc.name}
                         </h3>
                         <p className="text-xs text-muted-foreground mb-2">
-                          {doc.type} • {formatFileSize(doc.size || 0)}
+                          {formatFileType(doc.type)}
+                           {/*  • {formatFileSize(doc.size || 0)} */}
                         </p>
                         
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -478,7 +547,7 @@ const Documents = () => {
                         </td>
                         <td className="p-4">{getProjectName(doc)}</td>
                         <td className="p-4">{getTaskName(doc)}</td>
-                        <td className="p-4">{doc.type}</td>
+                        <td className="p-4">{formatFileType(doc.type)}</td>
                         <td className="p-4">{formatFileSize(doc.size || 0)}</td>
                         <td className="p-4">
                           <div className="flex flex-col">

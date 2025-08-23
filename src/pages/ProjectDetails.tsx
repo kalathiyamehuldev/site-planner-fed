@@ -21,6 +21,7 @@ import {
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
+import UploadDocumentDialog from "@/components/documents/UploadDocumentDialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchProjectById,
@@ -56,11 +57,67 @@ const staticProjectData = {
   progress: 65,
 };
 
+// Format file type to display simplified version
+const formatFileType = (type: string): string => {
+  if (!type) return 'Unknown';
+  
+  // If it's already a simple extension, return as is
+  if (!type.includes('/')) {
+    return type.toUpperCase();
+  }
+  
+  // Map common MIME types to simple extensions
+  const mimeTypeMap: { [key: string]: string } = {
+    'application/pdf': 'PDF',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
+    'application/msword': 'DOC',
+    'application/vnd.ms-excel': 'XLS',
+    'application/vnd.ms-powerpoint': 'PPT',
+    'image/jpeg': 'JPG',
+    'image/jpg': 'JPG',
+    'image/png': 'PNG',
+    'image/gif': 'GIF',
+    'image/svg+xml': 'SVG',
+    'text/plain': 'TXT',
+    'text/csv': 'CSV',
+    'application/zip': 'ZIP',
+    'application/x-zip-compressed': 'ZIP',
+    'application/json': 'JSON',
+    'text/html': 'HTML',
+    'text/css': 'CSS',
+    'application/javascript': 'JS',
+    'text/javascript': 'JS'
+  };
+  
+  // Return mapped type or extract extension from MIME type
+  if (mimeTypeMap[type]) {
+    return mimeTypeMap[type];
+  }
+  
+  // For other MIME types, try to extract a meaningful part
+  const parts = type.split('/');
+  if (parts.length === 2) {
+    const subtype = parts[1];
+    // Remove common prefixes and suffixes
+    const cleaned = subtype
+      .replace(/^vnd\./, '')
+      .replace(/^x-/, '')
+      .replace(/\+.*$/, '')
+      .toUpperCase();
+    return cleaned || 'FILE';
+  }
+  
+  return 'FILE';
+};
+
 // Remove static documents - will use API data instead
 
 const ProjectDetails = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [uploadDocumentDialogOpen, setUploadDocumentDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
@@ -465,7 +522,12 @@ const ProjectDetails = () => {
           <TabsContent value="documents" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Documents</h2>
-              <MotionButton variant="default" size="sm" motion="subtle">
+              <MotionButton 
+                variant="default" 
+                size="sm" 
+                motion="subtle"
+                onClick={() => setUploadDocumentDialogOpen(true)}
+              >
                 <Plus size={16} className="mr-2" /> Upload Document
               </MotionButton>
             </div>
@@ -489,9 +551,9 @@ const ProjectDetails = () => {
                         <th className="text-left p-4 font-medium text-muted-foreground">
                           Type
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
+                        {/* <th className="text-left p-4 font-medium text-muted-foreground">
                           Size
-                        </th>
+                        </th> */}
                         <th className="text-left p-4 font-medium text-muted-foreground">
                           Date
                         </th>
@@ -510,8 +572,8 @@ const ProjectDetails = () => {
                             <FileText size={16} className="text-primary" />
                             {doc.name}
                           </td>
-                          <td className="p-4">{doc.type}</td>
-                          <td className="p-4">-</td>
+                          <td className="p-4">{formatFileType(doc.type)}</td>
+                          {/* <td className="p-4">-</td> */}
                           <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td className="p-4 text-right">
                             <MotionButton
@@ -610,6 +672,16 @@ const ProjectDetails = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Document Dialog */}
+      <UploadDocumentDialog
+        open={uploadDocumentDialogOpen}
+        onOpenChange={setUploadDocumentDialogOpen}
+        projectId={id}
+        onDocumentUploaded={() => {
+          // Documents will be automatically refreshed by the dialog
+        }}
+      />
     </PageContainer>
   );
 };
