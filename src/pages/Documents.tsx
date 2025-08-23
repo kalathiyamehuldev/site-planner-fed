@@ -192,7 +192,7 @@ const Documents = () => {
         limit: 10
       };
       if (searchTerm) filters.search = searchTerm;
-      if (selectedFileType !== "All") filters.fileType = selectedFileType;
+      if (selectedFileType !== "All") filters.fileType = selectedFileType.toLowerCase();
       if (selectedProject !== "All") filters.projectId = selectedProject;
       if (selectedTask !== "All") filters.taskId = selectedTask;
       
@@ -239,7 +239,7 @@ const Documents = () => {
       limit: 10
     };
     if (searchTerm) filters.search = searchTerm;
-    if (selectedFileType !== "All") filters.fileType = selectedFileType;
+    if (selectedFileType !== "All") filters.fileType = selectedFileType.toLowerCase();
     if (selectedProject !== "All") filters.projectId = selectedProject;
     if (selectedTask !== "All") filters.taskId = selectedTask;
     
@@ -638,11 +638,13 @@ const Documents = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">No Task</option>
-                  {tasks.map(task => (
-                    <option key={task.id} value={task.id}>
-                      {task.title}
-                    </option>
-                  ))}
+                  {tasks
+                    .filter(task => !editingDocument.projectId || task.project?.id === editingDocument.projectId)
+                    .map(task => (
+                      <option key={task.id} value={task.id}>
+                        {task.title}
+                      </option>
+                    ))}
                 </select>
               </div>
               
@@ -771,9 +773,11 @@ const Documents = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Task</option>
-                  {tasks.map(task => (
-                    <option key={task.id} value={task.id}>{task.title}</option>
-                  ))}
+                  {tasks
+                    .filter(task => !uploadForm.projectId || task.project?.id === uploadForm.projectId)
+                    .map(task => (
+                      <option key={task.id} value={task.id}>{task.title}</option>
+                    ))}
                 </select>
               </div>
               

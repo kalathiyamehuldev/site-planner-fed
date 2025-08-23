@@ -20,6 +20,7 @@ export interface ApiDocument {
   fileType?: string;
   projectId?: string;
   taskId?: string;
+  companyId: string;
   createdAt: string;
   updatedAt: string;
   project?: {
@@ -140,10 +141,13 @@ export const fetchDocuments = createAsyncThunk(
     try {
       const companyId = getSelectedCompanyId(getState);
       if (!companyId) {
-        console.warn('No company selected, proceeding without company filter');
+        throw new Error('No company selected');
       }
       
       const params = new URLSearchParams();
+      // Add companyId to filters
+      params.append('companyId', companyId);
+      
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           params.append(key, value.toString());
@@ -207,8 +211,13 @@ export const fetchDocumentById = createAsyncThunk(
 
 export const createDocument = createAsyncThunk(
   'documents/createDocument',
-  async (documentData: CreateDocumentData, { rejectWithValue }) => {
+  async (documentData: CreateDocumentData, { rejectWithValue, getState }) => {
     try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
       let response: ApiResponse<ApiDocument>;
       
       // Check if file upload is included
@@ -221,14 +230,14 @@ export const createDocument = createAsyncThunk(
         if (documentData.taskId) formData.append('taskId', documentData.taskId);
         formData.append('file', documentData.file);
         
-        response = await api.post('/documents', formData, {
+        response = await api.post(`/documents?companyId=${companyId}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         }) as ApiResponse<ApiDocument>;
       } else {
         // Regular JSON request for documents without files
-        response = await api.post('/documents', documentData) as ApiResponse<ApiDocument>;
+        response = await api.post(`/documents?companyId=${companyId}`, documentData) as ApiResponse<ApiDocument>;
       }
       
       if (response.status === 'error') {
@@ -251,9 +260,14 @@ export const createDocument = createAsyncThunk(
 
 export const updateDocument = createAsyncThunk(
   'documents/updateDocument',
-  async ({ id, documentData }: { id: string; documentData: UpdateDocumentData }, { rejectWithValue }) => {
+  async ({ id, documentData }: { id: string; documentData: UpdateDocumentData }, { rejectWithValue, getState }) => {
     try {
-      const response: ApiResponse<ApiDocument> = await api.patch(`/documents/${id}`, documentData);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: ApiResponse<ApiDocument> = await api.patch(`/documents/${id}?companyId=${companyId}`, documentData);
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to update document');
@@ -278,9 +292,14 @@ export const updateDocument = createAsyncThunk(
 
 export const deleteDocument = createAsyncThunk(
   'documents/deleteDocument',
-  async (id: string, { rejectWithValue }) => {
+  async (id: string, { rejectWithValue, getState }) => {
     try {
-      const response: ApiResponse = await api.delete(`/documents/${id}`);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: ApiResponse = await api.delete(`/documents/${id}?companyId=${companyId}`);
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to delete document');
@@ -299,9 +318,14 @@ export const deleteDocument = createAsyncThunk(
 
 export const fetchDocumentsByProject = createAsyncThunk(
   'documents/fetchDocumentsByProject',
-  async (projectId: string, { rejectWithValue }) => {
+  async (projectId: string, { rejectWithValue, getState }) => {
     try {
-      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/project/${projectId}`);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/project/${projectId}?companyId=${companyId}`);
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch project documents');
@@ -322,9 +346,14 @@ export const fetchDocumentsByProject = createAsyncThunk(
 
 export const fetchDocumentsByTask = createAsyncThunk(
   'documents/fetchDocumentsByTask',
-  async (taskId: string, { rejectWithValue }) => {
+  async (taskId: string, { rejectWithValue, getState }) => {
     try {
-      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/task/${taskId}`);
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/task/${taskId}?companyId=${companyId}`);
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to fetch task documents');
