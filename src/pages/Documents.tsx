@@ -1,5 +1,6 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
@@ -19,138 +20,179 @@ import {
   Calendar,
   UserCircle,
   Clock,
-  Folder
+  Folder,
+  Edit3,
+  X
 } from "lucide-react";
+import {
+  fetchDocuments,
+  createDocument,
+  updateDocument,
+  deleteDocument,
+  selectAllDocuments,
+  Document,
+  DocumentFilterParams
+} from "@/redux/slices/documentsSlice";
+import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
+import { fetchAllTasksByCompany, selectAllTasks } from "@/redux/slices/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock data for documents
-const documents = [
-  {
-    id: "d1",
-    name: "Initial Contract.pdf",
-    type: "PDF",
-    size: "1.2 MB",
-    date: "August 15, 2023",
-    project: "Modern Loft Redesign",
-    user: "Alex Jones",
-    category: "Contracts",
-    thumbnail: null
-  },
-  {
-    id: "d2",
-    name: "Floor Plan v1.pdf",
-    type: "PDF",
-    size: "3.4 MB",
-    date: "August 22, 2023",
-    project: "Modern Loft Redesign",
-    user: "Sarah Smith",
-    category: "Floor Plans",
-    thumbnail: null
-  },
-  {
-    id: "d3",
-    name: "Client Requirements.docx",
-    type: "DOCX",
-    size: "845 KB",
-    date: "August 18, 2023",
-    project: "Modern Loft Redesign",
-    user: "Alex Jones", 
-    category: "Requirements",
-    thumbnail: null
-  },
-  {
-    id: "d4",
-    name: "Mood Board.jpg",
-    type: "JPG",
-    size: "5.1 MB",
-    date: "August 30, 2023",
-    project: "Modern Loft Redesign",
-    user: "Sarah Smith",
-    category: "Images",
-    thumbnail: null
-  },
-  {
-    id: "d5",
-    name: "Budget Estimate.xlsx",
-    type: "XLSX",
-    size: "1.7 MB",
-    date: "September 5, 2023",
-    project: "Coastal Vacation Home",
-    user: "Robert Lee",
-    category: "Financials",
-    thumbnail: null
-  },
-  {
-    id: "d6",
-    name: "Material Samples.zip",
-    type: "ZIP",
-    size: "12.3 MB",
-    date: "September 10, 2023",
-    project: "Coastal Vacation Home",
-    user: "Alex Jones",
-    category: "Materials",
-    thumbnail: null
-  },
-  {
-    id: "d7",
-    name: "Final Presentation.pptx",
-    type: "PPTX",
-    size: "8.5 MB",
-    date: "September 15, 2023",
-    project: "Corporate Office Revamp",
-    user: "Sarah Smith",
-    category: "Presentations",
-    thumbnail: null
-  },
-  {
-    id: "d8",
-    name: "Installation Instructions.pdf",
-    type: "PDF",
-    size: "2.8 MB",
-    date: "September 20, 2023",
-    project: "Corporate Office Revamp",
-    user: "Robert Lee",
-    category: "Instructions",
-    thumbnail: null
-  }
-];
-
-// Categories for filtering
-const categories = [
+// File type categories for filtering
+const fileTypeCategories = [
   "All",
-  "Contracts",
-  "Floor Plans",
-  "Images",
-  "Requirements",
-  "Financials",
-  "Materials",
-  "Presentations",
-  "Instructions"
+  "PDF",
+  "DOCX", 
+  "XLSX",
+  "PPTX",
+  "JPG",
+  "PNG",
+  "ZIP"
 ];
 
-// Projects for filtering
-const projects = [
-  "All",
-  "Modern Loft Redesign",
-  "Coastal Vacation Home",
-  "Corporate Office Revamp"
-];
+// Format date to match existing format (e.g., 'August 15, 2023')
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
+
+// Format file size
+const formatFileSize = (bytes: number | string): string => {
+  const numBytes = typeof bytes === 'string' ? parseInt(bytes) || 0 : bytes;
+  if (numBytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(numBytes) / Math.log(k));
+  return parseFloat((numBytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 const Documents = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedProject, setSelectedProject] = useState("All");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
   
-  // Filter documents based on search, category, and project
-  const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || doc.category === selectedCategory;
-    const matchesProject = selectedProject === "All" || doc.project === selectedProject;
-    
-    return matchesSearch && matchesCategory && matchesProject;
+  // Redux selectors
+  const documents = useAppSelector(selectAllDocuments);
+  const projects = useAppSelector(selectAllProjects);
+  const tasks = useAppSelector(selectAllTasks);
+  const loading = useAppSelector((state) => state.documents.loading);
+  const error = useAppSelector((state) => state.documents.error);
+  
+  // Local state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFileType, setSelectedFileType] = useState("All");
+  const [selectedProject, setSelectedProject] = useState("All");
+  const [selectedTask, setSelectedTask] = useState("All");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    description: '',
+    projectId: '',
+    taskId: '',
+    file: null as File | null
   });
   
-  const getFileIcon = (type: string) => {
+  // Load data on component mount
+  useEffect(() => {
+    dispatch(fetchDocuments({ page: 1, limit: 10 }));
+    dispatch(fetchProjects());
+    dispatch(fetchAllTasksByCompany());
+  }, [dispatch]);
+  
+  // Use documents directly since filtering is handled by the API
+  const filteredDocuments = documents;
+  
+  // Get project name from document data
+  const getProjectName = (document: Document) => {
+    return document.project || 'No Project';
+  };
+  
+  // Get task name from document data
+  const getTaskName = (document: Document) => {
+    return document.task || 'No Task';
+  };
+  
+  // Handle document deletion
+  const handleDeleteDocument = (document: Document) => {
+    setDocumentToDelete(document);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteDocument = async () => {
+    if (!documentToDelete) return;
+    
+    try {
+      await dispatch(deleteDocument(documentToDelete.id)).unwrap();
+      
+      // Refetch documents to ensure UI is up to date
+      const filters: DocumentFilterParams = {
+        page: 1,
+        limit: 10
+      };
+      if (searchTerm) filters.search = searchTerm;
+      if (selectedFileType !== "All") filters.fileType = selectedFileType;
+      if (selectedProject !== "All") filters.projectId = selectedProject;
+      if (selectedTask !== "All") filters.taskId = selectedTask;
+      
+      dispatch(fetchDocuments(filters));
+      
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive",
+      });
+    } finally {
+      setShowDeleteConfirm(false);
+      setDocumentToDelete(null);
+    }
+  };
+
+  const cancelDeleteDocument = () => {
+    setShowDeleteConfirm(false);
+    setDocumentToDelete(null);
+  };
+  
+  // Handle edit document
+  const handleEditDocument = (document: Document) => {
+    setEditingDocument(document);
+    setIsEditModalOpen(true);
+  };
+  
+  // Handle download document
+  const handleDownloadDocument = (document: Document) => {
+    if (document.url) {
+      window.open(document.url, '_blank');
+    }
+  };
+  
+  // Apply filters when selections change
+  useEffect(() => {
+    const filters: DocumentFilterParams = {
+      page: 1,
+      limit: 10
+    };
+    if (searchTerm) filters.search = searchTerm;
+    if (selectedFileType !== "All") filters.fileType = selectedFileType;
+    if (selectedProject !== "All") filters.projectId = selectedProject;
+    if (selectedTask !== "All") filters.taskId = selectedTask;
+    
+    dispatch(fetchDocuments(filters));
+    dispatch(fetchAllTasksByCompany());
+  }, [dispatch, searchTerm, selectedFileType, selectedProject, selectedTask]);
+  
+  const getFileIcon = (type: string = "") => {
     switch (type) {
       case "PDF":
         return <FileText className="text-red-500" />;
@@ -183,7 +225,12 @@ const Documents = () => {
             <MotionButton variant="outline" size="sm" motion="subtle">
               <FolderOpen size={16} className="mr-2" /> New Folder
             </MotionButton>
-            <MotionButton variant="default" size="sm" motion="subtle">
+            <MotionButton 
+              variant="default" 
+              size="sm" 
+              motion="subtle"
+              onClick={() => setShowUploadModal(true)}
+            >
               <Upload size={16} className="mr-2" /> Upload Files
             </MotionButton>
           </div>
@@ -206,12 +253,12 @@ const Documents = () => {
             <div className="relative">
               <select
                 className="appearance-none px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring pr-8"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedFileType}
+                onChange={(e) => setSelectedFileType(e.target.value)}
               >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category}
+                {fileTypeCategories.map(fileType => (
+                  <option key={fileType} value={fileType}>
+                    {fileType}
                   </option>
                 ))}
               </select>
@@ -224,9 +271,26 @@ const Documents = () => {
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
               >
+                <option value="All">All Projects</option>
                 {projects.map(project => (
-                  <option key={project} value={project}>
-                    {project}
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+              <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-muted-foreground" size={16} />
+            </div>
+            
+            <div className="relative">
+              <select
+                className="appearance-none px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring pr-8"
+                value={selectedTask}
+                onChange={(e) => setSelectedTask(e.target.value)}
+              >
+                <option value="All">All Tasks</option>
+                {tasks.map(task => (
+                  <option key={task.id} value={task.id}>
+                    {task.title}
                   </option>
                 ))}
               </select>
@@ -268,18 +332,32 @@ const Documents = () => {
             <span>/</span>
             {selectedProject !== "All" && (
               <>
-                <span className="font-medium text-foreground">{selectedProject}</span>
+                <span className="font-medium text-foreground">
+                  {projects.find(p => p.id === selectedProject)?.title || selectedProject}
+                </span>
                 <span>/</span>
               </>
             )}
-            {selectedCategory !== "All" && (
-              <span className="font-medium text-foreground">{selectedCategory}</span>
+            {selectedFileType !== "All" && (
+              <span className="font-medium text-foreground">{selectedFileType}</span>
             )}
           </div>
         </div>
 
         {/* Document Grid/List */}
-        {viewMode === "grid" ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading documents...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive mb-2">Error loading documents:</p>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-fade-in animation-delay-[0.2s]">
             {filteredDocuments.length === 0 ? (
               <div className="col-span-full">
@@ -326,23 +404,35 @@ const Documents = () => {
                           {doc.name}
                         </h3>
                         <p className="text-xs text-muted-foreground mb-2">
-                          {doc.type} • {doc.size}
+                          {doc.type} • {formatFileSize(doc.size || 0)}
                         </p>
                         
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar size={12} />
-                          <span>{doc.date}</span>
+                          <span>{formatDate(doc.createdAt)}</span>
                         </div>
                       </div>
                     </div>
                     
                     <div className="mt-auto pt-2 px-4 pb-4 border-t border-border flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-xs text-muted-foreground">{doc.project}</span>
+                      <span className="text-xs text-muted-foreground">{getProjectName(doc)}</span>
                       <div className="flex gap-1">
-                        <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
+                        <button 
+                          onClick={() => handleDownloadDocument(doc)}
+                          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                        >
                           <Download size={14} />
                         </button>
-                        <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive">
+                        <button 
+                          onClick={() => handleEditDocument(doc)}
+                          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteDocument(doc)}
+                          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive"
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -372,7 +462,7 @@ const Documents = () => {
                     <tr className="border-b">
                       <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Project</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground">Category</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Task</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Type</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Size</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Modified</th>
@@ -386,28 +476,37 @@ const Documents = () => {
                           {getFileIcon(doc.type)}
                           <span className="font-medium">{doc.name}</span>
                         </td>
-                        <td className="p-4">{doc.project}</td>
-                        <td className="p-4">{doc.category}</td>
+                        <td className="p-4">{getProjectName(doc)}</td>
+                        <td className="p-4">{getTaskName(doc)}</td>
                         <td className="p-4">{doc.type}</td>
-                        <td className="p-4">{doc.size}</td>
+                        <td className="p-4">{formatFileSize(doc.size || 0)}</td>
                         <td className="p-4">
                           <div className="flex flex-col">
-                            <span>{doc.date}</span>
+                            <span>{formatDate(doc.createdAt)}</span>
                             <span className="text-xs text-muted-foreground flex items-center">
-                              <UserCircle size={12} className="mr-1" /> {doc.user}
+                              <UserCircle size={12} className="mr-1" /> Unknown
                             </span>
                           </div>
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-1">
-                            <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary">
+                            <button 
+                              onClick={() => handleDownloadDocument(doc)}
+                              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                            >
                               <Download size={16} />
                             </button>
-                            <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive">
-                              <Trash2 size={16} />
+                            <button 
+                              onClick={() => handleEditDocument(doc)}
+                              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                            >
+                              <Edit3 size={16} />
                             </button>
-                            <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground">
-                              <MoreHorizontal size={16} />
+                            <button 
+                              onClick={() => handleDeleteDocument(doc)}
+                              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>
@@ -420,6 +519,284 @@ const Documents = () => {
           </GlassCard>
         )}
       </div>
+      
+      {/* Edit Document Modal */}
+      {isEditModalOpen && editingDocument && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Document</h3>
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Document Name</label>
+                <input 
+                  type="text" 
+                  value={editingDocument.name}
+                  onChange={(e) => setEditingDocument({...editingDocument, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Project</label>
+                <select 
+                  value={editingDocument.projectId || ''}
+                  onChange={(e) => setEditingDocument({...editingDocument, projectId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">No Project</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Task</label>
+                <select 
+                  value={editingDocument.taskId || ''}
+                  onChange={(e) => setEditingDocument({...editingDocument, taskId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">No Task</option>
+                  {tasks.map(task => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                 <label className="block text-sm font-medium mb-1">Description</label>
+                 <textarea 
+                   value={editingDocument.description || ''}
+                   onChange={(e) => setEditingDocument({...editingDocument, description: e.target.value})}
+                   rows={3}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   placeholder="Document description..."
+                 />
+               </div>
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                   try {
+                     const result = await dispatch(updateDocument({
+                       id: editingDocument.id,
+                       documentData: {
+                         title: editingDocument.name,
+                         projectId: editingDocument.projectId,
+                         taskId: editingDocument.taskId,
+                         content: editingDocument.description
+                       }
+                     })).unwrap();
+                     
+                     // Refetch documents to ensure UI is up to date
+                      const filters: DocumentFilterParams = {
+                        page: 1,
+                        limit: 10
+                      };
+                      if (searchTerm) filters.search = searchTerm;
+                      if (selectedFileType !== "All") filters.fileType = selectedFileType;
+                      if (selectedProject !== "All") filters.projectId = selectedProject;
+                      if (selectedTask !== "All") filters.taskId = selectedTask;
+                      
+                      dispatch(fetchDocuments(filters));
+                     
+                     setIsEditModalOpen(false);
+                     toast({
+                       title: "Success",
+                       description: result.message || "Document updated successfully",
+                     });
+                   } catch (error) {
+                     toast({
+                       title: "Error",
+                       description: typeof error === 'string' ? error : "Failed to update document",
+                       variant: "destructive"
+                     });
+                   }
+                 }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Create Document</h2>
+              <button 
+                onClick={() => setShowUploadModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input 
+                  type="text"
+                  value={uploadForm.title}
+                  onChange={(e) => setUploadForm({...uploadForm, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Document title..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea 
+                  value={uploadForm.description}
+                  onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Document description..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Project</label>
+                <select 
+                  value={uploadForm.projectId}
+                  onChange={(e) => setUploadForm({...uploadForm, projectId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Project</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>{project.title}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Task (Optional)</label>
+                <select 
+                  value={uploadForm.taskId}
+                  onChange={(e) => setUploadForm({...uploadForm, taskId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Task</option>
+                  {tasks.map(task => (
+                    <option key={task.id} value={task.id}>{task.title}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">File (Optional)</label>
+                <input 
+                  type="file"
+                  onChange={(e) => setUploadForm({...uploadForm, file: e.target.files?.[0] || null})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip"
+                />
+                <p className="text-sm text-gray-500 mt-1">Upload a file or create a text-only document</p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button 
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                    if (uploadForm.title) {
+                      try {
+                        const documentData = {
+                          title: uploadForm.title,
+                          content: uploadForm.description,
+                          projectId: uploadForm.projectId || undefined,
+                          taskId: uploadForm.taskId || undefined,
+                          file: uploadForm.file || undefined
+                        };
+                        
+                        await dispatch(createDocument(documentData)).unwrap();
+                        toast({ title: 'Success', description: uploadForm.file ? 'Document uploaded successfully' : 'Document created successfully' });
+                        setShowUploadModal(false);
+                        setUploadForm({ title: '', description: '', projectId: '', taskId: '', file: null });
+                      } catch (error) {
+                        toast({ title: 'Error', description: 'Failed to create document', variant: 'destructive' });
+                      }
+                    }
+                  }}
+                disabled={!uploadForm.title}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && documentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="flex-shrink-0">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold">Delete Document</h3>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-600 dark:text-gray-300 mb-3">
+                  Are you sure you want to permanently delete this document?
+                </p>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                   <p className="font-medium text-gray-900 dark:text-gray-100">
+                     {documentToDelete.name}
+                   </p>
+                 </div>
+              </div>
+            </div>
+            <div className="flex justify-between gap-3">
+              <button
+                onClick={cancelDeleteDocument}
+                className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDocument}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                Delete Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 };

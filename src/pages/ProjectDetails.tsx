@@ -508,9 +508,9 @@ const ProjectDetails = () => {
                         >
                           <td className="p-4 flex items-center gap-2">
                             <FileText size={16} className="text-primary" />
-                            {doc.title}
+                            {doc.name}
                           </td>
-                          <td className="p-4">{doc.fileType}</td>
+                          <td className="p-4">{doc.type}</td>
                           <td className="p-4">-</td>
                           <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td className="p-4 text-right">
@@ -519,7 +519,7 @@ const ProjectDetails = () => {
                               size="sm"
                               motion="subtle"
                               className="text-primary"
-                              onClick={() => handleDownloadDocument(doc.fileUrl, doc.title)}
+                              onClick={() => handleDownloadDocument(doc.url, doc.name)}
                             >
                               Download
                             </MotionButton>

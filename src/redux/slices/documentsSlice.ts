@@ -11,265 +11,336 @@ interface ApiResponse<T = any> {
   error?: string;
 }
 
-// API Document interface (from backend response)
+// API Document interface (matching backend DTOs)
 export interface ApiDocument {
   id: string;
   title: string;
-  content: string;
-  fileUrl: string;
-  fileType: string;
+  content?: string;
+  fileUrl?: string;
+  fileType?: string;
+  projectId?: string;
+  taskId?: string;
   createdAt: string;
   updatedAt: string;
-  projectId: string;
-  taskId?: string;
+  project?: {
+    id: string;
+    name: string;
+  };
   task?: {
     id: string;
     title: string;
-    description: string;
-    status: string;
-    priority: string;
-    dueDate: string;
-    estimatedHours: number;
-    createdAt: string;
-    updatedAt: string;
-    projectId: string;
-    memberId: string;
   };
 }
 
-// Transform API document to frontend Document format
-const transformApiDocument = (apiDoc: ApiDocument): Document => ({
-  id: apiDoc.id,
-  name: apiDoc.title,
-  type: apiDoc.fileType.toUpperCase(),
-  size: 'Unknown', // API doesn't provide size, could be calculated
-  date: new Date(apiDoc.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }),
-  projectId: apiDoc.projectId,
-  project: '', // Could be populated from project data
-  userId: apiDoc.task?.memberId || '',
-  user: '', // Could be populated from member data
-  category: 'Documents', // Default category
-  description: apiDoc.content,
-  tags: [],
-  thumbnail: null,
-  url: apiDoc.fileUrl,
-  version: 1,
-  isShared: false,
-  // Add API-specific properties
-  title: apiDoc.title,
-  fileType: apiDoc.fileType,
-  fileUrl: apiDoc.fileUrl,
-  createdAt: apiDoc.createdAt,
-  updatedAt: apiDoc.updatedAt,
-  content: apiDoc.content,
-  taskId: apiDoc.taskId,
-  task: apiDoc.task
-});
-
-// Async thunks for API calls
-export const fetchDocumentsByProject = createAsyncThunk(
-  'documents/fetchByProject',
-  async (projectId: string, { rejectWithValue }) => {
-    try {
-      const response = await api.get(`/documents/project/${projectId}`);
-      return response;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch documents');
-    }
-  }
-);
-
-// Mock data for documents (keeping for fallback)
-const initialDocuments = [
-  {
-    id: "d1",
-    name: "Initial Contract.pdf",
-    type: "PDF",
-    size: "1.2 MB",
-    date: "August 15, 2023",
-    projectId: "p1",
-    project: "Modern Loft Redesign",
-    userId: "user1",
-    user: "Alex Jones",
-    category: "Contracts",
-    description: "Initial agreement with client",
-    tags: ["contract", "agreement", "client"],
-    thumbnail: null,
-    url: "#", // In a real app, this would be the file URL
-    version: 1,
-    isShared: false,
-  },
-  {
-    id: "d2",
-    name: "Floor Plan v1.pdf",
-    type: "PDF",
-    size: "3.4 MB",
-    date: "August 22, 2023",
-    projectId: "p1",
-    project: "Modern Loft Redesign",
-    userId: "user2",
-    user: "Sarah Smith",
-    category: "Floor Plans",
-    description: "First draft of floor plans",
-    tags: ["floor plan", "draft", "layout"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: true,
-  },
-  {
-    id: "d3",
-    name: "Client Requirements.docx",
-    type: "DOCX",
-    size: "845 KB",
-    date: "August 18, 2023",
-    projectId: "p1",
-    project: "Modern Loft Redesign",
-    userId: "user1", 
-    user: "Alex Jones",
-    category: "Requirements",
-    description: "Detailed client requirements and preferences",
-    tags: ["requirements", "client", "specs"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: false,
-  },
-  {
-    id: "d4",
-    name: "Mood Board.jpg",
-    type: "JPG",
-    size: "5.1 MB",
-    date: "August 30, 2023",
-    projectId: "p1",
-    project: "Modern Loft Redesign",
-    userId: "user2",
-    user: "Sarah Smith",
-    category: "Images",
-    description: "Design inspiration and color palette",
-    tags: ["mood board", "inspiration", "colors"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: true,
-  },
-  {
-    id: "d5",
-    name: "Budget Estimate.xlsx",
-    type: "XLSX",
-    size: "1.7 MB",
-    date: "September 5, 2023",
-    projectId: "p2",
-    project: "Coastal Vacation Home",
-    userId: "user3",
-    user: "Robert Lee",
-    category: "Financials",
-    description: "Detailed budget breakdown",
-    tags: ["budget", "costs", "estimate"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: false,
-  },
-  {
-    id: "d6",
-    name: "Material Samples.zip",
-    type: "ZIP",
-    size: "12.3 MB",
-    date: "September 10, 2023",
-    projectId: "p2",
-    project: "Coastal Vacation Home",
-    userId: "user1",
-    user: "Alex Jones",
-    category: "Materials",
-    description: "Compressed folder with all material samples",
-    tags: ["materials", "samples", "textures"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: false,
-  },
-  {
-    id: "d7",
-    name: "Final Presentation.pptx",
-    type: "PPTX",
-    size: "8.5 MB",
-    date: "September 15, 2023",
-    projectId: "p3",
-    project: "Corporate Office Revamp",
-    userId: "user2",
-    user: "Sarah Smith",
-    category: "Presentations",
-    description: "Client presentation with all design concepts",
-    tags: ["presentation", "client", "proposal"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: true,
-  },
-  {
-    id: "d8",
-    name: "Installation Instructions.pdf",
-    type: "PDF",
-    size: "2.8 MB",
-    date: "September 20, 2023",
-    projectId: "p3",
-    project: "Corporate Office Revamp",
-    userId: "user3",
-    user: "Robert Lee",
-    category: "Instructions",
-    description: "Detailed installation guidelines for contractors",
-    tags: ["installation", "instructions", "contractor"],
-    thumbnail: null,
-    url: "#",
-    version: 1,
-    isShared: false,
-  }
-];
-
+// Frontend Document interface
 export interface Document {
   id: string;
   name: string;
   type: string;
   size: string;
   date: string;
-  projectId: string;
-  project: string;
-  userId: string;
-  user: string;
+  projectId?: string;
+  project?: string;
+  taskId?: string;
+  task?: string;
+  userId?: string;
+  user?: string;
   category: string;
-  description: string;
+  description?: string;
   tags: string[];
-  thumbnail: any;
+  thumbnail?: string | null;
   url: string;
   version: number;
   isShared: boolean;
-  // API-specific properties
-  title?: string;
-  fileType?: string;
-  fileUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  content?: string;
-  taskId?: string;
-  task?: {
-    id: string;
-    title: string;
-    description: string;
-    status: string;
-    priority: string;
-    dueDate: string;
-    estimatedHours: number;
-    createdAt: string;
-    updatedAt: string;
-    projectId: string;
-    memberId: string;
-  };
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Create/Update Document Data interfaces
+export interface CreateDocumentData {
+  title: string;
+  content?: string;
+  fileUrl?: string;
+  fileType?: string;
+  projectId?: string;
+  taskId?: string;
+}
+
+export interface UpdateDocumentData extends Partial<CreateDocumentData> {}
+
+export interface DocumentFilterParams {
+  search?: string;
+  fileType?: string;
+  projectId?: string;
+  taskId?: string;
+  page?: number;
+  limit?: number;
+}
+
+// Helper function to get selected company ID from state
+const getSelectedCompanyId = (getState: any) => {
+  const state = getState();
+  return state.auth.selectedCompany?.id || JSON.parse(localStorage.getItem('selectedCompany') || '{}')?.id;
+};
+
+// Transform API document to frontend format
+const transformApiDocument = (apiDoc: ApiDocument): Document => {
+  // Add null checking for apiDoc
+  if (!apiDoc || typeof apiDoc !== 'object') {
+    throw new Error('Invalid document data received from API');
+  }
+  
+  const fileExtension = apiDoc.fileType?.toUpperCase() || 'FILE';
+  const fileName = apiDoc.title || 'Untitled Document';
+  
+  return {
+    id: apiDoc.id,
+    name: fileName,
+    type: fileExtension,
+    size: '0 KB', // Will be updated when we get actual file info
+    date: new Date(apiDoc.createdAt).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }),
+    projectId: apiDoc.projectId,
+    project: apiDoc.project?.name || '',
+    taskId: apiDoc.taskId,
+    task: apiDoc.task?.title || '',
+    userId: '', // Will be populated from user data
+    user: '', // Will be populated from user data
+    category: getCategoryFromFileType(apiDoc.fileType || ''),
+    description: apiDoc.content || '',
+    tags: [],
+    thumbnail: null,
+    url: apiDoc.fileUrl || '#',
+    version: 1,
+    isShared: false,
+    createdAt: apiDoc.createdAt,
+    updatedAt: apiDoc.updatedAt,
+  };
+};
+
+// Helper function to determine category from file type
+const getCategoryFromFileType = (fileType: string): string => {
+  if (fileType.includes('pdf')) return 'Documents';
+  if (fileType.includes('image')) return 'Images';
+  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'Financials';
+  if (fileType.includes('presentation') || fileType.includes('powerpoint')) return 'Presentations';
+  if (fileType.includes('word') || fileType.includes('document')) return 'Requirements';
+  if (fileType.includes('zip') || fileType.includes('archive')) return 'Materials';
+  return 'Documents';
+};
+
+// Async thunks
+export const fetchDocuments = createAsyncThunk(
+  'documents/fetchDocuments',
+  async (filters: DocumentFilterParams = {}, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        console.warn('No company selected, proceeding without company filter');
+      }
+      
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+      
+      const response: ApiResponse = await api.get(`/documents?${params.toString()}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch documents');
+      }
+      
+      // The response.data contains the paginated data
+      const paginatedData = response.data || {};
+      const documents = (paginatedData.items || [])
+        .filter((item: any) => item && typeof item === 'object')
+        .map(transformApiDocument);
+      
+      return {
+        documents,
+        pagination: {
+          total: paginatedData.total || 0,
+          page: paginatedData.page || 1,
+          limit: paginatedData.limit || 10,
+          totalPages: paginatedData.totalPages || 1
+        }
+      };
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch documents');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchDocumentById = createAsyncThunk(
+  'documents/fetchDocumentById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse<ApiDocument> = await api.get(`/documents/${id}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch document');
+      }
+      
+      if (!response.data) {
+        return rejectWithValue('No document data received');
+      }
+      return transformApiDocument(response.data);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch document');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const createDocument = createAsyncThunk(
+  'documents/createDocument',
+  async (documentData: CreateDocumentData, { rejectWithValue }) => {
+    try {
+      let response: ApiResponse<ApiDocument>;
+      
+      // Check if file upload is included
+      if ((documentData as any).file) {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('title', documentData.title);
+        if (documentData.content) formData.append('content', documentData.content);
+        if (documentData.projectId) formData.append('projectId', documentData.projectId);
+        if (documentData.taskId) formData.append('taskId', documentData.taskId);
+        formData.append('file', (documentData as any).file);
+        
+        response = await api.post('/documents', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }) as ApiResponse<ApiDocument>;
+      } else {
+        // Regular JSON request for documents without files
+        response = await api.post('/documents', documentData) as ApiResponse<ApiDocument>;
+      }
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create document');
+      }
+      
+      if (!response.data) {
+        return rejectWithValue('No document data received');
+      }
+      return transformApiDocument(response.data);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to create document');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const updateDocument = createAsyncThunk(
+  'documents/updateDocument',
+  async ({ id, documentData }: { id: string; documentData: UpdateDocumentData }, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse<ApiDocument> = await api.patch(`/documents/${id}`, documentData);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to update document');
+      }
+      
+      if (!response.data) {
+        return rejectWithValue('No document data received');
+      }
+      return {
+        document: transformApiDocument(response.data),
+        message: response.message || 'Document updated successfully'
+      };
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to update document');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const deleteDocument = createAsyncThunk(
+  'documents/deleteDocument',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse = await api.delete(`/documents/${id}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to delete document');
+      }
+      
+      return id;
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to delete document');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchDocumentsByProject = createAsyncThunk(
+  'documents/fetchDocumentsByProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/project/${projectId}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch project documents');
+      }
+      
+      return (response.data || [])
+        .filter((item: any) => item && typeof item === 'object')
+        .map(transformApiDocument);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch project documents');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchDocumentsByTask = createAsyncThunk(
+  'documents/fetchDocumentsByTask',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/task/${taskId}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch task documents');
+      }
+      
+      return (response.data || [])
+        .filter((item: any) => item && typeof item === 'object')
+        .map(transformApiDocument);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch task documents');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
 
 interface DocumentsState {
   documents: Document[];
@@ -278,61 +349,32 @@ interface DocumentsState {
   loading: boolean;
   projectDocumentsLoading: boolean;
   error: string | null;
+  total: number;
+  page: number;
+  limit: number;
 }
 
 const initialState: DocumentsState = {
-  documents: initialDocuments,
+  documents: [],
   projectDocuments: [],
   selectedDocument: null,
   loading: false,
   projectDocumentsLoading: false,
-  error: null
+  error: null,
+  total: 0,
+  page: 1,
+  limit: 10,
 };
 
 export const documentsSlice = createSlice({
   name: 'documents',
   initialState,
   reducers: {
-    getDocuments: (state) => {
-      state.loading = false;
-      state.error = null;
-    },
     setSelectedDocument: (state, action: PayloadAction<string>) => {
       state.selectedDocument = state.documents.find(doc => doc.id === action.payload) || null;
     },
     clearSelectedDocument: (state) => {
       state.selectedDocument = null;
-    },
-    addDocument: (state, action: PayloadAction<Omit<Document, 'id'>>) => {
-      const newDocument = {
-        ...action.payload,
-        id: `d${state.documents.length + 1}`,
-        version: 1,
-        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-      };
-      state.documents.push(newDocument);
-    },
-    updateDocument: (state, action: PayloadAction<{ id: string; document: Partial<Document> }>) => {
-      const { id, document } = action.payload;
-      const index = state.documents.findIndex(d => d.id === id);
-      if (index !== -1) {
-        state.documents[index] = { ...state.documents[index], ...document };
-        
-        // If this is a content update, increment version
-        if (document.url) {
-          state.documents[index].version = (state.documents[index].version || 1) + 1;
-        }
-        
-        if (state.selectedDocument?.id === id) {
-          state.selectedDocument = state.documents[index];
-        }
-      }
-    },
-    deleteDocument: (state, action: PayloadAction<string>) => {
-      state.documents = state.documents.filter(doc => doc.id !== action.payload);
-      if (state.selectedDocument?.id === action.payload) {
-        state.selectedDocument = null;
-      }
     },
     shareDocument: (state, action: PayloadAction<{ id: string; isShared: boolean }>) => {
       const { id, isShared } = action.payload;
@@ -351,6 +393,84 @@ export const documentsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch Documents
+      .addCase(fetchDocuments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocuments.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = action.payload.documents;
+        state.total = action.payload.pagination.total;
+        state.page = action.payload.pagination.page;
+        state.limit = action.payload.pagination.limit;
+      })
+      .addCase(fetchDocuments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Document By ID
+      .addCase(fetchDocumentById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedDocument = action.payload;
+      })
+      .addCase(fetchDocumentById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Create Document
+      .addCase(createDocument.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createDocument.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents.push(action.payload);
+      })
+      .addCase(createDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Update Document
+      .addCase(updateDocument.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateDocument.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedDocument = action.payload.document;
+        const index = state.documents.findIndex(doc => doc.id === updatedDocument.id);
+        if (index !== -1) {
+          state.documents[index] = updatedDocument;
+        }
+        if (state.selectedDocument?.id === updatedDocument.id) {
+          state.selectedDocument = updatedDocument;
+        }
+      })
+      .addCase(updateDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Delete Document
+      .addCase(deleteDocument.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteDocument.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = state.documents.filter(doc => doc.id !== action.payload);
+        if (state.selectedDocument?.id === action.payload) {
+          state.selectedDocument = null;
+        }
+      })
+      .addCase(deleteDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
       // Fetch documents by project
       .addCase(fetchDocumentsByProject.pending, (state) => {
         state.projectDocumentsLoading = true;
@@ -358,25 +478,34 @@ export const documentsSlice = createSlice({
       })
       .addCase(fetchDocumentsByProject.fulfilled, (state, action) => {
         state.projectDocumentsLoading = false;
-        // action.payload is already the response data due to axios interceptor
-        const documents = Array.isArray(action.payload) ? action.payload : [];
-        state.projectDocuments = documents.map(transformApiDocument);
+        // action.payload is already transformed Document objects from the thunk
+        state.projectDocuments = Array.isArray(action.payload) ? action.payload : [];
         state.error = null;
       })
       .addCase(fetchDocumentsByProject.rejected, (state, action) => {
         state.projectDocumentsLoading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Documents By Task
+      .addCase(fetchDocumentsByTask.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentsByTask.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = action.payload;
+        state.total = action.payload.length;
+      })
+      .addCase(fetchDocumentsByTask.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload as string;
       });
   }
 });
 
 export const { 
-  getDocuments, 
   setSelectedDocument, 
   clearSelectedDocument, 
-  addDocument, 
-  updateDocument, 
-  deleteDocument,
   shareDocument,
   updateDocumentTags
 } = documentsSlice.actions;
