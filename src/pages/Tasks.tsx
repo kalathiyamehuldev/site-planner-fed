@@ -14,6 +14,7 @@ import {
   fetchAllTasksByCompany,
   setSelectedTask,
   deleteTaskAsync,
+  updateTaskStatusAsync,
 } from "@/redux/slices/tasksSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import { useToast } from "@/hooks/use-toast";
@@ -154,6 +155,33 @@ const Tasks = () => {
     dispatch(fetchAllTasksByCompany());
   };
 
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      const result = await dispatch(updateTaskStatusAsync({ 
+        id: taskId, 
+        status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
+      }));
+      
+      if (updateTaskStatusAsync.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Task status updated successfully!",
+        });
+        // Refresh tasks list
+        dispatch(fetchAllTasksByCompany());
+      } else {
+        throw new Error(result.payload as string || 'Failed to update task status');
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update task status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -247,6 +275,7 @@ const Tasks = () => {
                setShowNewTaskDialog(true);
                // You could set a default status here if needed
              }}
+             onUpdateTaskStatus={handleUpdateTaskStatus}
              className="animate-fade-in"
            />
          )}

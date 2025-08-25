@@ -127,7 +127,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           estimatedHours: task.estimatedHours
             ? task.estimatedHours.toString()
             : "",
-          memberId: task.assignedTo?.id || "unassigned",
+          memberId: task.member?.id || "unassigned",
           projectId: task.project?.id || projectId || "",
         });
       } else {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import { 
@@ -34,6 +34,20 @@ const KanbanCard = ({
   onDeleteTask, 
   className 
 }: KanbanCardProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      taskId: task.id,
+      currentStatus: task.status
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
   const priorityColors = {
     LOW: "border-l-blue-400",
     MEDIUM: "border-l-amber-400",
@@ -64,9 +78,13 @@ const KanbanCard = ({
 
   return (
     <GlassCard 
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
         "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 group",
         priorityColors[task.priority as keyof typeof priorityColors] || "border-l-gray-400",
+        isDragging && "opacity-50 rotate-2 scale-105",
         className
       )}
       onClick={() => onTaskClick?.(task.id)}

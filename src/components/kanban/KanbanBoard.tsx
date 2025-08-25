@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import KanbanCard from "./KanbanCard";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ interface KanbanBoardProps {
   onEditTask?: (task: any) => void;
   onDeleteTask?: (taskId: string) => void;
   onAddTask?: (status: string) => void;
+  onUpdateTaskStatus?: (taskId: string, newStatus: string) => void;
   className?: string;
 }
 
@@ -20,8 +21,40 @@ const KanbanBoard = ({
   onEditTask, 
   onDeleteTask, 
   onAddTask,
+  onUpdateTaskStatus,
   className 
 }: KanbanBoardProps) => {
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(columnId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear drag over if we're leaving the column entirely
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverColumn(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    
+    try {
+      const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const { taskId, currentStatus } = dragData;
+      
+      // Only update if the status is actually changing
+      if (currentStatus !== newStatus) {
+        onUpdateTaskStatus?.(taskId, newStatus);
+      }
+    } catch (error) {
+      console.error('Error parsing drag data:', error);
+    }
+  };
   // Define the columns with their corresponding statuses
   const columns = [
     {
@@ -114,10 +147,16 @@ const KanbanBoard = ({
               </div>
 
               {/* Column Content */}
-              <div className={cn(
-                "flex-1 p-3 lg:p-4 rounded-b-lg border-2 border-t-0 min-h-[400px] max-h-[70vh] overflow-y-auto",
-                column.color
-              )}>
+              <div 
+                className={cn(
+                  "flex-1 p-3 lg:p-4 rounded-b-lg border-2 border-t-0 min-h-[400px] max-h-[70vh] overflow-y-auto transition-all duration-200",
+                  column.color,
+                  dragOverColumn === column.id && "ring-2 ring-primary ring-opacity-50 bg-primary/5"
+                )}
+                onDragOver={(e) => handleDragOver(e, column.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, column.id)}
+              >
                 <div className="space-y-3">
                   {columnTasks.map((task) => (
                     <div key={task.id} className="group">
