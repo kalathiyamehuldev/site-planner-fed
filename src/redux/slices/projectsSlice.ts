@@ -77,7 +77,7 @@ const transformApiProject = (apiProject: ApiProject) => ({
   id: apiProject.id,
   title: apiProject.name,
   client: '',
-  status: apiProject.status === 'ACTIVE' ? 'In Progress' as const :
+  status: apiProject.status === 'ACTIVE' ? 'Active' as const :
           apiProject.status === 'COMPLETED' ? 'Completed' as const :
           apiProject.status === 'ON_HOLD' ? 'On Hold' as const :
           apiProject.status === 'IN_PROGRESS' ? 'In Progress' as const :
@@ -92,7 +92,7 @@ const transformApiProject = (apiProject: ApiProject) => ({
 });
 
 export type Project = ReturnType<typeof transformApiProject>;
-export type ProjectStatus = 'Not Started' | 'In Progress' | 'On Hold' | 'Completed';
+export type ProjectStatus = 'Not Started' | 'Active' | 'In Progress' | 'On Hold' | 'Completed';
 
 // Async thunks
 export const fetchProjects = createAsyncThunk(

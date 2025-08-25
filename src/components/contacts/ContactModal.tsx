@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Contact, CreateContactDto, UpdateContactDto, createContactAsync, updateContactAsync, selectContactsLoading, selectContactsError } from '@/redux/slices/contactsSlice';
+import { fetchProjects, selectAllProjects, selectProjectLoading } from '@/redux/slices/projectsSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +33,9 @@ interface ContactFormData {
   name: string;
   email: string;
   phone: string;
-  type: string;
+  type: 'Client' | 'Vendor' | 'Architect';
   isFavorite: boolean;
+  selectedProjects: string[];
 }
 
 interface FormErrors {
@@ -43,9 +45,9 @@ interface FormErrors {
 }
 
 const CONTACT_TYPES = [
-  { value: 'client', label: 'Client' },
-  { value: 'vendor', label: 'Vendor' },
-  { value: 'partner', label: 'Partner' },
+  { value: 'Client', label: 'Client' },
+  { value: 'Vendor', label: 'Vendor' },
+  { value: 'Architect', label: 'Architect' },
 ];
 
 const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact, mode }) => {
@@ -53,49 +55,78 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
   const { toast } = useToast();
   const loading = useAppSelector(selectContactsLoading);
   const error = useAppSelector(selectContactsError);
+  const projects = useAppSelector(selectAllProjects);
+  const projectsLoading = useAppSelector(selectProjectLoading);
   
   const [formData, setFormData] = useState<ContactFormData>({
     name: '',
     email: '',
     phone: '',
-    type: 'client',
-    isFavorite: false
+    type: 'Client',
+    isFavorite: false,
+    selectedProjects: []
   });
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   // Initialize form data when dialog opens or contact changes
   useEffect(() => {
-    if (open && mode === 'edit' && contact) {
-      setFormData({
-        name: contact.name || '',
-        email: contact.email || '',
-        phone: contact.phone || '',
-        type: contact.type || 'client',
-        isFavorite: contact.isFavorite || false,
-      });
-    } else if (open && mode === 'add') {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        type: 'client',
-        isFavorite: false,
-      });
+    if (open) {
+      // Fetch projects when modal opens
+      dispatch(fetchProjects());
+      
+      if (mode === 'edit' && contact) {
+        setFormData({
+          name: contact.name || '',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          type: contact.type as 'Client' | 'Vendor' | 'Architect',
+          isFavorite: contact.isFavorite || false,
+          selectedProjects: []
+        });
+      } else if (mode === 'add') {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          type: 'Client',
+          isFavorite: false,
+          selectedProjects: []
+        });
+      }
     }
     
     if (!open) {
       setFormErrors({});
     }
-  }, [open, mode, contact]);
+  }, [open, mode, contact, dispatch]);
 
   // Handle form field changes
   const handleInputChange = (field: keyof ContactFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
     // Clear error when user starts typing
     if (formErrors[field as keyof FormErrors]) {
       setFormErrors(prev => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  // Handle project selection
+  const handleProjectSelect = (projectId: string) => {
+    if (!formData.selectedProjects.includes(projectId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedProjects: [...prev.selectedProjects, projectId]
+      }));
+    }
+  };
+
+  // Handle project removal
+  const handleProjectRemove = (projectId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+    }));
   };
 
   // Validate form
@@ -134,8 +165,9 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
-          type: formData.type as 'client' | 'vendor' | 'partner',
-          isFavorite: formData.isFavorite
+          type: formData.type as 'Client' | 'Vendor' | 'Architect',
+          isFavorite: formData.isFavorite,
+          projectIds: formData.selectedProjects
         };
         const result = await dispatch(createContactAsync(createData));
         if (createContactAsync.fulfilled.match(result)) {
@@ -150,7 +182,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
-          type: formData.type as 'client' | 'vendor' | 'partner',
+          type: formData.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: formData.isFavorite
         };
         const result = await dispatch(updateContactAsync({ id: contact.id, data: updateData }));
@@ -252,6 +284,55 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                       {type.label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Associated Projects */}
+            <div className="space-y-2">
+              <Label>Associated Projects</Label>
+              
+              {/* Selected Projects Tags */}
+              {formData.selectedProjects.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.selectedProjects.map((projectId) => {
+                    const project = projects.find(p => p.id === projectId);
+                    return (
+                      <div
+                        key={projectId}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                      >
+                        {project?.title || 'Unknown Project'}
+                        <button
+                          type="button"
+                          onClick={() => handleProjectRemove(projectId)}
+                          className="ml-1 text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Project Selection Dropdown */}
+              <Select 
+                onValueChange={handleProjectSelect}
+                disabled={projectsLoading}
+                value=""
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects
+                    .filter(project => !formData.selectedProjects.includes(project.id))
+                    .map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.title}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

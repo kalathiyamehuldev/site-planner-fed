@@ -4,9 +4,10 @@ import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
+import KanbanBoard from "@/components/kanban/KanbanBoard";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Filter, Calendar, Clock, User } from "lucide-react";
+import { Plus, Search, Filter, Calendar, Clock, User, List, LayoutGrid } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
@@ -40,6 +41,7 @@ const Tasks = () => {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
@@ -162,13 +164,41 @@ const Tasks = () => {
               Manage and track all your project tasks
             </p>
           </div>
-          <MotionButton 
-            variant="default" 
-            motion="subtle"
-            onClick={() => setShowNewTaskDialog(true)}
-          >
-            <Plus size={18} className="mr-2" /> New Task
-          </MotionButton>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-secondary rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  viewMode === "list"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List size={16} />
+                List
+              </button>
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  viewMode === "kanban"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid size={16} />
+                Board
+              </button>
+            </div>
+            <MotionButton 
+              variant="default" 
+              motion="subtle"
+              onClick={() => setShowNewTaskDialog(true)}
+            >
+              <Plus size={18} className="mr-2" /> New Task
+            </MotionButton>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
@@ -198,14 +228,28 @@ const Tasks = () => {
           </div>
         </div>
 
-        <TaskTable
-          tasks={filteredTasks}
-          onTaskClick={handleTaskClick}
-          onEditTask={handleEditTask}
-          onDeleteTask={handleDeleteTask}
-          className="animate-fade-in"
-          showProject={true}
-        />
+        {viewMode === "list" ? (
+          <TaskTable
+            tasks={filteredTasks}
+            onTaskClick={handleTaskClick}
+            onEditTask={handleEditTask}
+            onDeleteTask={handleDeleteTask}
+            className="animate-fade-in"
+            showProject={true}
+          />
+        ) : (
+           <KanbanBoard
+             tasks={filteredTasks}
+             onTaskClick={handleTaskClick}
+             onEditTask={handleEditTask}
+             onDeleteTask={handleDeleteTask}
+             onAddTask={(status) => {
+               setShowNewTaskDialog(true);
+               // You could set a default status here if needed
+             }}
+             className="animate-fade-in"
+           />
+         )}
 
         {/* New Task Dialog */}
         <AddTaskDialog

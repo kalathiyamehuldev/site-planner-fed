@@ -12,7 +12,7 @@ interface ProjectCardProps {
   id: string;
   title: string;
   client: string;
-  status: "Not Started" | "In Progress" | "On Hold" | "Completed";
+  status: "Active" | "Not Started" | "In Progress" | "On Hold" | "Completed";
   dueDate: string;
   team: string[];
   progress: number;
@@ -61,6 +61,7 @@ const ProjectCard = ({
   };
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
+    "Active": "bg-emerald-100 text-emerald-600",
     "In Progress": "bg-blue-100 text-blue-600",
     "On Hold": "bg-amber-100 text-amber-600",
     Completed: "bg-green-100 text-green-600",
@@ -68,6 +69,7 @@ const ProjectCard = ({
 
   const borderColors = {
     "Not Started": "border-gray-400",
+    "Active": "border-emerald-500",
     "In Progress": "border-blue-500",
     "On Hold": "border-amber-500",
     Completed: "border-green-500",

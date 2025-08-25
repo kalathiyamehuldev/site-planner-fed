@@ -18,7 +18,7 @@ const Projects = () => {
   const error = useAppSelector(selectProjectError);
 
   const [filter, setFilter] = useState<
-    "all" | "active" | "completed" | "onhold"
+    "all" | "active" | "completed" | "onhold" | "inprogress"
   >("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -38,6 +38,8 @@ const Projects = () => {
 
     switch (filter) {
       case "active":
+        return project.status === "Active";
+      case "inprogress":
         return project.status === "In Progress";
       case "completed":
         return project.status === "Completed";
@@ -198,6 +200,7 @@ const Projects = () => {
                   "animation-delay-[0.3s]": index % 3 === 2,
                   // Status-based border colors
                   "border-blue-500": project.status === "In Progress",
+                  "border-emerald-500": project.status === "Active",
                   "border-gray-400": project.status === "Not Started",
                   "border-amber-500": project.status === "On Hold",
                   "border-green-500": project.status === "Completed",

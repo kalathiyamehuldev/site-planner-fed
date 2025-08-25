@@ -59,7 +59,7 @@ export interface CreateContactDto {
   phone?: string;
   company?: string;
   position?: string;
-  type: 'client' | 'vendor' | 'partner';
+  type: 'Client' | 'Vendor' | 'Architect';
   isFavorite?: boolean;
   notes?: string;
   projectIds?: string[];

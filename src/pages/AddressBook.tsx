@@ -27,25 +27,32 @@ import {
 } from "lucide-react";
 import {
   fetchAllContactsByCompany,
+  fetchContactsByProject,
   selectAllContacts,
+  selectProjectContacts,
   selectContactsLoading,
   selectContactsError,
   selectSelectedContact,
   setSelectedContact,
   clearSelectedContact,
   clearError,
+  updateContactAsync,
   type Contact,
 } from "@/redux/slices/contactsSlice";
+import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
 
-const contactTypes = ["All", "client", "vendor", "partner"];
+const contactTypes = ["All", "Client", "Vendor", "Architect"];
 
 const AddressBook = () => {
   const dispatch = useDispatch();
   const contacts = useSelector(selectAllContacts);
+  const projectContacts = useSelector(selectProjectContacts);
   const selectedContact = useSelector(selectSelectedContact);
+  const projects = useSelector(selectAllProjects);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("All");
+  const [selectedProject, setSelectedProject] = useState<string>("All");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Modal states
@@ -61,10 +68,18 @@ const AddressBook = () => {
     // Clear any existing errors before fetching
     dispatch(clearError());
     dispatch(fetchAllContactsByCompany({}) as any);
+    dispatch(fetchProjects() as any);
   }, [dispatch]);
 
+  useEffect(() => {
+    if (selectedProject !== "All") {
+      dispatch(fetchContactsByProject(selectedProject) as any);
+    }
+  }, [dispatch, selectedProject]);
+
   // Filter contacts based on search term, type, and favorites
-  const filteredContacts = contacts.filter((contact: Contact) => {
+  const contactsToFilter = selectedProject === "All" ? contacts : projectContacts;
+  const filteredContacts = contactsToFilter.filter((contact: Contact) => {
     const matchesSearch =
       contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (contact.company || "")
@@ -80,7 +95,13 @@ const AddressBook = () => {
   });
 
   const toggleFavorite = (contactId: string) => {
-    console.log("Toggle favorite for contact:", contactId);
+    const contact = contacts.find(c => c.id === contactId);
+    if (contact) {
+      dispatch(updateContactAsync({
+        id: contactId,
+        data: { isFavorite: !contact.isFavorite }
+      }) as any);
+    }
   };
 
   // Modal handlers
@@ -136,6 +157,37 @@ const AddressBook = () => {
     return colors[hash % colors.length];
   };
 
+  // Helper function to get project status styling
+  const getProjectStatusStyle = (status: string) => {
+    switch (status) {
+      case "In Progress":
+        return "bg-blue-100 text-blue-600";
+      case "Completed":
+        return "bg-green-100 text-green-600";
+      case "On Hold":
+        return "bg-amber-100 text-amber-600";
+      case "Not Started":
+        return "bg-gray-100 text-gray-600";
+      case "Active":
+        return "bg-emerald-100 text-emerald-600";
+      default:
+        return "bg-gray-100 text-gray-600";
+    }
+  };
+
+  // Helper function to get contact's projects with full details
+  const getContactProjects = (contact: Contact) => {
+    if (!contact.projects || contact.projects.length === 0) {
+      return [];
+    }
+    
+    // For now, we need to match project names since Contact.projects is string[]
+    // In a real implementation, this would use project IDs
+    return projects.filter(project => 
+      contact.projects?.includes(project.title)
+    );
+  };
+
   return (
     <PageContainer>
       <div className="space-y-8">
@@ -172,27 +224,45 @@ const AddressBook = () => {
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
-            {contactTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(type)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors",
-                  selectedType === type
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-secondary"
-                )}
+          <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
+            {/* Contact Type Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="flex items-center gap-1.5 px-3 py-2 pr-8 rounded-lg text-sm border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[120px]"
               >
-                <Filter size={16} />
-                <span>{type}</span>
-              </button>
-            ))}
+                {contactTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+            </div>
 
+            {/* Project Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="flex items-center gap-1.5 px-3 py-2 pr-8 rounded-lg text-sm border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[140px]"
+              >
+                <option value="All">All Projects</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+            </div>
+
+            {/* Favorites Toggle */}
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap",
                 showFavoritesOnly
                   ? "bg-primary/10 text-primary font-medium"
                   : "text-muted-foreground hover:bg-secondary"
@@ -351,11 +421,11 @@ const AddressBook = () => {
                         <span
                           className={cn(
                             "text-xs px-2 py-1 rounded-full font-medium",
-                            selectedContact.type === "client" &&
+                            selectedContact.type === "Client" &&
                               "bg-blue-100 text-blue-600",
-                            selectedContact.type === "vendor" &&
+                            selectedContact.type === "Vendor" &&
                               "bg-green-100 text-green-600",
-                            selectedContact.type === "partner" &&
+                            selectedContact.type === "Architect" &&
                               "bg-amber-100 text-amber-600"
                           )}
                         >
@@ -422,24 +492,28 @@ const AddressBook = () => {
                           Related Projects
                         </h3>
                         <div className="bg-muted/30 rounded-lg p-4">
-                          <ul className="space-y-2">
-                            <li className="text-sm flex items-center justify-between">
-                              <a href="#" className="hover:text-primary">
-                                Modern Loft Redesign
-                              </a>
-                              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                                In Progress
-                              </span>
-                            </li>
-                            <li className="text-sm flex items-center justify-between">
-                              <a href="#" className="hover:text-primary">
-                                Corporate Office Revamp
-                              </a>
-                              <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                                On Hold
-                              </span>
-                            </li>
-                          </ul>
+                          {(() => {
+                            const contactProjects = getContactProjects(selectedContact);
+                            return contactProjects.length > 0 ? (
+                              <ul className="space-y-2">
+                                {contactProjects.map((project) => (
+                                  <li key={project.id} className="text-sm flex items-center justify-between">
+                                    <a href="#" className="hover:text-primary">
+                                      {project.title}
+                                    </a>
+                                    <span className={cn(
+                                      "text-xs px-2 py-0.5 rounded-full",
+                                      getProjectStatusStyle(project.status)
+                                    )}>
+                                      {project.status}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No projects associated</p>
+                            );
+                          })()}
                         </div>
                       </div>
 

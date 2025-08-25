@@ -78,6 +78,7 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange,
       const getFormStatus = (apiStatus: string) => {
         switch (apiStatus) {
           case 'In Progress': return 'IN_PROGRESS';
+          case 'Active': return 'ACTIVE';
           case 'Not Started': return 'NOT_STARTED';
           case 'On Hold': return 'ON_HOLD';
           case 'Completed': return 'COMPLETED';
