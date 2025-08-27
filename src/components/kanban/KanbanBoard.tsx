@@ -60,29 +60,29 @@ const KanbanBoard = ({
     {
       id: "TODO",
       title: "To Do",
-      color: "bg-gray-50 border-gray-200",
+      color: "bg-white border-gray-200",
       headerColor: "text-gray-700",
       count: 0
     },
     {
       id: "IN_PROGRESS",
       title: "In Progress",
-      color: "bg-blue-50 border-blue-200",
-      headerColor: "text-blue-700",
+      color: "bg-white border-gray-200",
+      headerColor: "text-gray-700",
       count: 0
     },
     {
       id: "DONE",
       title: "Done",
-      color: "bg-green-50 border-green-200",
-      headerColor: "text-green-700",
+      color: "bg-white border-gray-200",
+      headerColor: "text-gray-700",
       count: 0
     },
     {
       id: "CANCELLED",
       title: "Cancelled",
-      color: "bg-red-50 border-red-200",
-      headerColor: "text-red-700",
+      color: "bg-white border-gray-200",
+      headerColor: "text-gray-700",
       count: 0
     }
   ];
@@ -114,7 +114,7 @@ const KanbanBoard = ({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
         {columns.map((column) => {
           const columnTasks = tasksByStatus[column.id] || [];
           
@@ -122,15 +122,15 @@ const KanbanBoard = ({
             <div key={column.id} className="flex flex-col">
               {/* Column Header */}
               <div className={cn(
-                "flex items-center justify-between p-4 rounded-t-lg border-2 border-b-0",
-                column.color
+                "flex items-center justify-between px-4 py-3 rounded-t-lg border border-b-0 bg-gray-50",
+                "border-gray-200"
               )}>
                 <div className="flex items-center gap-2">
                   <h3 className={cn("font-medium text-sm", column.headerColor)}>
                     {column.title}
                   </h3>
                   <span className={cn(
-                    "text-xs px-2 py-0.5 rounded-full bg-white/50",
+                    "text-xs px-2 py-0.5 rounded-full bg-gray-100",
                     column.headerColor
                   )}>
                     {column.count}
@@ -139,7 +139,7 @@ const KanbanBoard = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 hover:bg-white/50"
+                  className="h-6 w-6 p-0 hover:bg-gray-100"
                   onClick={() => onAddTask?.(column.id)}
                 >
                   <Plus size={14} />
@@ -149,15 +149,15 @@ const KanbanBoard = ({
               {/* Column Content */}
               <div 
                 className={cn(
-                  "flex-1 p-3 lg:p-4 rounded-b-lg border-2 border-t-0 min-h-[400px] max-h-[70vh] overflow-y-auto transition-all duration-200",
-                  column.color,
+                  "flex-1 p-1 rounded-b-lg border border-t-0 min-h-[400px] max-h-[70vh] overflow-y-auto transition-all duration-200",
+                  "bg-white border-gray-200",
                   dragOverColumn === column.id && "ring-2 ring-primary ring-opacity-50 bg-primary/5"
                 )}
                 onDragOver={(e) => handleDragOver(e, column.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.id)}
               >
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {columnTasks.map((task) => (
                     <div key={task.id} className="group">
                       <KanbanCard

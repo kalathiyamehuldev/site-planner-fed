@@ -7,6 +7,11 @@ import { FileText, Calendar, Users, Clock, ArrowRight, Trash2 } from "lucide-rea
 import { useAppDispatch } from "@/redux/hooks";
 import { deleteProjectAsync } from "@/redux/slices/projectsSlice";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProjectCardProps {
   id: string;
@@ -87,27 +92,40 @@ const ProjectCard = ({
     >
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
-          <div className="space-y-1">
-            <h3 className="text-xl font-medium">{title}</h3>
+          <div className="space-y-1 flex-1 min-w-0">
+            <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h3 className="text-xl font-medium cursor-pointer w-full overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{title}</h3>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="max-w-xs z-50">
+                    <p className="break-words whitespace-normal">{title}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             <p className="text-muted-foreground text-sm">{client}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "text-xs px-3 py-1 rounded-full font-medium",
-                statusColors[status]
-              )}
-            >
-              {status}
-            </span>
-            <button
-              onClick={handleDelete}
-              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-              title="Delete project"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
+          <div className="relative overflow-hidden w-32 h-8">
+             <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 group-hover:-translate-x-10">
+               <span
+                 className={cn(
+                   "text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap",
+                   statusColors[status]
+                 )}
+               >
+                 {status}
+               </span>
+             </div>
+             <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 translate-x-full group-hover:translate-x-0">
+               <button
+                 onClick={handleDelete}
+                 className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                 title="Delete project"
+               >
+                 <Trash2 size={14} />
+               </button>
+             </div>
+           </div>
         </div>
 
         <div className="space-y-4">

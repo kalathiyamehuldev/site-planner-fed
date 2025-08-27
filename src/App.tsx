@@ -70,7 +70,7 @@ const App = () => (
                   <SidebarProvider>
                     <div className="min-h-screen flex w-full">
                       <AppSidebar />
-                      <div className="flex-1 min-h-screen">
+                      <div className="flex-1 min-h-screen bg-background">
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/projects" element={<Projects />} />

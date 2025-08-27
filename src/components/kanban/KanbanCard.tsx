@@ -48,12 +48,7 @@ const KanbanCard = ({
   const handleDragEnd = () => {
     setIsDragging(false);
   };
-  const priorityColors = {
-    LOW: "border-l-blue-400",
-    MEDIUM: "border-l-amber-400",
-    HIGH: "border-l-red-400",
-    URGENT: "border-l-red-600",
-  };
+  // Removed priority colors to match Jira-style design
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No due date";
@@ -82,33 +77,64 @@ const KanbanCard = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={cn(
-        "p-4 cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 group",
-        priorityColors[task.priority as keyof typeof priorityColors] || "border-l-gray-400",
-        isDragging && "opacity-50 rotate-2 scale-105",
+        "p-3 cursor-pointer hover:shadow-sm transition-all duration-200 group rounded-md",
+        "!bg-white !backdrop-blur-none !border-gray-300 !shadow-sm",
+        "hover:!shadow-md hover:!border-gray-400 w-full",
+        isDragging && "opacity-50 rotate-1 scale-105",
         className
       )}
       onClick={() => onTaskClick?.(task.id)}
     >
-      {/* Task Title */}
-      <h3 className="font-medium text-sm mb-2 line-clamp-2">
-        {task.title}
-      </h3>
+      {/* Task Title - Fixed height for consistency */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="mb-2 cursor-pointer h-16 flex items-start">
+              <h3 
+                className="font-medium text-sm"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: '1.4em',
+                  maxHeight: '4.2em'
+                }}
+              >
+                {task.title}
+              </h3>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <p>{task.title}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-      {/* Project Name */}
-      <div className="text-xs text-muted-foreground mb-3">
-        {task.project?.name || "Unknown Project"}
-      </div>
+      {/* Project Name - Single line with ellipsis */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-xs text-muted-foreground mb-2 truncate cursor-pointer">
+              {task.project?.name || "Unknown Project"}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <p>{task.project?.name || "Unknown Project"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {/* Members and Actions Row */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         {/* Member Avatar */}
         <div className="flex items-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
                   {task.member ? getMemberInitials(task.member) : (
-                    <User size={12} className="text-muted-foreground" />
+                    <User size={10} className="text-muted-foreground" />
                   )}
                 </div>
               </TooltipTrigger>
@@ -121,45 +147,45 @@ const KanbanCard = ({
 
         {/* Action Icons */}
         <div className="flex items-center gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                  <CheckSquare size={12} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Checklist</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
+                    <CheckSquare size={10} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Checklist</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                  <MessageSquare size={12} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Comments</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
+                    <MessageSquare size={10} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Comments</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                  <Pin size={12} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Pin</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
+                    <Pin size={10} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pin</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
       </div>
 
       {/* Date and Actions */}
@@ -216,12 +242,12 @@ const KanbanCard = ({
       </div>
 
       {/* Estimated Hours */}
-      {task.estimatedHours && (
+      {/* {task.estimatedHours && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
           <Clock size={10} />
           <span>{task.estimatedHours}h</span>
         </div>
-      )}
+      )} */}
     </GlassCard>
   );
 };

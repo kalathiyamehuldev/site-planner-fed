@@ -79,6 +79,13 @@ import {
   selectAllTasks,
 } from "@/redux/slices/tasksSlice";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { convertToDecimalDuration } from "@/lib/timeUtils";
 
 const TimeTracking = () => {
   const dispatch = useAppDispatch();
@@ -135,6 +142,18 @@ const TimeTracking = () => {
     Partial<StartTimerData>
   >({
     isBillable: true,
+  });
+  
+  // New Time Entry modal state
+  const [isNewTimeEntryModalOpen, setIsNewTimeEntryModalOpen] = useState(false);
+  const [newTimeEntryFormData, setNewTimeEntryFormData] = useState<
+    Partial<CreateTimeEntryData & { hours?: number; minutes?: number; status?: string }>
+  >({
+    date: new Date().toISOString().split('T')[0],
+    isBillable: true,
+    hours: 0,
+    minutes: 0,
+    status: 'TO_DO',
   });
   
   // Live timer state
@@ -293,7 +312,7 @@ const TimeTracking = () => {
       case "nonbillable":
         return !entry.isBillable;
       case "pending":
-        return entry.status === "Pending";
+        return entry.status === "To Do";
       default:
         return true;
     }
@@ -437,6 +456,93 @@ const TimeTracking = () => {
     }
   };
 
+  // Handle new time entry modal
+  const handleNewTimeEntry = () => {
+    setIsNewTimeEntryModalOpen(true);
+  };
+
+  const handleNewTimeEntrySubmit = async () => {
+    if (!newTimeEntryFormData.projectId) {
+      toast({
+        title: "Error",
+        description: "Please select a project",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newTimeEntryFormData.taskId) {
+      toast({
+        title: "Error",
+        description: "Please select a task",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newTimeEntryFormData.date) {
+      toast({
+        title: "Error",
+        description: "Please select a date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const hours = newTimeEntryFormData.hours || 0;
+    const minutes = newTimeEntryFormData.minutes || 0;
+    
+    if (hours === 0 && minutes === 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid duration",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const duration = convertToDecimalDuration(hours, minutes);
+      
+      const timeEntryData: CreateTimeEntryData = {
+        projectId: newTimeEntryFormData.projectId!,
+        taskId: newTimeEntryFormData.taskId!,
+        date: newTimeEntryFormData.date!,
+        duration,
+        description: newTimeEntryFormData.description,
+        isBillable: newTimeEntryFormData.isBillable ?? true,
+        hourlyRate: newTimeEntryFormData.hourlyRate,
+        status: newTimeEntryFormData.status,
+      };
+console.log("timeEntryData",timeEntryData);
+
+      await dispatch(createTimeEntry(timeEntryData)).unwrap();
+      toast({
+        title: "Success",
+        description: "Time entry created successfully",
+      });
+      
+      setIsNewTimeEntryModalOpen(false);
+      setNewTimeEntryFormData({
+        date: new Date().toISOString().split('T')[0],
+        isBillable: true,
+        hours: 0,
+        minutes: 0,
+        status: 'TO_DO',
+      });
+      
+      // Refresh time entries
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create time entry",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreateTimeEntry = async () => {
     if (!newTimeEntry.projectId || !newTimeEntry.taskId) {
       toast({
@@ -500,6 +606,8 @@ const TimeTracking = () => {
         projectId: newTimeEntry.projectId,
       };
 
+      console.log("timeEntryData",timeEntryData);
+      
       await dispatch(createTimeEntry(timeEntryData)).unwrap();
       toast({
         title: "Success",
@@ -541,8 +649,9 @@ const TimeTracking = () => {
 
   const handleStatusUpdate = async (entryId: string, newStatus: string) => {
     try {
-      const apiStatus = newStatus === 'Pending' ? 'PENDING' : 
-                      newStatus === 'Approved' ? 'APPROVED' : 'REJECTED';
+      const apiStatus: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' = newStatus === 'To Do' ? 'TO_DO' : 
+                      newStatus === 'In Progress' ? 'IN_PROGRESS' : 
+                      newStatus === 'In Review' ? 'IN_REVIEW' : 'DONE';
       
       await dispatch(updateTimeEntryStatus({ id: entryId, status: apiStatus })).unwrap();
       toast({
@@ -652,7 +761,7 @@ const TimeTracking = () => {
             <MotionButton variant="outline" size="sm" motion="subtle">
               <Download size={16} className="mr-2" /> Export
             </MotionButton>
-            <MotionButton variant="default" size="sm" motion="subtle">
+            <MotionButton variant="default" size="sm" motion="subtle" onClick={handleNewTimeEntry}>
               <Plus size={16} className="mr-2" /> New Time Entry
             </MotionButton>
           </div>
@@ -907,37 +1016,31 @@ const TimeTracking = () => {
                       )}
                     >
                       <RefreshCw size={14} />
-                      <span>Pending</span>
+                      <span>To Do</span>
                     </button>
                   </div>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
                     <thead>
                       <tr className="bg-muted/30">
-                        <th className="text-left p-4 font-medium text-muted-foreground">
+                        <th className="text-left p-4 font-medium text-muted-foreground w-20 sm:w-24 md:w-28">
                           Date
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
+                        <th className="text-left p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
                           Project
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
+                        <th className="text-left p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
                           Task
                         </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
+                        <th className="text-left p-4 font-medium text-muted-foreground w-24 sm:w-28 md:w-32">
                           User
                         </th>
-                        <th className="text-right p-4 font-medium text-muted-foreground">
+                        <th className="text-right p-4 font-medium text-muted-foreground w-16 sm:w-18 md:w-20">
                           Hours
                         </th>
-                        <th className="text-center p-4 font-medium text-muted-foreground">
-                          Billable
-                        </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
-                          Status
-                        </th>
-                        <th className="text-right p-4 font-medium text-muted-foreground">
+                        <th className="text-right p-4 font-medium text-muted-foreground w-20 sm:w-22 md:w-24">
                           Actions
                         </th>
                       </tr>
@@ -988,66 +1091,84 @@ const TimeTracking = () => {
                             className="hover:bg-muted/20 border-b border-border last:border-0"
                           >
                             <td className="p-4">{entry.date}</td>
-                            <td className="p-4 font-medium">
-                              {entry.project?.name || "No project"}
+                            <td className="p-4 font-medium max-w-xs">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span 
+                                      className="cursor-pointer"
+                                      style={{
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: '1.4em',
+                                        maxHeight: '4.2em'
+                                      }}
+                                    >
+                                      {entry.project?.name || "No project"}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="start" className="max-w-xs">
+                                     <p>{entry.project?.name || "No project"}</p>
+                                   </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </td>
-                            <td className="p-4">
-                              {entry.task?.title || "No task"}
+                            <td className="p-4 max-w-xs">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span 
+                                      className="cursor-pointer"
+                                      style={{
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: '1.4em',
+                                        maxHeight: '4.2em'
+                                      }}
+                                    >
+                                      {entry.task?.title || "No task"}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="start" className="max-w-xs">
+                                     <p>{entry.task?.title || "No task"}</p>
+                                   </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </td>
-                            <td className="p-4">
-                              {entry.user
-                                ? `${entry.user.firstName} ${entry.user.lastName}`
-                                : "Unknown user"}
+                            <td className="p-4 max-w-xs">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span 
+                                      className="cursor-pointer"
+                                      style={{
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: '1.3em',
+                                        maxHeight: '2.6em'
+                                      }}
+                                    >
+                                      {entry.user
+                                        ? `${entry.user.firstName} ${entry.user.lastName}`
+                                        : "Unknown user"}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="start" className="max-w-xs">
+                                     <p>{entry.user
+                                       ? `${entry.user.firstName} ${entry.user.lastName}`
+                                       : "Unknown user"}</p>
+                                   </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </td>
                             <td className="p-4 text-right tabular-nums">
                               {formatDuration(entry.duration || 0)}
-                            </td>
-                            <td className="p-4 text-center">
-                              {entry.isBillable ? (
-                                <span className="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
-                              ) : (
-                                <span className="inline-block w-4 h-4 bg-gray-300 rounded-full"></span>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <Select
-                                value={entry.status}
-                                onValueChange={(value) => handleStatusUpdate(entry.id, value)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue>
-                                    <span
-                                      className={cn(
-                                        "text-xs px-2 py-1 rounded-full font-medium inline-block",
-                                        entry.status === "Approved"
-                                          ? "bg-green-100 text-green-600"
-                                          : entry.status === "Rejected"
-                                          ? "bg-red-100 text-red-600"
-                                          : "bg-amber-100 text-amber-600"
-                                      )}
-                                    >
-                                      {entry.status}
-                                    </span>
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Pending">
-                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-600">
-                                      Pending
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="Approved">
-                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-600">
-                                      Approved
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="Rejected">
-                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-red-100 text-red-600">
-                                      Rejected
-                                    </span>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -1822,6 +1943,150 @@ const TimeTracking = () => {
             >
               <Pause size={16} className="mr-2" />
               Stop & Save
+            </MotionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* New Time Entry Modal */}
+      <Dialog open={isNewTimeEntryModalOpen} onOpenChange={setIsNewTimeEntryModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Time Entry</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-3 py-3">
+            {/* Hours and Minutes */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="hours" className="text-sm">Hours</Label>
+                <Input
+                  id="hours"
+                  type="number"
+                  min="0"
+                  max="23"
+                  placeholder="0"
+                  className="h-9"
+                  value={newTimeEntryFormData.hours || ''}
+                  onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, hours: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="minutes" className="text-sm">Minutes</Label>
+                <Input
+                  id="minutes"
+                  type="number"
+                  min="0"
+                  max="59"
+                  placeholder="0"
+                  className="h-9"
+                  value={newTimeEntryFormData.minutes || ''}
+                  onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+            
+            {/* Date */}
+            <div className="space-y-1">
+              <Label htmlFor="date" className="text-sm">Date*</Label>
+              <Input
+                id="date"
+                type="date"
+                className="h-9"
+                value={newTimeEntryFormData.date || ''}
+                onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, date: e.target.value }))}
+              />
+            </div>
+            
+            {/* Project */}
+            <div className="space-y-1">
+              <Label htmlFor="project" className="text-sm">Project*</Label>
+              <Select
+                value={newTimeEntryFormData.projectId || ''}
+                onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, projectId: value, taskId: undefined }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Status */}
+            <div className="space-y-1">
+              <Label htmlFor="status" className="text-sm">Status*</Label>
+              <Select
+                value={newTimeEntryFormData.status || ''}
+                onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TO_DO">To Do</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="IN_REVIEW">In Review</SelectItem>
+                  <SelectItem value="DONE">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Task */}
+            <div className="space-y-1">
+              <Label htmlFor="task" className="text-sm">Task*</Label>
+              <Select
+                value={newTimeEntryFormData.taskId || ''}
+                onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, taskId: value }))}
+                disabled={!newTimeEntryFormData.projectId}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select a task" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tasks
+                    .filter(task => !newTimeEntryFormData.projectId || task.project?.id === newTimeEntryFormData.projectId)
+                    .map((task) => (
+                    <SelectItem key={task.id} value={task.id}>
+                      {task.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Description */}
+            <div className="space-y-1">
+              <Label htmlFor="description" className="text-sm">Note</Label>
+              <Textarea
+                id="description"
+                placeholder="Add a note..."
+                value={newTimeEntryFormData.description || ''}
+                onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <MotionButton
+              variant="outline"
+              onClick={() => setIsNewTimeEntryModalOpen(false)}
+              motion="subtle"
+            >
+              Cancel
+            </MotionButton>
+            <MotionButton
+              onClick={handleNewTimeEntrySubmit}
+              motion="subtle"
+            >
+              Save Entry
             </MotionButton>
           </div>
         </DialogContent>

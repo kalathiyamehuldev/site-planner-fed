@@ -5,6 +5,13 @@ import { cn } from "@/lib/utils";
 import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TaskTableProps {
   tasks: any[];
@@ -16,6 +23,8 @@ interface TaskTableProps {
 }
 
 const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, showProject = true }: TaskTableProps) => {
+  const isMobile = useIsMobile();
+  
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",
@@ -68,36 +77,154 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
     );
   }
 
+  // Mobile Card View
+  if (isMobile) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        {tasks.map((task, index) => {
+          const transformedTask = transformTaskForTable(task);
+          return (
+            <GlassCard 
+              key={task.id} 
+              className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in"
+              style={{
+                animationDelay: `${index * 0.05}s`,
+                animationFillMode: "forwards",
+              }}
+              onClick={() => onTaskClick?.(task.id)}
+            >
+              <div className="space-y-3">
+                {/* Title and Description */}
+                <div>
+                  <h3 className="font-medium text-base mb-1 line-clamp-2">{task.title}</h3>
+                  {task.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+                  )}
+                </div>
+                
+                {/* Status and Priority Row */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={cn(
+                      "text-xs px-2.5 py-1 rounded-full font-medium",
+                      statusColors[transformedTask.status]
+                    )}
+                  >
+                    {transformedTask.status}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs px-2.5 py-1 rounded-full font-medium",
+                      priorityColors[transformedTask.priority]
+                    )}
+                  >
+                    {transformedTask.priority}
+                  </span>
+                </div>
+                
+                {/* Project (if shown) */}
+                {showProject && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Project:</span>
+                    <span className="text-sm truncate">{transformedTask.projectName}</span>
+                  </div>
+                )}
+                
+                {/* Details Row */}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <User size={14} className="text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{transformedTask.assignedTo}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={14} className="text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{transformedTask.dueDate}</span>
+                  </div>
+                </div>
+                
+                {/* Hours and Actions Row */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={14} className="text-muted-foreground" />
+                    <span className="text-sm">{task.estimatedHours || 0}h</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/tasks/${task.id}`}
+                      className="inline-flex items-center gap-1 text-primary font-medium text-sm px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Eye size={14} />
+                      View
+                    </Link>
+                    {onEditTask && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditTask(task);
+                        }}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Edit size={14} />
+                      </Button>
+                    )}
+                    {onDeleteTask && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTask(task.id);
+                        }}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop Table View
   return (
     <GlassCard className={cn("overflow-hidden", className)}>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
           <thead>
             <tr className="border-b">
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
                 Task
               </th>
               {showProject && (
-                <th className="text-left p-4 font-medium text-muted-foreground">
+                <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-full sm:w-1/4 md:w-1/6 lg:w-1/8 hidden sm:table-cell">
                   Project
                 </th>
               )}
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-16 sm:w-20 md:w-24">
                 Status
               </th>
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-16 sm:w-20 md:w-24 hidden md:table-cell">
                 Priority
               </th>
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-28 md:w-32 hidden lg:table-cell">
                 Assigned To
               </th>
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-24 md:w-28 hidden lg:table-cell">
                 Due Date
               </th>
-              <th className="text-left p-4 font-medium text-muted-foreground">
+              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-12 sm:w-16 md:w-20 hidden xl:table-cell">
                 Hours
               </th>
-              <th className="text-right p-4 font-medium text-muted-foreground">
+              <th className="text-right p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-28 md:w-32">
                 Actions
               </th>
             </tr>
@@ -115,32 +242,107 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   }}
                   onClick={() => onTaskClick?.(task.id)}
                 >
-                  <td className="p-4">
+                  <td className="p-3 md:p-4 max-w-xs">
                     <div className="flex flex-col">
-                      <span className="font-medium">{task.title}</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="font-medium cursor-pointer text-sm md:text-base"
+                              style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: '1.4em',
+                                maxHeight: '2.8em'
+                              }}
+                            >
+                              {task.title}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="max-w-xs">
+                             <p>{task.title}</p>
+                           </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {task.description && (
-                        <span className="text-sm text-muted-foreground truncate max-w-xs">
-                          {task.description}
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span 
+                                className="text-xs md:text-sm text-muted-foreground cursor-pointer mt-1 hidden sm:block"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  lineHeight: '1.3em',
+                                  maxHeight: '1.3em'
+                                }}
+                              >
+                                {task.description}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-xs">
+                               <p>{task.description}</p>
+                             </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
+                      {/* Mobile: Show priority and assignee under title */}
+                      <div className="flex items-center gap-2 mt-1 md:hidden">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium",
+                            priorityColors[transformedTask.priority]
+                          )}
+                        >
+                          {transformedTask.priority}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {transformedTask.assignedTo}
+                        </span>
+                      </div>
                     </div>
                   </td>
                   {showProject && (
-                    <td className="p-4">
-                      <span className="text-sm">{transformedTask.projectName}</span>
+                    <td className="p-3 md:p-4 max-w-xs hidden sm:table-cell">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="text-xs md:text-sm cursor-pointer"
+                              style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: '1.3em',
+                                maxHeight: '2.6em'
+                              }}
+                            >
+                              {transformedTask.projectName}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="max-w-xs">
+                             <p>{transformedTask.projectName}</p>
+                           </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </td>
                   )}
-                  <td className="p-4">
+                  <td className="p-3 md:p-4">
                     <span
                       className={cn(
-                        "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
+                        "text-xs px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-medium whitespace-nowrap",
                         statusColors[transformedTask.status]
                       )}
                     >
                       {transformedTask.status}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3 md:p-4 hidden md:table-cell">
                     <span
                       className={cn(
                         "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
@@ -150,34 +352,36 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       {transformedTask.priority}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3 md:p-4 hidden lg:table-cell">
                     <div className="flex items-center gap-1.5">
                       <User size={14} className="text-muted-foreground" />
-                      <span className="text-sm">{transformedTask.assignedTo}</span>
+                      <span className="text-sm truncate">{transformedTask.assignedTo}</span>
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3 md:p-4 hidden lg:table-cell">
                     <div className="flex items-center gap-1.5">
                       <Calendar size={14} className="text-muted-foreground" />
-                      <span className="text-sm">{transformedTask.dueDate}</span>
+                      <span className="text-sm truncate">{transformedTask.dueDate}</span>
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3 md:p-4 hidden xl:table-cell">
                     <div className="flex items-center gap-1.5">
                       <Clock size={14} className="text-muted-foreground" />
                       <span className="text-sm">{task.estimatedHours || 0}h</span>
                     </div>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="p-3 md:p-4 text-right">
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
                       <Link
                         to={`/tasks/${task.id}`}
-                        className="inline-flex items-center gap-1 text-primary font-medium text-sm hover:gap-2 transition-all duration-200"
+                        className="inline-flex items-center gap-1 text-primary font-medium text-xs md:text-sm hover:gap-2 transition-all duration-200 px-2 py-1 rounded hover:bg-primary/10"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Eye size={14} />
-                        View
-                        <ArrowRight size={14} className="transition-transform hover:translate-x-1" />
+                        <Eye size={12} className="md:hidden" />
+                        <Eye size={14} className="hidden md:block" />
+                        <span className="hidden sm:inline">View</span>
+                        <ArrowRight size={12} className="transition-transform hover:translate-x-1 md:hidden" />
+                        <ArrowRight size={14} className="transition-transform hover:translate-x-1 hidden md:block" />
                       </Link>
                       {onEditTask && (
                         <Button
@@ -187,9 +391,10 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                             e.stopPropagation();
                             onEditTask(task);
                           }}
-                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-7 w-7 md:h-8 md:w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} className="md:hidden" />
+                          <Edit size={14} className="hidden md:block" />
                         </Button>
                       )}
                       {onDeleteTask && (
@@ -200,9 +405,10 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                             e.stopPropagation();
                             onDeleteTask(task.id);
                           }}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 w-7 md:h-8 md:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} className="md:hidden" />
+                          <Trash2 size={14} className="hidden md:block" />
                         </Button>
                       )}
                     </div>

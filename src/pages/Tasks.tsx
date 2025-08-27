@@ -42,7 +42,7 @@ const Tasks = () => {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
@@ -195,18 +195,6 @@ const Tasks = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-secondary rounded-lg p-1">
               <button
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                  viewMode === "list"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <List size={16} />
-                List
-              </button>
-              <button
                 onClick={() => setViewMode("kanban")}
                 className={cn(
                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
@@ -217,6 +205,18 @@ const Tasks = () => {
               >
                 <LayoutGrid size={16} />
                 Board
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  viewMode === "list"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List size={16} />
+                List
               </button>
             </div>
             <MotionButton 
@@ -256,16 +256,7 @@ const Tasks = () => {
           </div>
         </div>
 
-        {viewMode === "list" ? (
-          <TaskTable
-            tasks={filteredTasks}
-            onTaskClick={handleTaskClick}
-            onEditTask={handleEditTask}
-            onDeleteTask={handleDeleteTask}
-            className="animate-fade-in"
-            showProject={true}
-          />
-        ) : (
+        {viewMode === "kanban" ? (
            <KanbanBoard
              tasks={filteredTasks}
              onTaskClick={handleTaskClick}
@@ -278,7 +269,16 @@ const Tasks = () => {
              onUpdateTaskStatus={handleUpdateTaskStatus}
              className="animate-fade-in"
            />
-         )}
+         ):(
+          <TaskTable
+            tasks={filteredTasks}
+            onTaskClick={handleTaskClick}
+            onEditTask={handleEditTask}
+            onDeleteTask={handleDeleteTask}
+            className="animate-fade-in"
+            showProject={true}
+          />
+        )}
 
         {/* New Task Dialog */}
         <AddTaskDialog

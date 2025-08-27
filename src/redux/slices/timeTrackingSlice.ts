@@ -22,7 +22,7 @@ export interface ApiTimeEntry {
   isBillable: boolean;
   hourlyRate?: number;
   billableAmount?: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
   isRunning: boolean;
   taskId?: string;
   projectId?: string;
@@ -55,6 +55,7 @@ export interface CreateTimeEntryData {
   taskId?: string;
   projectId?: string;
   userId?: string;
+  status?: string;
 }
 
 export interface UpdateTimeEntryData {
@@ -65,14 +66,14 @@ export interface UpdateTimeEntryData {
   duration?: number;
   isBillable?: boolean;
   hourlyRate?: number;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status?: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
 }
 
 export interface TimeEntryFilterParams {
   projectId?: string;
   taskId?: string;
   userId?: string;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status?: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
   isBillable?: boolean;
   isRunning?: boolean;
   startDate?: string;
@@ -141,7 +142,7 @@ export interface TimeEntry {
   isBillable: boolean;
   hourlyRate: number;
   billableAmount: number;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'To Do' | 'In Progress' | 'In Review' | 'Done';
   isRunning: boolean;
   task?: {
     id: string;
@@ -160,7 +161,7 @@ export interface TimeEntry {
   updatedAt: string;
 }
 
-export type TimeEntryStatus = 'Pending' | 'Approved' | 'Rejected';
+export type TimeEntryStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done';
 
 // Transform API time entry to frontend format
 const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
@@ -176,9 +177,10 @@ const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
   isBillable: apiTimeEntry.isBillable,
   hourlyRate: apiTimeEntry.hourlyRate || 0,
   billableAmount: apiTimeEntry.billableAmount || 0,
-  status: apiTimeEntry.status === 'PENDING' ? 'Pending' as const :
-          apiTimeEntry.status === 'APPROVED' ? 'Approved' as const :
-          'Rejected' as const,
+  status: apiTimeEntry.status === 'TO_DO' ? 'To Do' as const :
+          apiTimeEntry.status === 'IN_PROGRESS' ? 'In Progress' as const :
+          apiTimeEntry.status === 'IN_REVIEW' ? 'In Review' as const :
+          'Done' as const,
   isRunning: apiTimeEntry.isRunning,
   task: apiTimeEntry.task,
   project: apiTimeEntry.project,
@@ -355,7 +357,7 @@ export const fetchTimeEntrySummary = createAsyncThunk(
 
 export const updateTimeEntryStatus = createAsyncThunk(
   'timeTracking/updateTimeEntryStatus',
-  async ({ id, status }: { id: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' }, { rejectWithValue }) => {
+  async ({ id, status }: { id: string; status: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' }, { rejectWithValue }) => {
     try {
       const response: any = await api.patch(`/time-tracking/${id}/status`, { status });
       if (response.status === 'error') {

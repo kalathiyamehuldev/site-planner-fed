@@ -17,10 +17,10 @@ const PageContainer = ({
   padding = true 
 }: PageContainerProps) => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <main
         className={cn(
-          "flex-1",
+          "flex-1 bg-background",
           padding && "pt-24 pb-16 px-4 md:px-8",
           !fullWidth && "max-w-7xl mx-auto w-full",
           className

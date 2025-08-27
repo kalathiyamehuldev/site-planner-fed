@@ -49,9 +49,17 @@
     @apply border-border;
   }
 
+  html {
+    @apply bg-background;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+  }
+
+  #root {
+    @apply bg-background min-h-screen;
   }
 
   h1, h2, h3, h4, h5, h6 {
