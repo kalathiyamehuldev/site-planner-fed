@@ -400,18 +400,19 @@ const AddressBook = () => {
                   </div>
 
                   <div className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-start gap-6 mb-8">
-                      <div className="flex flex-col items-center">
+                    {/* Header Section with Profile */}
+                    <div className="flex flex-col lg:flex-row gap-8 mb-8">
+                      <div className="flex flex-col items-center lg:items-start">
                         {selectedContact.image ? (
                           <img
                             src={selectedContact.image}
                             alt={selectedContact.name}
-                            className="w-24 h-24 rounded-full object-cover mb-2"
+                            className="w-28 h-28 rounded-xl object-cover mb-4 shadow-md"
                           />
                         ) : (
                           <div
                             className={cn(
-                              "w-24 h-24 rounded-full flex items-center justify-center text-2xl font-medium mb-2",
+                              "w-28 h-28 rounded-xl flex items-center justify-center text-2xl font-semibold mb-4 shadow-md",
                               getContactColor(selectedContact.id)
                             )}
                           >
@@ -420,37 +421,67 @@ const AddressBook = () => {
                         )}
                         <span
                           className={cn(
-                            "text-xs px-2 py-1 rounded-full font-medium",
+                            "text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wide",
                             selectedContact.type === "Client" &&
-                              "bg-blue-100 text-blue-600",
+                              "bg-blue-100 text-blue-700 border border-blue-200",
                             selectedContact.type === "Vendor" &&
-                              "bg-green-100 text-green-600",
+                              "bg-green-100 text-green-700 border border-green-200",
                             selectedContact.type === "Architect" &&
-                              "bg-amber-100 text-amber-600"
+                              "bg-amber-100 text-amber-700 border border-amber-200"
                           )}
                         >
                           {selectedContact.type}
                         </span>
                       </div>
-
+                      
                       <div className="flex-1">
-                        <h1 className="text-2xl font-medium mb-1">
+                        <h1 className="text-3xl font-bold mb-2 text-foreground">
                           {selectedContact.name}
                         </h1>
-                        <p className="text-muted-foreground mb-4">
-                          {selectedContact.company || "No company"}
+                        <p className="text-lg text-muted-foreground mb-6">
+                          {selectedContact.company || "Independent"}
                         </p>
+                        
+                        {/* Quick Contact Actions */}
+                        <div className="flex flex-wrap gap-3">
+                          <a
+                            href={`mailto:${selectedContact.email}`}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                          >
+                            <Mail className="w-4 h-4" />
+                            Send Email
+                          </a>
+                          {selectedContact.phone && (
+                            <a
+                              href={`tel:${selectedContact.phone}`}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+                            >
+                              <Phone className="w-4 h-4" />
+                              Call
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                        <div className="space-y-3">
+                    {/* Contact Information Cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center">
+                          <User className="w-5 h-5 mr-2 text-primary" />
+                          Contact Information
+                        </h3>
+                        
+                        <div className="bg-card border rounded-lg p-4 space-y-4">
                           <div className="flex items-start gap-3">
-                            <Mail className="w-5 h-5 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Email
+                            <Mail className="w-5 h-5 text-muted-foreground mt-1" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                                Email Address
                               </p>
                               <a
                                 href={`mailto:${selectedContact.email}`}
-                                className="text-primary hover:underline"
+                                className="text-primary hover:underline font-medium break-all"
                               >
                                 {selectedContact.email}
                               </a>
@@ -458,107 +489,90 @@ const AddressBook = () => {
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <Phone className="w-5 h-5 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Phone
+                            <Phone className="w-5 h-5 text-muted-foreground mt-1" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                                Phone Number
                               </p>
                               <a
                                 href={`tel:${selectedContact.phone}`}
-                                className="hover:text-primary"
+                                className="hover:text-primary font-medium"
                               >
-                                {selectedContact.phone || "No phone"}
+                                {selectedContact.phone || "Not provided"}
                               </a>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
+                            <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                                 Address
                               </p>
-                              <p>{selectedContact.address || "No address"}</p>
+                              <p className="font-medium">{selectedContact.address || "Not provided"}</p>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-md font-medium mb-3 flex items-center">
-                          <FileText className="w-4 h-4 mr-2" />
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center">
+                          <FileText className="w-5 h-5 mr-2 text-primary" />
                           Related Projects
                         </h3>
-                        <div className="bg-muted/30 rounded-lg p-4">
+                        
+                        <div className="bg-card border rounded-lg p-4">
                           {(() => {
                             const contactProjects = getContactProjects(selectedContact);
                             return contactProjects.length > 0 ? (
-                              <ul className="space-y-2">
+                              <div className="space-y-3">
                                 {contactProjects.map((project) => (
-                                  <li key={project.id} className="text-sm flex items-center justify-between">
-                                    <a href="#" className="hover:text-primary">
+                                  <div key={project.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                                    <a 
+                                      href="#" 
+                                      className="hover:text-primary font-medium flex-1 truncate"
+                                      title={project.title}
+                                    >
                                       {project.title}
                                     </a>
                                     <span className={cn(
-                                      "text-xs px-2 py-0.5 rounded-full",
+                                      "text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap flex-shrink-0",
                                       getProjectStatusStyle(project.status)
                                     )}>
                                       {project.status}
                                     </span>
-                                  </li>
+                                  </div>
                                 ))}
-                              </ul>
+                              </div>
                             ) : (
-                              <p className="text-sm text-muted-foreground">No projects associated</p>
+                              <p className="text-muted-foreground text-center py-4">No projects associated</p>
                             );
-                          })()}
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-md font-medium mb-3 flex items-center">
-                          <Clock className="w-4 h-4 mr-2" />
-                          Recent Invoices
-                        </h3>
-                        <div className="bg-muted/30 rounded-lg p-4">
-                          <ul className="space-y-2">
-                            <li className="text-sm flex items-center justify-between">
-                              <a href="#" className="hover:text-primary">
-                                Invoice #INV-2023-001
-                              </a>
-                              <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-                                Paid
-                              </span>
-                            </li>
-                            <li className="text-sm flex items-center justify-between">
-                              <a href="#" className="hover:text-primary">
-                                Invoice #INV-2023-005
-                              </a>
-                              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                                Pending
-                              </span>
-                            </li>
-                          </ul>
+                          })()} 
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-border">
-                      <h3 className="text-md font-medium mb-3">Notes</h3>
-                      <textarea
-                        className="w-full rounded-lg border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[100px]"
-                        placeholder="Add notes about this contact..."
-                      ></textarea>
-                      <div className="flex justify-end mt-3">
-                        <MotionButton
-                          variant="default"
-                          size="sm"
-                          motion="subtle"
-                        >
-                          Save Notes
-                        </MotionButton>
+                    {/* Notes Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold mb-4 flex items-center">
+                        <FileText className="w-5 h-5 mr-2 text-primary" />
+                        Notes
+                      </h3>
+                      
+                      <div className="bg-card border rounded-lg p-4">
+                        <textarea
+                          placeholder="Add notes about this contact..."
+                          className="w-full h-32 bg-background rounded-lg p-4 border border-input resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-sm"
+                        ></textarea>
+                        <div className="flex justify-end mt-4">
+                          <MotionButton
+                            variant="default"
+                            size="sm"
+                            motion="subtle"
+                          >
+                            Save Notes
+                          </MotionButton>
+                        </div>
                       </div>
                     </div>
                   </div>

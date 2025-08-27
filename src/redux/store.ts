@@ -11,6 +11,7 @@ import imagesReducer from './slices/imagesSlice';
 import productsReducer from './slices/productsSlice';
 import authReducer from './slices/authSlice';
 import adminReducer from './slices/adminSlice';
+import foldersReducer from './slices/foldersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     images: imagesReducer,
     products: productsReducer,
     admin: adminReducer,
+    folders: foldersReducer,
   },
 });
 
