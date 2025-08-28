@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -28,6 +29,8 @@ import {
 } from "lucide-react";
 import {
   fetchDocuments,
+  fetchDocumentsByFolder,
+  fetchRootDocuments,
   createDocument,
   updateDocument,
   deleteDocument,
@@ -49,6 +52,8 @@ import {
   Folder as ReduxFolder
 } from "@/redux/slices/foldersSlice";
 import { useToast } from "@/hooks/use-toast";
+import UploadDocumentDialog from "@/components/documents/UploadDocumentDialog";
+import DeleteFolderModal from '@/components/DeleteFolderModal';
 
 // File type categories for filtering
 const fileTypeCategories = [
@@ -128,6 +133,10 @@ const Documents = () => {
   // Remove local folders state as it's now managed by Redux
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [folderNameInput, setFolderNameInput] = useState<string>("");
+  const [deleteFolderModal, setDeleteFolderModal] = useState<{
+    isOpen: boolean;
+    folder: Folder | null;
+  }>({ isOpen: false, folder: null });
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<{id: string, name: string}[]>([]);
   const [contextMenu, setContextMenu] = useState<{
@@ -157,7 +166,7 @@ const Documents = () => {
 
   // Load data on component mount
   useEffect(() => {
-    dispatch(fetchDocuments({ page: 1, limit: 10 }));
+    dispatch(fetchRootDocuments());
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
     dispatch(fetchFolders(undefined));
@@ -214,10 +223,7 @@ const Documents = () => {
       
       setShowCreateFolderModal(false);
       setNewFolderForm({ name: '', projectId: '' });
-      toast({
-        title: "Success",
-        description: "Folder created successfully"
-      });
+      // Success message will be handled by backend API
     } catch (error) {
       toast({
         title: "Error",
@@ -250,17 +256,15 @@ const Documents = () => {
     }
   };
 
-  const deleteFolderById = async (folderId: string) => {
+  const deleteFolderById = async (folderId: string, cascade: boolean = false) => {
     try {
-      await dispatch(deleteFolderAsync(folderId)).unwrap();
+      await dispatch(deleteFolderAsync({ id: folderId, cascade })).unwrap();
       if (selectedFolderId === folderId) {
         setSelectedFolderId(null);
         setFolderPath([]);
       }
-      toast({
-        title: "Success",
-        description: "Folder deleted successfully"
-      });
+      setDeleteFolderModal({ isOpen: false, folder: null });
+      // Success message will be handled by backend API
     } catch (error) {
       toast({
         title: "Error",
@@ -280,23 +284,33 @@ const Documents = () => {
     setFolderNameInput('');
   };
 
+  // Navigation
+  const navigate = useNavigate();
+
   // Folder navigation functions
   const handleFolderClick = (folderId: string) => {
     if (editingFolderId === folderId) return;
     
-    navigateToFolder(folderId);
+    navigate(`/documents/folder/${folderId}`);
   };
 
   const navigateToFolder = (folderId: string | null) => {
     if (folderId) {
       const folder = folders.find(f => f.id === folderId);
       if (folder) {
+        console.log('Navigating to folder:', { folderId, folder });
         setSelectedFolderId(folderId);
         setFolderPath(prev => [...prev, { id: folder.id, name: folder.name }]);
+        // Fetch documents for this folder
+        dispatch(fetchDocumentsByFolder(folderId));
+      } else {
+        console.error('Folder not found:', folderId);
       }
     } else {
       setSelectedFolderId(null);
       setFolderPath([]);
+      // Fetch root documents when going back to root
+      dispatch(fetchRootDocuments());
     }
   };
 
@@ -304,7 +318,16 @@ const Documents = () => {
     if (folderPath.length > 0) {
       const newPath = folderPath.slice(0, -1);
       setFolderPath(newPath);
-      setSelectedFolderId(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+      const newSelectedFolderId = newPath.length > 0 ? newPath[newPath.length - 1].id : null;
+      setSelectedFolderId(newSelectedFolderId);
+      
+      // Fetch documents for the parent folder or all documents if at root
+      if (newSelectedFolderId) {
+        console.log('Going back to parent folder:', newSelectedFolderId);
+        dispatch(fetchDocumentsByFolder(newSelectedFolderId));
+      } else {
+        dispatch(fetchRootDocuments());
+      }
     }
   };
 
@@ -314,9 +337,8 @@ const Documents = () => {
       folder.parentId === selectedFolderId
     );
     
-    const currentDocuments = selectedFolderId 
-      ? folders.find(f => f.id === selectedFolderId)?.documents || []
-      : filteredDocuments;
+    // Use documents from Redux store (filtered by folder or all documents)
+    const currentDocuments = filteredDocuments;
     
     return {
       folders: currentFolders,
@@ -344,9 +366,16 @@ const Documents = () => {
 
   const handleDeleteFolder = () => {
     if (contextMenu.folderId) {
-      deleteFolderById(contextMenu.folderId);
+      const folder = folders.find(f => f.id === contextMenu.folderId);
+      if (folder) {
+        setDeleteFolderModal({ isOpen: true, folder });
+      }
     }
     closeContextMenu();
+  };
+
+  const openDeleteFolderModal = (folder: Folder) => {
+    setDeleteFolderModal({ isOpen: true, folder });
   };
 
   const handleDownloadFolder = () => {
@@ -391,10 +420,7 @@ const Documents = () => {
       setShowEditFolderModal(false);
       setSelectedFolderForEdit(null);
       setEditFolderForm({ name: '', projectId: '' });
-      toast({
-        title: "Success",
-        description: "Folder updated successfully"
-      });
+      // Success message will be handled by backend API
     } catch (error) {
       toast({
         title: "Error",
@@ -414,10 +440,7 @@ const Documents = () => {
     if (documentToDelete) {
       try {
         await dispatch(deleteDocument(documentToDelete.id)).unwrap();
-        toast({
-          title: "Success",
-          description: "Document deleted successfully",
-        });
+        // Success message will be handled by backend API
       } catch (error) {
         toast({
           title: "Error",
@@ -898,6 +921,35 @@ const Documents = () => {
             </div>
           </div>
         )}
+
+        {/* Upload Document Dialog */}
+        <UploadDocumentDialog
+          open={showUploadModal}
+          onOpenChange={setShowUploadModal}
+          folderId={selectedFolderId}
+          folderName={selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : undefined}
+          folderProjectId={selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.projectId : undefined}
+          onDocumentUploaded={() => {
+            // Refresh documents after upload
+            dispatch(fetchDocuments({ page: 1, limit: 10 }));
+          }}
+        />
+
+        {/* Delete Folder Modal */}
+        <DeleteFolderModal
+          open={deleteFolderModal.isOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteFolderModal({ isOpen: false, folder: null });
+            }
+          }}
+          folder={deleteFolderModal.folder}
+          onConfirm={(cascade) => {
+            if (deleteFolderModal.folder) {
+              deleteFolderById(deleteFolderModal.folder.id, cascade);
+            }
+          }}
+        />
       </div>
     </PageContainer>
   );

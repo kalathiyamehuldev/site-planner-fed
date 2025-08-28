@@ -14,12 +14,13 @@ interface ApiResponse<T = any> {
 // API Document interface (matching backend DTOs)
 export interface ApiDocument {
   id: string;
-  title: string;
+  name: string;
   content?: string;
   fileUrl?: string;
   fileType?: string;
   projectId?: string;
   taskId?: string;
+  folderId?: string;
   companyId: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,10 @@ export interface ApiDocument {
   task?: {
     id: string;
     title: string;
+  };
+  folder?: {
+    id: string;
+    name: string;
   };
 }
 
@@ -44,6 +49,8 @@ export interface Document {
   project?: string;
   taskId?: string;
   task?: string;
+  folderId?: string;
+  folder?: string;
   userId?: string;
   user?: string;
   category: string;
@@ -59,12 +66,13 @@ export interface Document {
 
 // Create/Update Document Data interfaces
 export interface CreateDocumentData {
-  title: string;
+  name: string;
   content?: string;
   fileUrl?: string;
   fileType?: string;
   projectId?: string;
   taskId?: string;
+  folderId?: string;
   file?: File;
 }
 
@@ -93,7 +101,7 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
   }
   
   const fileExtension = apiDoc.fileType?.toUpperCase() || 'FILE';
-  const fileName = apiDoc.title || 'Untitled Document';
+  const fileName = apiDoc.name || 'Untitled Document';
   
   return {
     id: apiDoc.id,
@@ -109,6 +117,8 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
     project: apiDoc.project?.name || '',
     taskId: apiDoc.taskId,
     task: apiDoc.task?.title || '',
+    folderId: apiDoc.folderId,
+    folder: apiDoc.folder?.name || '',
     userId: '', // Will be populated from user data
     user: '', // Will be populated from user data
     category: getCategoryFromFileType(apiDoc.fileType || ''),
@@ -224,10 +234,11 @@ export const createDocument = createAsyncThunk(
       if (documentData.file) {
         // Create FormData for file upload
         const formData = new FormData();
-        formData.append('title', documentData.title);
+        formData.append('name', documentData.name);
         if (documentData.content) formData.append('content', documentData.content);
         if (documentData.projectId) formData.append('projectId', documentData.projectId);
         if (documentData.taskId) formData.append('taskId', documentData.taskId);
+        if (documentData.folderId) formData.append('folderId', documentData.folderId);
         formData.append('file', documentData.file);
         
         response = await api.post(`/documents?companyId=${companyId}`, formData, {
@@ -366,6 +377,71 @@ export const fetchDocumentsByTask = createAsyncThunk(
       if (error.response?.data) {
         const apiError = error.response.data as ApiResponse;
         return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch task documents');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchDocumentsByFolder = createAsyncThunk(
+  'documents/fetchDocumentsByFolder',
+  async (folderId: string, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(folderId)) {
+        console.error('Invalid folder ID format:', folderId);
+        return rejectWithValue('Invalid folder ID format');
+      }
+      
+      console.log('Fetching documents for folder:', { folderId, companyId });
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/folder/${folderId}?companyId=${companyId}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch folder documents');
+      }
+      
+      return (response.data || [])
+        .filter((item: any) => item && typeof item === 'object')
+        .map(transformApiDocument);
+    } catch (error: any) {
+      console.error('Error fetching documents by folder:', { folderId, error: error.response?.data || error.message });
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch folder documents');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchRootDocuments = createAsyncThunk(
+  'documents/fetchRootDocuments',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response: ApiResponse<ApiDocument[]> = await api.get(`/documents/root?companyId=${companyId}`);
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch root documents');
+      }
+      
+      return (response.data || [])
+        .filter((item: any) => item && typeof item === 'object')
+        .map(transformApiDocument);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch root documents');
       }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
@@ -527,6 +603,34 @@ export const documentsSlice = createSlice({
         state.total = action.payload.length;
       })
       .addCase(fetchDocumentsByTask.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Documents By Folder
+      .addCase(fetchDocumentsByFolder.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentsByFolder.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = action.payload;
+        state.total = action.payload.length;
+      })
+      .addCase(fetchDocumentsByFolder.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Root Documents
+      .addCase(fetchRootDocuments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchRootDocuments.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = action.payload;
+        state.total = action.payload.length;
+      })
+      .addCase(fetchRootDocuments.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

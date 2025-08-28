@@ -10,6 +10,16 @@ interface ApiResponse<T = any> {
   error?: string;
 }
 
+// API Document interface
+export interface ApiDocument {
+  id: string;
+  name: string;
+  description?: string;
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // API Folder interface
 export interface ApiFolder {
   id: string;
@@ -23,6 +33,7 @@ export interface ApiFolder {
   companyId: string;
   parent?: ApiFolder;
   children: ApiFolder[];
+  documents?: ApiDocument[];
   _count: {
     documents: number;
   };
@@ -61,7 +72,8 @@ const transformApiFolder = (apiFolder: ApiFolder) => ({
   updatedAt: apiFolder.updatedAt,
   parent: apiFolder.parent ? transformApiFolder(apiFolder.parent) : null,
   children: apiFolder.children?.map(transformApiFolder) || [],
-  documentCount: apiFolder._count.documents,
+  documents: apiFolder.documents || [],
+  documentCount: apiFolder._count?.documents || 0,
   isEditing: false,
   projectName: '' // This will be populated from projects data
 });
@@ -173,9 +185,10 @@ export const updateFolderAsync = createAsyncThunk(
 
 export const deleteFolderAsync = createAsyncThunk(
   'folders/deleteFolder',
-  async (id: string, { rejectWithValue }) => {
+  async ({ id, cascade = false }: { id: string; cascade?: boolean }, { rejectWithValue }) => {
     try {
-      const response = await api.delete(`/folders/${id}`) as ApiResponse<null>;
+      const url = cascade ? `/folders/${id}?cascade=true` : `/folders/${id}`;
+      const response = await api.delete(url) as ApiResponse<null>;
       
       if (response.status === 'error') {
         return rejectWithValue(response.error || response.message || 'Failed to delete folder');
@@ -192,20 +205,83 @@ export const deleteFolderAsync = createAsyncThunk(
   }
 );
 
+export const fetchFolderPath = createAsyncThunk(
+  'folders/fetchFolderPath',
+  async (folderId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/folders/${folderId}/path`) as ApiResponse<{
+        id: string;
+        name: string;
+        path: string;
+        parts: string[];
+      }>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch folder path');
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch folder path');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const fetchFolderTree = createAsyncThunk(
+  'folders/fetchFolderTree',
+  async (projectId: string, { rejectWithValue, getState }) => {
+    try {
+      const companyId = getSelectedCompanyId(getState);
+      if (!companyId) {
+        throw new Error('No company selected');
+      }
+      
+      const response = await api.get(`/folders/tree/${projectId}`) as ApiResponse<{ folders: ApiFolder[] }>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch folder tree');
+      }
+      
+      return response.data!.folders.map(transformApiFolder);
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch folder tree');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
 interface FoldersState {
   folders: Folder[];
+  folderTree: Folder[];
   selectedFolder: Folder | null;
   loading: boolean;
+  treeLoading: boolean;
   error: string | null;
   currentPath: string[];
+  folderPath: {
+    id: string;
+    name: string;
+    path: string;
+    parts: string[];
+  } | null;
 }
 
 const initialState: FoldersState = {
   folders: [],
+  folderTree: [],
   selectedFolder: null,
   loading: false,
+  treeLoading: false,
   error: null,
   currentPath: [],
+  folderPath: null,
 };
 
 export const foldersSlice = createSlice({
@@ -340,6 +416,34 @@ export const foldersSlice = createSlice({
       .addCase(deleteFolderAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Fetch folder path
+      .addCase(fetchFolderPath.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFolderPath.fulfilled, (state, action) => {
+        state.loading = false;
+        state.folderPath = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchFolderPath.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch folder tree
+      .addCase(fetchFolderTree.pending, (state) => {
+        state.treeLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchFolderTree.fulfilled, (state, action) => {
+        state.treeLoading = false;
+        state.folderTree = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchFolderTree.rejected, (state, action) => {
+        state.treeLoading = false;
+        state.error = action.payload as string;
       });
   }
 });
@@ -376,5 +480,8 @@ export const selectCurrentFolders = (state: RootState) => {
 };
 export const selectFoldersByProject = (projectId: string) => (state: RootState) =>
   state.folders.folders.filter(folder => folder.projectId === projectId);
+export const selectFolderPath = (state: RootState) => state.folders.folderPath;
+export const selectFolderTree = (state: RootState) => state.folders.folderTree;
+export const selectTreeLoading = (state: RootState) => state.folders.treeLoading;
 
 export default foldersSlice.reducer;

@@ -24,6 +24,7 @@ import TimeTracking from "./pages/TimeTracking";
 import TodoList from "./pages/TodoList";
 import Invoices from "./pages/Invoices";
 import Documents from "./pages/Documents";
+import FolderView from "./pages/FolderView";
 import ProcurementHub from "./pages/ProcurementHub";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import AddressBook from "./pages/AddressBook";
@@ -86,6 +87,7 @@ const App = () => (
                           <Route path="/todo" element={<TodoList />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/documents" element={<Documents />} />
+                          <Route path="/documents/folder/:folderId" element={<FolderView />} />
                           <Route
                             path="/procurement"
                             element={<ProcurementHub />}
