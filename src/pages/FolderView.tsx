@@ -248,6 +248,11 @@ const FolderView: React.FC = () => {
       
       await dispatch(createFolder(newFolder)).unwrap();
       
+      // Refresh folder tree after successful creation
+      if (currentFolder.projectId) {
+        dispatch(fetchFolderTree(currentFolder.projectId));
+      }
+      
       setShowCreateFolderModal(false);
       setNewFolderName('');
       // Success message will be handled by backend API
@@ -274,6 +279,13 @@ const FolderView: React.FC = () => {
         id, 
         folderData: { name: name.trim() } 
       })).unwrap();
+      
+      // Refresh folder tree after successful update
+      const projectId = getProjectId();
+      if (projectId) {
+        dispatch(fetchFolderTree(projectId));
+      }
+      
       setEditingFolderId(null);
       setEditingFolderName('');
       // Success message will be handled by backend API
@@ -290,6 +302,13 @@ const FolderView: React.FC = () => {
   const handleDeleteFolder = async (id: string, cascade: boolean = false) => {
     try {
       await dispatch(deleteFolderAsync({ id, cascade })).unwrap();
+      
+      // Refresh folder tree after successful deletion
+      const projectId = getProjectId();
+      if (projectId) {
+        dispatch(fetchFolderTree(projectId));
+      }
+      
       // Success message will be handled by backend API
       setDeleteFolderModal({ isOpen: false, folder: null });
     } catch (error) {
@@ -310,6 +329,16 @@ const FolderView: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
       try {
         await dispatch(deleteDocument(id)).unwrap();
+        
+        // Refresh folder tree and documents after successful deletion
+        const projectId = getProjectId();
+        if (projectId) {
+          dispatch(fetchFolderTree(projectId));
+        }
+        if (folderId) {
+          dispatch(fetchDocumentsByFolder(folderId));
+        }
+        
         // Success message will be handled by backend API
       } catch (error) {
         console.error('Failed to delete document:', error);
@@ -820,9 +849,13 @@ const FolderView: React.FC = () => {
           folderName={currentFolder?.name}
           folderProjectId={currentFolder?.projectId}
           onDocumentUploaded={() => {
-            // Refresh documents after upload
+            // Refresh documents and folder tree after upload
             if (folderId) {
               dispatch(fetchDocumentsByFolder(folderId));
+            }
+            const projectId = getProjectId();
+            if (projectId) {
+              dispatch(fetchFolderTree(projectId));
             }
           }}
         />
