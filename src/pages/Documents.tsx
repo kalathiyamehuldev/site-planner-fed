@@ -25,7 +25,9 @@ import {
   Edit3,
   X,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Grid3X3,
+  List
 } from "lucide-react";
 import {
   fetchDocuments,
@@ -186,9 +188,6 @@ const Documents = () => {
     }
   }, [projects, folders, dispatch]);
 
-  // Filter documents based on search and filters
-  const filteredDocuments = documents;
-
   // Helper functions
   const getProjectName = (document: Document) => {
     return projects.find(p => p.id === document.projectId)?.title || 'No Project';
@@ -197,6 +196,87 @@ const Documents = () => {
   const getTaskName = (document: Document) => {
     return tasks.find(t => t.id === document.taskId)?.title || 'No Task';
   };
+
+  // Filter documents based on search and filters
+  const filteredDocuments = documents.filter(document => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesName = document.name.toLowerCase().includes(searchLower);
+      const matchesDescription = document.description?.toLowerCase().includes(searchLower);
+      const matchesProject = getProjectName(document).toLowerCase().includes(searchLower);
+      const matchesTask = getTaskName(document).toLowerCase().includes(searchLower);
+      
+      if (!matchesName && !matchesDescription && !matchesProject && !matchesTask) {
+        return false;
+      }
+    }
+    
+    // Project filter
+    if (selectedProject !== "All") {
+      if (document.projectId !== selectedProject) {
+        return false;
+      }
+    }
+    
+    // Task filter
+    if (selectedTask !== "All") {
+      if (document.taskId !== selectedTask) {
+        return false;
+      }
+    }
+    
+    // File type filter
+    if (selectedFileType !== "All") {
+      const fileExtension = document.name.split('.').pop()?.toUpperCase();
+      const documentType = document.type?.toUpperCase();
+      
+      // Map file types to extensions and MIME types
+      const typeMatches = {
+        'PDF': fileExtension === 'PDF' || documentType?.includes('PDF'),
+        'DOCX': fileExtension === 'DOCX' || documentType?.includes('WORD') || documentType?.includes('DOCUMENT'),
+        'XLSX': fileExtension === 'XLSX' || documentType?.includes('EXCEL') || documentType?.includes('SHEET'),
+        'PPTX': fileExtension === 'PPTX' || documentType?.includes('POWERPOINT') || documentType?.includes('PRESENTATION'),
+        'JPG': fileExtension === 'JPG' || fileExtension === 'JPEG' || documentType?.includes('JPEG'),
+        'PNG': fileExtension === 'PNG' || documentType?.includes('PNG'),
+        'ZIP': fileExtension === 'ZIP' || documentType?.includes('ZIP')
+      };
+      
+      if (!typeMatches[selectedFileType as keyof typeof typeMatches]) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  // Filter folders based on search and project
+  const filteredFolders = folders.filter(folder => {
+    // Only show folders in current directory
+    if (folder.parentId !== selectedFolderId) {
+      return false;
+    }
+    
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesName = folder.name.toLowerCase().includes(searchLower);
+      const matchesProject = folder.projectName?.toLowerCase().includes(searchLower);
+      
+      if (!matchesName && !matchesProject) {
+        return false;
+      }
+    }
+    
+    // Project filter
+    if (selectedProject !== "All") {
+      if (folder.projectId !== selectedProject) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   // Folder management functions
   const createNewFolder = () => {
@@ -333,16 +413,9 @@ const Documents = () => {
 
   // Get current folder content
   const getCurrentFolderContent = () => {
-    const currentFolders = folders.filter(folder => 
-      folder.parentId === selectedFolderId
-    );
-    
-    // Use documents from Redux store (filtered by folder or all documents)
-    const currentDocuments = filteredDocuments;
-    
     return {
-      folders: currentFolders,
-      documents: currentDocuments
+      folders: filteredFolders,
+      documents: filteredDocuments
     };
   };
 
@@ -519,18 +592,104 @@ const Documents = () => {
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
-          <div className="flex-1 min-w-0 relative order-1 lg:order-none">
+        {/* Search and Filters - Single Line */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 animate-fade-in animation-delay-[0.1s] w-full">
+          {/* Search Input */}
+          <div className="flex-1 min-w-[180px] max-w-[300px] relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
               placeholder="Search files and folders..."
-              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[200px]"
+              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          {/* Project Filter */}
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[110px] max-w-[150px] flex-shrink-0"
+          >
+            <option value="All">All Projects</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.title}
+              </option>
+            ))}
+          </select>
+          
+          {/* Task Filter */}
+          <select
+            value={selectedTask}
+            onChange={(e) => setSelectedTask(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
+          >
+            <option value="All">All Tasks</option>
+            {tasks.map(task => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+          
+          {/* File Type Filter */}
+          <select
+            value={selectedFileType}
+            onChange={(e) => setSelectedFileType(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0"
+          >
+            {fileTypeCategories.map(type => (
+              <option key={type} value={type}>
+                {type === "All" ? "All Types" : type}
+              </option>
+            ))}
+          </select>
+          
+          {/* View Mode Toggle */}
+          <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "px-3 py-2 text-sm transition-colors",
+                viewMode === "grid" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <Grid3X3 size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "px-3 py-2 text-sm transition-colors",
+                viewMode === "list" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <List size={16} />
+            </button>
+          </div>
+          
+          {/* Clear Filters Button */}
+          {(searchTerm || selectedProject !== "All" || selectedTask !== "All" || selectedFileType !== "All") && (
+            <MotionButton
+              variant="outline"
+              size="sm"
+              motion="subtle"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedProject("All");
+                setSelectedTask("All");
+                setSelectedFileType("All");
+              }}
+              className="whitespace-nowrap"
+            >
+              <X size={16} className="mr-1" /> Clear
+            </MotionButton>
+          )}
         </div>
 
         {/* Breadcrumb Navigation */}
@@ -687,11 +846,11 @@ const Documents = () => {
                               "opacity-0 animate-scale-in"
                             )}
                             style={{ 
-                              animationDelay: `${0.05 * (index % 4)}s`, 
+                              animationDelay: `${0.05 * (currentFolders.length + index)}s`, 
                               animationFillMode: "forwards" 
                             }}
                           >
-                            <div className="p-4 flex-1">
+                            <div className="p-4 flex-1 flex flex-col">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
                                   {getFileIcon(doc.type)}
@@ -751,7 +910,154 @@ const Documents = () => {
             })()}
           </div>
         ) : (
-          <div>List view not implemented</div>
+          <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
+            {(() => {
+              const { folders: currentFolders, documents: currentDocuments } = getCurrentFolderContent();
+              
+              if (currentFolders.length === 0 && currentDocuments.length === 0) {
+                return (
+                  <GlassCard className="p-8 text-center">
+                    <FileText className="mx-auto mb-4 text-muted-foreground" size={48} />
+                    <h3 className="text-xl font-medium mb-2">No Items Found</h3>
+                    <p className="text-muted-foreground mb-6">
+                      {selectedFolderId ? 'This folder is empty.' : 'No documents match your current filters. Try a different search or category.'}
+                    </p>
+                    <MotionButton variant="default" motion="subtle" onClick={() => setShowUploadModal(true)}>
+                      <Upload size={18} className="mr-2" /> Upload Documents
+                    </MotionButton>
+                  </GlassCard>
+                );
+              }
+              
+              return (
+                <GlassCard className="p-6">
+                  <div className="space-y-2">
+                    {/* List Header */}
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
+                      <div className="col-span-5">Name</div>
+                      <div className="col-span-2">Project</div>
+                      <div className="col-span-2">Type</div>
+                      <div className="col-span-2">Modified</div>
+                      <div className="col-span-1">Actions</div>
+                    </div>
+                    
+                    {/* Folders */}
+                    {currentFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer rounded-lg group"
+                        onClick={() => handleFolderClick(folder.id)}
+                        onContextMenu={(e) => openContextMenu(e, folder.id)}
+                      >
+                        <div className="col-span-5 flex items-center gap-3 min-w-0">
+                          <Folder className="text-blue-500 flex-shrink-0" size={20} />
+                          {editingFolderId === folder.id ? (
+                            <input
+                              type="text"
+                              value={folderNameInput}
+                              onChange={(e) => setFolderNameInput(e.target.value)}
+                              onBlur={() => updateFolderName(folder.id, folderNameInput)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateFolderName(folder.id, folderNameInput);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditingFolder();
+                                }
+                              }}
+                              className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="font-medium truncate group-hover:text-primary transition-colors">
+                              {folder.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground truncate">
+                          {folder.projectName || '-'}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          Folder
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          {formatDate(folder.createdAt)}
+                        </div>
+                        <div className="col-span-1 flex items-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openContextMenu(e, folder.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Documents */}
+                    {currentDocuments.map((document) => (
+                      <div
+                        key={document.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors rounded-lg group"
+                      >
+                        <div className="col-span-5 flex items-center gap-3 min-w-0">
+                          {getFileIcon(document.type)}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate group-hover:text-primary transition-colors">
+                              {document.name}
+                            </div>
+                            {document.description && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {document.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground truncate">
+                          {getProjectName(document)}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          <div>
+                            <div>{formatFileType(document.type || '')}</div>
+                            <div className="text-xs">{formatFileSize(document.size || 0)}</div>
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          {formatDate(document.createdAt)}
+                        </div>
+                        <div className="col-span-1 flex items-center gap-1">
+                          <button
+                            onClick={() => handleDownloadDocument(document)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            title="Download"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleEditDocument(document)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            title="Edit"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDocument(document)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              );
+            })()}
+          </div>
         )}
 
         {/* Context Menu */}

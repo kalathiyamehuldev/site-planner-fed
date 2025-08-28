@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import {
   fetchDocumentsByFolder,
   deleteDocument,
+  updateDocument,
   selectAllDocuments,
   Document
 } from '@/redux/slices/documentsSlice';
@@ -40,6 +41,7 @@ import {
   Search,
   Plus,
   MoreVertical,
+  MoreHorizontal,
   ArrowLeft,
   Folder,
   FileText,
@@ -49,7 +51,9 @@ import {
   Trash2,
   Edit3,
   ChevronRight,
-  Upload
+  Upload,
+  Download,
+  Calendar
 } from 'lucide-react';
 import UploadDocumentDialog from '@/components/documents/UploadDocumentDialog';
 import DeleteFolderModal from '@/components/DeleteFolderModal';
@@ -90,6 +94,40 @@ const formatFileSize = (bytes: number | string): string => {
   return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// Utility function for formatting date
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+// Utility function for formatting file type
+const formatFileType = (type: string): string => {
+  if (!type) return 'Unknown';
+  
+  const typeMap: { [key: string]: string } = {
+    'pdf': 'PDF Document',
+    'docx': 'Word Document',
+    'doc': 'Word Document',
+    'xlsx': 'Excel Spreadsheet',
+    'xls': 'Excel Spreadsheet',
+    'pptx': 'PowerPoint Presentation',
+    'ppt': 'PowerPoint Presentation',
+    'jpg': 'JPEG Image',
+    'jpeg': 'JPEG Image',
+    'png': 'PNG Image',
+    'gif': 'GIF Image',
+    'zip': 'ZIP Archive',
+    'rar': 'RAR Archive',
+    'txt': 'Text File'
+  };
+  
+  return typeMap[type.toLowerCase()] || type.toUpperCase() + ' File';
+};
+
 const FolderView: React.FC = () => {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
@@ -124,6 +162,8 @@ const FolderView: React.FC = () => {
     isOpen: boolean;
     folder: FolderType | null;
   }>({ isOpen: false, folder: null });
+  const [renameDocumentModal, setRenameDocumentModal] = useState<{ isOpen: boolean; document: Document | null }>({ isOpen: false, document: null });
+  const [newDocumentName, setNewDocumentName] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
   
   // Helper function to find a folder in the tree structure
@@ -325,31 +365,7 @@ const FolderView: React.FC = () => {
     setDeleteFolderModal({ isOpen: true, folder });
   };
   
-  const handleDeleteDocument = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-      try {
-        await dispatch(deleteDocument(id)).unwrap();
-        
-        // Refresh folder tree and documents after successful deletion
-        const projectId = getProjectId();
-        if (projectId) {
-          dispatch(fetchFolderTree(projectId));
-        }
-        if (folderId) {
-          dispatch(fetchDocumentsByFolder(folderId));
-        }
-        
-        // Success message will be handled by backend API
-      } catch (error) {
-        console.error('Failed to delete document:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to delete document',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
+
   
   const handleFolderClick = (folder: FolderType) => {
     // Navigate to the folder - the tree data will be available from the parent component
@@ -421,15 +437,120 @@ const FolderView: React.FC = () => {
       return <File className="h-4 w-4" />;
     }
     switch (type.toLowerCase()) {
-      case 'image':
-        return <Image className="h-4 w-4" />;
-      case 'spreadsheet':
-        return <FileSpreadsheet className="h-4 w-4" />;
-      case 'document':
-        return <FileText className="h-4 w-4" />;
+      case 'pdf':
+        return <FileText className="h-4 w-4 text-red-500" />;
+      case 'docx':
+      case 'doc':
+        return <FileText className="h-4 w-4 text-blue-500" />;
+      case 'xlsx':
+      case 'xls':
+        return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+      case 'pptx':
+      case 'ppt':
+        return <FileText className="h-4 w-4 text-orange-500" />;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return <Image className="h-4 w-4 text-purple-500" />;
+      case 'zip':
+      case 'rar':
+        return <File className="h-4 w-4 text-gray-500" />;
       default:
         return <File className="h-4 w-4" />;
     }
+  };
+
+  // Document handling functions
+  const handleDownloadDocument = (doc: Document) => {
+    if (doc.url) {
+      const link = window.document.createElement('a');
+      link.href = doc.url;
+      link.download = doc.name;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    }
+  };
+
+  const handleEditDocument = (doc: Document) => {
+    setRenameDocumentModal({ isOpen: true, document: doc });
+    setNewDocumentName(doc.name);
+  };
+
+  const handleRenameDocument = async () => {
+    if (!renameDocumentModal.document || !newDocumentName.trim()) return;
+
+    try {
+      await dispatch(updateDocument({
+        id: renameDocumentModal.document.id,
+        documentData: { name: newDocumentName.trim() }
+      })).unwrap();
+      
+      toast({
+        title: "Success",
+        description: "Document renamed successfully.",
+      });
+      
+      // Refresh documents after rename
+      if (folderId) {
+        dispatch(fetchDocumentsByFolder(folderId));
+      }
+      
+      // Refresh folder tree to update document count and structure
+      const projectId = getProjectId();
+      if (projectId) {
+        dispatch(fetchFolderTree(projectId));
+      }
+      
+      setRenameDocumentModal({ isOpen: false, document: null });
+      setNewDocumentName('');
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to rename document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelRename = () => {
+    setRenameDocumentModal({ isOpen: false, document: null });
+    setNewDocumentName('');
+  };
+
+  const handleDeleteDocumentFile = async (documentId: string) => {
+    try {
+      await dispatch(deleteDocument(documentId)).unwrap();
+      toast({
+        title: "Success",
+        description: "Document deleted successfully.",
+      });
+      
+      // Refresh documents after deletion
+      if (folderId) {
+        dispatch(fetchDocumentsByFolder(folderId));
+      }
+      
+      // Refresh folder tree to update document count and structure
+      const projectId = getProjectId();
+      if (projectId) {
+        dispatch(fetchFolderTree(projectId));
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getProjectName = (document: Document): string => {
+    const project = projects.find(p => p.id === document.projectId);
+    return project?.title || 'No Project';
   };
   
   const filteredDocuments = folderDocuments.filter(doc =>
@@ -656,7 +777,7 @@ const FolderView: React.FC = () => {
                   onClick={() => handleFolderClick(folder)}
                 >
                   <div className="flex items-center justify-between h-full">
-                    <div className="flex items-center flex-1 min-w-0 pr-2">
+                      <div className="flex items-center flex-1 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
                         <Folder className="text-blue-600" size={18} />
                       </div>
@@ -721,58 +842,70 @@ const FolderView: React.FC = () => {
           {filteredDocuments.length > 0 && (
             <div>
               <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredDocuments.map((document, index) => {
-                  const project = projects.find(p => p.id === document.projectId);
-                  const task = tasks.find(t => t.id === document.taskId);
-                  
-                  return (
-                    <div 
-                      key={document.id}
-                      className={cn(
-                        "relative flex flex-col p-4 cursor-pointer group",
-                        "opacity-0 animate-scale-in bg-white rounded-lg",
-                        "border border-gray-200 hover:border-gray-300 hover:bg-gray-50",
-                        "transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
-                      )}
-                      style={{ 
-                        animationDelay: `${0.05 * index}s`, 
-                        animationFillMode: "forwards" 
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0">
-                          {getFileIcon(document.type)}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredDocuments.map((doc, index) => (
+                  <div 
+                    key={doc.id}
+                    className={cn(
+                      "relative flex flex-col p-3 cursor-pointer group",
+                      "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
+                      "border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
+                      "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
+                    )}
+                    style={{ 
+                      animationDelay: `${0.05 * (filteredFolders.length + index)}s`, 
+                      animationFillMode: "forwards" 
+                    }}
+                  >
+                    <div className="flex items-center justify-between h-full">
+                      <div className="flex items-center flex-1 min-w-0 pr-2">
+                        <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
+                          {getFileIcon(doc.type)}
                         </div>
-                        
-                        <button
-                          className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDocument(document.id);
-                          }}
-                        >
-                          <MoreVertical size={16} />
-                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-sm" title={doc.name}>
+                            {doc.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar size={12} />
+                            <span>{formatDate(doc.createdAt)}</span>
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-sm mb-2">{document.name}</p>
-                        <div className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex items-center">
-                            <span className="truncate">{project?.title || 'No Project'}</span>
-                          </div>
-                          {task && (
-                            <div className="flex items-center">
-                              <span className="truncate">Task: {task.title}</span>
-                            </div>
-                          )}
-                          <div className="text-gray-500">{formatFileSize(document.size)}</div>
-                        </div>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150">
+                            <MoreVertical size={16} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => handleDownloadDocument(doc)}
+                            className="cursor-pointer"
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleEditDocument(doc)}
+                            className="cursor-pointer"
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteDocumentFile(doc.id)}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -875,6 +1008,48 @@ const FolderView: React.FC = () => {
              }
            }}
          />
+
+        {/* Rename Document Modal */}
+        {renameDocumentModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h2 className="text-lg font-semibold mb-4">Rename Document</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Document Name</label>
+                  <Input
+                    type="text"
+                    value={newDocumentName}
+                    onChange={(e) => setNewDocumentName(e.target.value)}
+                    placeholder="Enter document name"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleRenameDocument();
+                      } else if (e.key === 'Escape') {
+                        handleCancelRename();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelRename}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRenameDocument}
+                  disabled={!newDocumentName.trim()}
+                >
+                  Rename
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </PageContainer>
   );
