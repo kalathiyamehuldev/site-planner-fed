@@ -24,6 +24,9 @@ export interface Contact {
   lastContact?: string;
   notes?: string;
   companyId: string;
+  tags?: Array<{ id: string; name: string }>;
+  vendorTags?: Array<{ id: string; name: string }>;
+  vendorId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +66,8 @@ export interface CreateContactDto {
   isFavorite?: boolean;
   notes?: string;
   projectIds?: string[];
+  tagIds?: string[];
+  vendorId?: string;
 }
 
 export interface UpdateContactDto extends Partial<CreateContactDto> { }
@@ -82,6 +87,9 @@ const transformApiContact = (apiContact: any): Contact => {
     lastContact: apiContact.lastContact,
     notes: apiContact.notes,
     companyId: apiContact.companyId,
+    tags: apiContact.tags || [],
+    vendorTags: apiContact.vendorTags || [],
+    vendorId: apiContact.vendorId,
     createdAt: apiContact.createdAt,
     updatedAt: apiContact.updatedAt,
   };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import TagSelector from '@/components/ui/tag-selector';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
 import {
@@ -33,6 +35,7 @@ interface VendorFormData {
   phone: string;
   address: string;
   password: string;
+  tags: string[];
 }
 
 interface FormErrors {
@@ -44,6 +47,8 @@ interface FormErrors {
 
 const VendorManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { items: vendors, loading, error } = useSelector((state: RootState) => state.admin.vendors);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,6 +60,7 @@ const VendorManagement: React.FC = () => {
     phone: '',
     address: '',
     password: '',
+    tags: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
@@ -105,6 +111,38 @@ const VendorManagement: React.FC = () => {
     dispatch(fetchVendors());
   }, [dispatch]);
 
+  // Check for redirect from tag creation
+  useEffect(() => {
+    const locationState = location.state as {
+      fromTagCreation?: boolean;
+      newTag?: { name: string; id: string };
+      formData?: VendorFormData;
+    };
+    
+    if (locationState?.fromTagCreation && locationState?.newTag) {
+      // Pre-fill form data if available
+      if (locationState.formData) {
+        setFormData({
+          ...locationState.formData,
+          tags: [...new Set([...locationState.formData.tags, locationState.newTag.name])]
+        });
+      } else {
+        // Just add the new tag to empty form
+        setFormData(prev => ({
+          ...prev,
+          tags: [...new Set([...prev.tags, locationState.newTag!.name])]
+        }));
+      }
+      
+      // Open the dialog
+      setIsDialogOpen(true);
+      setEditingVendor(null);
+      
+      // Clear the navigation state
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
+
   useEffect(() => {
     if (error) {
       toast({
@@ -134,6 +172,9 @@ const VendorManagement: React.FC = () => {
         if (formData.email !== editingVendor.email) updatePayload.email = formData.email;
         if (formData.phone !== editingVendor.phone) updatePayload.phone = formData.phone;
         if (formData.address !== editingVendor.address) updatePayload.address = formData.address;
+        if (JSON.stringify(formData.tags) !== JSON.stringify(editingVendor.tags || [])) {
+          updatePayload.tags = formData.tags;
+        }
         
         await dispatch(updateVendor({ 
           id: editingVendor.id, 
@@ -153,6 +194,7 @@ const VendorManagement: React.FC = () => {
           phone: formData.phone,
           address: formData.address,
           password: formData.password,
+          tags: formData.tags,
         };
         
         await dispatch(createVendor(createPayload)).unwrap();
@@ -166,7 +208,7 @@ const VendorManagement: React.FC = () => {
       setFormErrors({});
       setIsDialogOpen(false);
       setEditingVendor(null);
-      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] });
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -181,9 +223,30 @@ const VendorManagement: React.FC = () => {
       phone: vendor.phone || '',
       address: vendor.address || '',
       password: '', // Don't populate password for editing
+      tags: vendor.tags || [],
     });
     setFormErrors({});
     setIsDialogOpen(true);
+  };
+
+  const handleTagCreated = (tag: any) => {
+    // Only redirect for new vendor creation, not updates
+    if (!editingVendor) {
+      // Store current form data and redirect with new tag
+      navigate(location.pathname, {
+        state: {
+          fromTagCreation: true,
+          newTag: { name: tag.name, id: tag.id },
+          formData: formData
+        }
+      });
+    } else {
+      // For updates, just add the tag without redirect
+      setFormData(prev => ({
+        ...prev,
+        tags: [...new Set([...prev.tags, tag.name])]
+      }));
+    }
   };
 
   const handleDelete = async (vendorId: string) => {
@@ -226,14 +289,14 @@ const VendorManagement: React.FC = () => {
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingVendor(null);
-              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] });
               setFormErrors({});
             }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Vendor
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-xl">
             <DialogHeader>
               <DialogTitle>
                 {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
@@ -269,6 +332,14 @@ const VendorManagement: React.FC = () => {
                       <p className="text-sm text-red-600">{formErrors.lastName}</p>
                     )}
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <TagSelector
+                    selectedTags={formData.tags}
+                    onTagsChange={(tags) => setFormData({ ...formData, tags })}
+                    onTagCreated={handleTagCreated}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
@@ -335,6 +406,7 @@ const VendorManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Tags</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -342,13 +414,13 @@ const VendorManagement: React.FC = () => {
             <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-8">
+                <td colSpan={6} className="text-center py-8">
                   Loading vendors...
                 </td>
               </tr>
             ) : filteredVendors.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-8">
+                <td colSpan={6} className="text-center py-8">
                   No vendors found
                 </td>
               </tr>
@@ -370,6 +442,16 @@ const VendorManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <span className="text-sm">{vendor.phone || '-'}</span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-wrap gap-1">
+                      {vendor.tags?.map((tag) => (
+                        <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                      {!vendor.tags?.length && <span className="text-sm text-muted-foreground">-</span>}
+                    </div>
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
