@@ -5,6 +5,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/contacts/ContactModal";
 import DeleteContactDialog from "@/components/contacts/DeleteContactDialog";
 import {
@@ -24,6 +25,7 @@ import {
   Star,
   FileText,
   Clock,
+  Tag as TagIcon,
 } from "lucide-react";
 import {
   fetchAllContactsByCompany,
@@ -40,20 +42,27 @@ import {
   type Contact,
 } from "@/redux/slices/contactsSlice";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
+import { fetchTags, Tag } from "@/redux/slices/adminSlice";
 
 const contactTypes = ["All", "Client", "Vendor", "Architect"];
 
 const AddressBook = () => {
   const dispatch = useDispatch();
+  const { toast } = useToast();
   const contacts = useSelector(selectAllContacts);
   const projectContacts = useSelector(selectProjectContacts);
   const selectedContact = useSelector(selectSelectedContact);
   const projects = useSelector(selectAllProjects);
+  const error = useSelector(selectContactsError);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("All");
   const [selectedProject, setSelectedProject] = useState<string>("All");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showTagFilter, setShowTagFilter] = useState(false);
+
+  const allTags = useSelector((state: any) => state.admin.tags.items);
 
   // Modal states
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -69,6 +78,7 @@ const AddressBook = () => {
     dispatch(clearError());
     dispatch(fetchAllContactsByCompany({}) as any);
     dispatch(fetchProjects() as any);
+    dispatch(fetchTags() as any);
   }, [dispatch]);
 
   useEffect(() => {
@@ -77,7 +87,20 @@ const AddressBook = () => {
     }
   }, [dispatch, selectedProject]);
 
-  // Filter contacts based on search term, type, and favorites
+  // Handle error toast
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
+      // Clear error after displaying
+      dispatch(clearError());
+    }
+  }, [error, toast, dispatch]);
+
+  // Filter contacts based on search term, type, tags, and favorites
   const contactsToFilter = selectedProject === "All" ? contacts : projectContacts;
   const filteredContacts = contactsToFilter.filter((contact: Contact) => {
     const matchesSearch =
@@ -89,9 +112,12 @@ const AddressBook = () => {
 
     const matchesType = selectedType === "All" || contact.type === selectedType;
 
+    const matchesTags = selectedTags.length === 0 || 
+      (contact.tags && contact.tags.some(tag => selectedTags.includes(tag.name)));
+
     const matchesFavorites = !showFavoritesOnly || contact.isFavorite;
 
-    return matchesSearch && matchesType && matchesFavorites;
+    return matchesSearch && matchesType && matchesTags && matchesFavorites;
   });
 
   const toggleFavorite = (contactId: string) => {
@@ -271,8 +297,63 @@ const AddressBook = () => {
               <Heart size={16} />
               <span>Favorites</span>
             </button>
+
+            {/* Tag Filter Toggle */}
+            <button
+              onClick={() => setShowTagFilter(!showTagFilter)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap",
+                selectedTags.length > 0
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              <Filter size={16} />
+              <span>Tags {selectedTags.length > 0 && `(${selectedTags.length})`}</span>
+            </button>
           </div>
         </div>
+
+        {/* Tag Filter */}
+        {showTagFilter && (
+          <div className="animate-fade-in animation-delay-[0.1s]">
+            <GlassCard className="p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium">Filter by Tags</h3>
+                {selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag: Tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => {
+                      setSelectedTags(prev =>
+                        prev.includes(tag.name)
+                          ? prev.filter(t => t !== tag.name)
+                          : [...prev, tag.name]
+                      );
+                    }}
+                    className={cn(
+                      "px-3 py-1 text-xs rounded-full transition-colors",
+                      selectedTags.includes(tag.name)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    )}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            </GlassCard>
+          </div>
+        )}
 
         {/* Contact List and Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in animation-delay-[0.2s]">
@@ -348,6 +429,33 @@ const AddressBook = () => {
                           <p className="text-sm text-muted-foreground truncate">
                             {contact.company}
                           </p>
+                          {(contact.tags && contact.tags.length > 0) || (contact.vendorTags && contact.vendorTags.length > 0) ? (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {/* Contact tags */}
+                              {contact.tags?.slice(0, 2).map((tag) => (
+                                <span
+                                  key={typeof tag === 'object' ? tag.id : tag}
+                                  className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] rounded-full"
+                                >
+                                  {typeof tag === 'object' ? tag.name : tag}
+                                </span>
+                              ))}
+                              {/* Vendor tags */}
+                              {contact.vendorTags?.slice(0, 2).map((tag) => (
+                                <span
+                                  key={`vendor-${typeof tag === 'object' ? tag.id : tag}`}
+                                  className="px-1.5 py-0.5 bg-green-100 text-green-800 text-[10px] rounded-full"
+                                >
+                                  {typeof tag === 'object' ? tag.name : tag}
+                                </span>
+                              ))}
+                              {((contact.tags?.length || 0) + (contact.vendorTags?.length || 0)) > 2 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{((contact.tags?.length || 0) + (contact.vendorTags?.length || 0)) - 2}
+                                </span>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -513,6 +621,45 @@ const AddressBook = () => {
                             </div>
                           </div>
                         </div>
+
+                        {/* Tags Section */}
+                        {(selectedContact.tags && selectedContact.tags.length > 0) || (selectedContact.vendorTags && selectedContact.vendorTags.length > 0) ? (
+                          <div className="mt-4">
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                              Tags
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {/* Contact tags */}
+                              {selectedContact.tags && selectedContact.tags.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Contact:</span>
+                                  {selectedContact.tags.map((tag) => (
+                                    <span
+                                      key={typeof tag === 'object' ? tag.id : tag}
+                                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                    >
+                                      {typeof tag === 'object' ? tag.name : tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Vendor tags */}
+                              {selectedContact.vendorTags && selectedContact.vendorTags.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Vendor:</span>
+                                  {selectedContact.vendorTags.map((tag) => (
+                                    <span
+                                      key={`vendor-${typeof tag === 'object' ? tag.id : tag}`}
+                                      className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                                    >
+                                      {typeof tag === 'object' ? tag.name : tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="space-y-4">

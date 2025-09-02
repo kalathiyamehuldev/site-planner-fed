@@ -24,6 +24,13 @@ export interface Member {
   updatedAt: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Vendor {
   id: string;
   firstName: string;
@@ -36,6 +43,7 @@ export interface Vendor {
   companyId: string;
   createdAt: string;
   updatedAt: string;
+  tags?: string[];
 }
 
 export interface Customer {
@@ -82,6 +90,7 @@ export interface CreateVendorData {
   companyName?: string;
   password: string;
   companyId: string;
+  tags?: string[];
 }
 
 export interface UpdateVendorData {
@@ -91,6 +100,7 @@ export interface UpdateVendorData {
   phone?: string;
   address?: string;
   isActive?: boolean;
+  tags?: string[];
 }
 
 export interface CreateCustomerData {
@@ -129,6 +139,11 @@ interface AdminState {
     loading: boolean;
     error: string | null;
   };
+  tags: {
+    items: Tag[];
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 const initialState: AdminState = {
@@ -143,6 +158,11 @@ const initialState: AdminState = {
     error: null,
   },
   customers: {
+    items: [],
+    loading: false,
+    error: null,
+  },
+  tags: {
     items: [],
     loading: false,
     error: null,
@@ -491,6 +511,70 @@ export const deleteCustomer = createAsyncThunk(
   }
 );
 
+// Tag async thunks
+export const fetchTags = createAsyncThunk(
+  'admin/fetchTags',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get('/tags') as ApiResponse<Tag[]>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch tags');
+      }
+      
+      return response.data || [];
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch tags');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const createTag = createAsyncThunk(
+  'admin/createTag',
+  async (tagData: { name: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/tags', tagData) as ApiResponse<Tag>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to create tag');
+      }
+      
+      return response.data!;
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to create tag');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
+export const searchTags = createAsyncThunk(
+  'admin/searchTags',
+  async (query: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/tags/search?q=${encodeURIComponent(query)}`) as ApiResponse<Tag[]>;
+      
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to search tags');
+      }
+      
+      return response.data || [];
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to search tags');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
 // Admin slice
 const adminSlice = createSlice({
   name: 'admin',
@@ -672,6 +756,46 @@ const adminSlice = createSlice({
       .addCase(deleteCustomer.rejected, (state, action) => {
         state.customers.loading = false;
         state.customers.error = action.payload as string;
+      })
+      // Tags
+      .addCase(fetchTags.pending, (state) => {
+        state.tags.loading = true;
+        state.tags.error = null;
+      })
+      .addCase(fetchTags.fulfilled, (state, action) => {
+        state.tags.loading = false;
+        state.tags.items = action.payload;
+        state.tags.error = null;
+      })
+      .addCase(fetchTags.rejected, (state, action) => {
+        state.tags.loading = false;
+        state.tags.error = action.payload as string;
+      })
+      .addCase(createTag.pending, (state) => {
+        state.tags.loading = true;
+        state.tags.error = null;
+      })
+      .addCase(createTag.fulfilled, (state, action) => {
+        state.tags.loading = false;
+        state.tags.items.push(action.payload);
+        state.tags.error = null;
+      })
+      .addCase(createTag.rejected, (state, action) => {
+        state.tags.loading = false;
+        state.tags.error = action.payload as string;
+      })
+      .addCase(searchTags.pending, (state) => {
+        state.tags.loading = true;
+        state.tags.error = null;
+      })
+      .addCase(searchTags.fulfilled, (state, action) => {
+        state.tags.loading = false;
+        state.tags.items = action.payload;
+        state.tags.error = null;
+      })
+      .addCase(searchTags.rejected, (state, action) => {
+        state.tags.loading = false;
+        state.tags.error = action.payload as string;
       });
   },
 });

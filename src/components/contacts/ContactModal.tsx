@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { Contact, CreateContactDto, UpdateContactDto, createContactAsync, updateContactAsync, selectContactsLoading, selectContactsError } from '@/redux/slices/contactsSlice';
+import { Contact, CreateContactDto, UpdateContactDto, createContactAsync, updateContactAsync, selectContactsLoading, selectContactsError, clearError, fetchAllContactsByCompany } from '@/redux/slices/contactsSlice';
 import { fetchProjects, selectAllProjects, selectProjectLoading } from '@/redux/slices/projectsSlice';
+import { fetchTags, Tag } from '@/redux/slices/adminSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import TagSelector from '@/components/ui/tag-selector';
 
 interface ContactModalProps {
   open: boolean;
@@ -36,6 +38,7 @@ interface ContactFormData {
   type: 'Client' | 'Vendor' | 'Architect';
   isFavorite: boolean;
   selectedProjects: string[];
+  tagNames: string[];
 }
 
 interface FormErrors {
@@ -57,6 +60,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
   const error = useAppSelector(selectContactsError);
   const projects = useAppSelector(selectAllProjects);
   const projectsLoading = useAppSelector(selectProjectLoading);
+  const allTags = useAppSelector((state: any) => state.admin.tags.items);
   
   const [formData, setFormData] = useState<ContactFormData>({
     name: '',
@@ -64,7 +68,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
     phone: '',
     type: 'Client',
     isFavorite: false,
-    selectedProjects: []
+    selectedProjects: [],
+    tagNames: [],
   });
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -72,8 +77,9 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
   // Initialize form data when dialog opens or contact changes
   useEffect(() => {
     if (open) {
-      // Fetch projects when modal opens
+      // Fetch projects and tags
       dispatch(fetchProjects());
+      dispatch(fetchTags());
       
       if (mode === 'edit' && contact) {
         setFormData({
@@ -82,7 +88,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           phone: contact.phone || '',
           type: contact.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: contact.isFavorite || false,
-          selectedProjects: []
+          selectedProjects: [],
+          tagNames: contact.tags?.map((tag) => tag.name) || []
         });
       } else if (mode === 'add') {
         setFormData({
@@ -91,7 +98,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           phone: '',
           type: 'Client',
           isFavorite: false,
-          selectedProjects: []
+          selectedProjects: [],
+          tagNames: [],
         });
       }
     }
@@ -102,7 +110,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
   }, [open, mode, contact, dispatch]);
 
   // Handle form field changes
-  const handleInputChange = (field: keyof ContactFormData, value: string | boolean) => {
+  const handleInputChange = (field: keyof ContactFormData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
@@ -161,13 +169,19 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
 
     try {
       if (mode === 'add') {
+        // Get tag IDs from tag names
+        const tagIds = formData.type === 'Vendor' 
+          ? formData.tagNames.map(name => allTags.find(tag => tag.name === name)?.id).filter(Boolean) as string[]
+          : undefined;
+
         const createData: CreateContactDto = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
           type: formData.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: formData.isFavorite,
-          projectIds: formData.selectedProjects
+          projectIds: formData.selectedProjects,
+          tagIds: tagIds,
         };
         const result = await dispatch(createContactAsync(createData));
         if (createContactAsync.fulfilled.match(result)) {
@@ -176,14 +190,22 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
             description: 'Contact created successfully',
           });
           onOpenChange(false);
+          // Refresh contacts after successful creation
+          dispatch(fetchAllContactsByCompany({}));
         }
       } else if (contact) {
+        // Get tag IDs from tag names
+        const tagIds = formData.type === 'Vendor' 
+          ? formData.tagNames.map(name => allTags.find(tag => tag.name === name)?.id).filter(Boolean) as string[]
+          : undefined;
+
         const updateData: UpdateContactDto = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
           type: formData.type as 'Client' | 'Vendor' | 'Architect',
-          isFavorite: formData.isFavorite
+          isFavorite: formData.isFavorite,
+          tagIds: tagIds,
         };
         const result = await dispatch(updateContactAsync({ id: contact.id, data: updateData }));
         if (updateContactAsync.fulfilled.match(result)) {
@@ -192,6 +214,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
             description: 'Contact updated successfully',
           });
           onOpenChange(false);
+          // Refresh contacts after successful update
+          dispatch(fetchAllContactsByCompany({}));
         }
       }
     } catch (error) {
@@ -207,8 +231,10 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
         description: error,
         variant: 'destructive',
       });
+      // Clear error after displaying
+      dispatch(clearError());
     }
-  }, [error, toast, open]);
+  }, [error, toast, open, dispatch]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -288,6 +314,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
               </Select>
             </div>
 
+
             {/* Associated Projects */}
             <div className="space-y-2">
               <Label>Associated Projects</Label>
@@ -336,6 +363,40 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Tags - show only for vendor type */}
+            {formData.type === 'Vendor' && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Vendor Tags</Label>
+                
+                {/* Display current tags as badges */}
+                {mode === 'edit' && contact && ( contact.type === 'vendor') && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {contact.tags?.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm"
+                      >
+                        {tag.name}
+                      </div>
+                    ))}
+                    {contact.vendorTags?.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm"
+                      >
+                        {tag.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <TagSelector
+                  selectedTags={formData.tagNames}
+                  onTagsChange={(tags) => handleInputChange('tagNames', tags)}
+                />
+              </div>
+            )}
 
             {/* Favorite */}
             <div className="space-y-2">
