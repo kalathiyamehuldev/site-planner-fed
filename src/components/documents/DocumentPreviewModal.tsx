@@ -3,6 +3,20 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Document, fetchDocumentDetails, updateDocument, deleteDocument, downloadDocument, fetchFilePreview, selectFilePreview, selectPreviewLoading } from '@/redux/slices/documentsSlice';
 import { getProjectMembers, ProjectMember } from '@/redux/slices/projectsSlice';
 import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import { 
+  fetchDocumentComments, 
+  createComment, 
+  updateComment as updateCommentAction, 
+  deleteComment as deleteCommentAction,
+  fetchProjectMembers as fetchCommentProjectMembers,
+  selectAllComments,
+  selectCommentsLoading,
+  selectCommentsError,
+  selectProjectMembers as selectCommentProjectMembers,
+  selectMembersLoading,
+  clearComments,
+  Comment as CommentType
+} from '@/redux/slices/commentsSlice';
 import {
   Dialog,
   DialogContent,
@@ -44,33 +58,15 @@ import {
   Calendar,
   Building,
   X,
+  Reply,
+  AtSign,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import DeleteDocumentModal from '@/components/DeleteDocumentModal';
 
-interface Comment {
-  id: string;
-  content: string;
-  author: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  taggedUsers: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  }[];
-  createdAt: string;
-  attachments?: {
-    id: string;
-    name: string;
-    url: string;
-    type: string;
-  }[];
-}
+// Using Comment type from commentsSlice
+type Comment = CommentType;
 
 interface DocumentPreviewModalProps {
   document: Document | null;
@@ -98,84 +94,81 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const filePreview = useAppSelector(selectFilePreview);
   const previewLoading = useAppSelector(selectPreviewLoading);
   
+  // Comments selectors
+  const comments = useAppSelector(selectAllComments);
+  const commentsLoading = useAppSelector(selectCommentsLoading);
+  const commentsError = useAppSelector(selectCommentsError);
+  const commentProjectMembers = useAppSelector(selectCommentProjectMembers);
+  const membersLoading = useAppSelector(selectMembersLoading);
+  
+  console.log('DocumentPreviewModal - commentProjectMembers:', commentProjectMembers);
+  console.log('DocumentPreviewModal - membersLoading:', membersLoading);
+  console.log('DocumentPreviewModal - document object:', document);
+  
   // State management
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [description, setDescription] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
-  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [isCommentsCollapsed, setIsCommentsCollapsed] = useState(false);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+
+  const [isAddingComment, setIsAddingComment] = useState(false);
   const [documentDetails, setDocumentDetails] = useState<any>(null);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replyMentionedUser, setReplyMentionedUser] = useState<string>('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState<string | null>(null);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [currentTextarea, setCurrentTextarea] = useState<'new' | 'edit' | 'reply' | null>(null);
+  const [collapsedReplies, setCollapsedReplies] = useState<Set<string>>(new Set());
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Mock comments data - replace with actual API calls
-  const mockComments: Comment[] = [
-    {
-      id: '1',
-      content: 'This document looks great! @John Doe please review the specifications.',
-      author: {
-        id: '1',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        email: 'jane@example.com',
-      },
-      taggedUsers: [
-        {
-          id: '2',
-          firstName: 'John',
-          lastName: 'Doe',
-        },
-      ],
-      createdAt: '2024-01-15T10:30:00Z',
-    },
-    {
-      id: '2',
-      content: 'Thanks for the review! I\'ve made the requested changes.',
-      author: {
-        id: '2',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john@example.com',
-      },
-      taggedUsers: [],
-      createdAt: '2024-01-15T14:20:00Z',
-      attachments: [
-        {
-          id: '1',
-          name: 'updated-specs.pdf',
-          url: '/files/updated-specs.pdf',
-          type: 'pdf',
-        },
-      ],
-    },
-  ];
+  // Fetch comments when document changes
+  const fetchCommentsForDocument = async (documentId: string) => {
+    try {
+      await dispatch(fetchDocumentComments({ documentId }));
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load comments',
+        variant: 'destructive',
+      });
+    }
+  };
+
+
 
   // Initialize data when modal opens
   useEffect(() => {
     if (isOpen && document && document.id) {
+      console.log('DocumentPreviewModal useEffect - document has projectId:', document.projectId);
       setDescription(document.description || '');
       setDocumentName(document.name || '');
       setSelectedTaskId(document.taskId || '');
-      setComments(mockComments);
+      
+      // Clear previous comments
+      dispatch(clearComments());
+      
+      // Fetch comments for this document
+      fetchCommentsForDocument(document.id);
       
       // Only fetch document details if document exists
       if (document.id) {
         fetchDocumentDetailsData(document.id);
-      }
-      
-      // Fetch project members if document has a project
-      if (document.projectId) {
-        fetchProjectMembers(document.projectId);
-        dispatch(fetchTasksByProject(document.projectId));
       }
     }
   }, [isOpen, document, dispatch]);
@@ -202,6 +195,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         // Fetch project tasks if document has project info but original document doesn't have projectId
         if (documentData.project?.id && !document?.projectId) {
           dispatch(fetchTasksByProject(documentData.project.id));
+          dispatch(fetchCommentProjectMembers(documentData.project.id));
         }
         // Fetch file preview if document has a fileId
         if (document?.fileId) {
@@ -232,19 +226,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     }
   };
 
-  const fetchProjectMembers = async (projectId: string) => {
-    setIsLoadingMembers(true);
-    try {
-      const result = await dispatch(getProjectMembers(projectId));
-      if (getProjectMembers.fulfilled.match(result)) {
-        setProjectMembers(result.payload.members || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch project members:', error);
-    } finally {
-      setIsLoadingMembers(false);
-    }
-  };
+
 
   const handleSaveDescription = async () => {
     if (!document) return;
@@ -310,7 +292,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelDocumentEdit = () => {
     setIsEditMode(false);
     setDocumentName(document?.name || '');
     setSelectedTaskId(document?.taskId || '');
@@ -385,46 +367,248 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     }
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim() || !selectedUser) {
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !document) return;
+    
+    setIsAddingComment(true);
+    try {
+      const mentionedUserIds = selectedUser ? [selectedUser] : [];
+      
+      await dispatch(createComment({
+        content: newComment,
+        commentType: 'GENERAL',
+        documentId: document.id,
+        mentionedUserIds
+      }));
+      
+      // Refresh comments after creating new comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setNewComment('');
+      setSelectedUser('');
+      
+      toast({
+        title: 'Success',
+        description: 'Comment added successfully',
+      });
+    } catch (error) {
+      console.error('Failed to add comment:', error);
       toast({
         title: 'Error',
-        description: 'Please enter a comment and select a user to tag',
+        description: 'Failed to add comment',
         variant: 'destructive',
       });
-      return;
+    } finally {
+      setIsAddingComment(false);
     }
+  };
 
-    const selectedMember = projectMembers.find(member => member.user.id === selectedUser);
-    if (!selectedMember) return;
-
-    const comment: Comment = {
-      id: Date.now().toString(),
-      content: newComment,
-      author: {
-        id: 'current-user',
-        firstName: 'Current',
-        lastName: 'User',
-        email: 'current@example.com',
-      },
-      taggedUsers: [
-        {
-          id: selectedMember.user.id,
-          firstName: selectedMember.user.firstName,
-          lastName: selectedMember.user.lastName,
-        },
-      ],
-      createdAt: new Date().toISOString(),
-    };
-
-    setComments(prev => [...prev, comment]);
-    setNewComment('');
-    setSelectedUser('');
+  const handleUpdateComment = async (commentId: string, newContent: string) => {
+    if (!document) return;
     
-    toast({
-      title: 'Success',
-      description: 'Comment added successfully',
-    });
+    try {
+      await dispatch(updateCommentAction({
+        id: commentId,
+        commentData: { content: newContent }
+      }));
+      
+      // Refresh comments after updating comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      toast({
+        title: 'Success',
+        description: 'Comment updated successfully',
+      });
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update comment',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!document) return;
+    
+    setIsDeletingComment(commentId);
+    try {
+      await dispatch(deleteCommentAction(commentId));
+      
+      // Refresh comments after deleting comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      toast({
+        title: 'Success',
+        description: 'Comment deleted successfully',
+      });
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingComment(null);
+    }
+  };
+
+  const handleStartEdit = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent('');
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editingContent.trim() || !document) return;
+    
+    setIsUpdatingComment(true);
+    try {
+      await dispatch(updateCommentAction({
+        id: commentId,
+        commentData: { content: editingContent.trim() }
+      }));
+      
+      // Refresh comments after editing comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setEditingCommentId(null);
+      setEditingContent('');
+      
+      toast({
+        title: 'Success',
+        description: 'Comment updated successfully',
+      });
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  const handleStartReply = (commentId: string) => {
+    setReplyingToCommentId(commentId);
+    setReplyContent('');
+    setReplyMentionedUser('');
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToCommentId(null);
+    setReplyContent('');
+    setReplyMentionedUser('');
+  };
+
+  const handleSubmitReply = async (parentId: string) => {
+    if (!replyContent.trim() || !document) return;
+    
+    setIsSubmittingReply(true);
+    try {
+      const mentionedUserIds = replyMentionedUser ? [replyMentionedUser] : [];
+      
+      await dispatch(createComment({
+        content: replyContent.trim(),
+        commentType: 'GENERAL',
+        documentId: document.id,
+        parentId,
+        mentionedUserIds
+      }));
+      
+      // Refresh comments after reply
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setReplyingToCommentId(null);
+      setReplyContent('');
+      setReplyMentionedUser('');
+      
+      toast({
+        title: 'Success',
+        description: 'Reply added successfully',
+      });
+    } catch (error) {
+      console.error('Failed to add reply:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add reply',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
+  // Helper functions for mention functionality
+  const handleTextareaChange = (value: string, type: 'new' | 'edit' | 'reply') => {
+    const lastAtIndex = value.lastIndexOf('@');
+    const lastSpaceIndex = value.lastIndexOf(' ');
+    
+    if (lastAtIndex > lastSpaceIndex && lastAtIndex !== -1) {
+      const query = value.substring(lastAtIndex + 1);
+      setMentionQuery(query);
+      setShowMentionDropdown(true);
+      setCurrentTextarea(type);
+    } else {
+      setShowMentionDropdown(false);
+      setMentionQuery('');
+      setCurrentTextarea(null);
+    }
+    
+    // Update the appropriate state
+    if (type === 'new') {
+      setNewComment(value);
+    } else if (type === 'edit') {
+      setEditingContent(value);
+    } else if (type === 'reply') {
+      setReplyContent(value);
+    }
+  };
+
+  const handleMentionSelect = (member: any) => {
+    const mentionText = `@${member.firstName} ${member.lastName}`;
+    
+    if (currentTextarea === 'new') {
+      const lastAtIndex = newComment.lastIndexOf('@');
+      const newValue = newComment.substring(0, lastAtIndex) + mentionText + ' ';
+      setNewComment(newValue);
+      setSelectedUser(member.id);
+    } else if (currentTextarea === 'edit') {
+      const lastAtIndex = editingContent.lastIndexOf('@');
+      const newValue = editingContent.substring(0, lastAtIndex) + mentionText + ' ';
+      setEditingContent(newValue);
+    } else if (currentTextarea === 'reply') {
+      const lastAtIndex = replyContent.lastIndexOf('@');
+      const newValue = replyContent.substring(0, lastAtIndex) + mentionText + ' ';
+      setReplyContent(newValue);
+      setReplyMentionedUser(member.id);
+    }
+    
+    setShowMentionDropdown(false);
+    setMentionQuery('');
+    setCurrentTextarea(null);
+  };
+
+  const filteredMembers = commentProjectMembers.filter(member => 
+    `${member.firstName} ${member.lastName}`.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
+
+  const toggleReplyCollapse = (commentId: string) => {
+    const newCollapsed = new Set(collapsedReplies);
+    if (newCollapsed.has(commentId)) {
+      newCollapsed.delete(commentId);
+    } else {
+      newCollapsed.add(commentId);
+    }
+    setCollapsedReplies(newCollapsed);
   };
 
   const getFileIcon = (fileType: string) => {
@@ -463,7 +647,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }}
             />
-            <div className="hidden flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
               <div className="text-center">
                 {getFileIcon(fileType)}
                 <p className="mt-2 text-sm text-gray-600">{filePreview.fileName}</p>
@@ -562,6 +746,210 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const isEditing = editingCommentId === comment.id;
+    const isReplying = replyingToCommentId === comment.id;
+    const maxDepth = 3; // Limit nesting depth
+    
+    return (
+      <div key={comment.id} className={`space-y-2 ${depth > 0 ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
+        <div className="flex items-start space-x-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-xs">
+              {getUserInitials(comment.fromUser.firstName, comment.fromUser.lastName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="font-medium text-sm">
+                {comment.fromUser.firstName} {comment.fromUser.lastName}
+              </span>
+              <span className="text-xs text-gray-500">
+                {format(new Date(comment.createdAt), 'MMM dd, HH:mm')}
+              </span>
+              {depth > 0 && (
+                <Badge variant="outline" className="text-xs px-1 py-0">
+                  Reply
+                </Badge>
+              )}
+            </div>
+            
+            {/* Comment Content */}
+            {isEditing ? (
+              <div className="space-y-2 relative">
+                <Textarea
+                  value={editingContent}
+                  onChange={(e) => handleTextareaChange(e.target.value, 'edit')}
+                  className="min-h-[60px] text-sm"
+                  placeholder="Edit your comment... (use @ to mention)"
+                />
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveEdit(comment.id)}
+                    disabled={isUpdatingComment || !editingContent.trim()}
+                  >
+                    {isUpdatingComment ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={isUpdatingComment}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-700 break-words">
+                {comment.content}
+              </p>
+            )}
+            
+            {/* Mentioned Users */}
+            {comment.mentionedUsers && comment.mentionedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {comment.mentionedUsers.map((user) => (
+                  <Badge key={user.id} variant="secondary" className="text-xs">
+                    @{user.firstName} {user.lastName}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            {!isEditing && (
+              <div className="flex items-center space-x-2 mt-2">
+                {depth < maxDepth && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                    onClick={() => handleStartReply(comment.id)}
+                  >
+                    <Reply className="h-3 w-3 mr-1" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => handleStartEdit(comment)}
+                >
+                  <Edit3 className="h-3 w-3 mr-1" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-600 focus:text-red-600"
+                      disabled={isDeletingComment === comment.id}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeletingComment === comment.id ? 'Deleting...' : 'Delete'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+            
+            {/* Reply Form */}
+            {isReplying && (
+              <div className="mt-3 space-y-2 p-3 bg-gray-50 rounded-lg relative">
+                <Textarea
+                  value={replyContent}
+                  onChange={(e) => handleTextareaChange(e.target.value, 'reply')}
+                  placeholder="Write a reply... (use @ to mention)"
+                  className="min-h-[60px] text-sm"
+                />
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSubmitReply(comment.id)}
+                    disabled={isSubmittingReply || !replyContent.trim()}
+                  >
+                    {isSubmittingReply ? 'Replying...' : 'Reply'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelReply}
+                    disabled={isSubmittingReply}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Render nested replies */}
+        {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
+          <div className="mt-2">
+            <div className="flex items-center space-x-2 mb-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                onClick={() => toggleReplyCollapse(comment.id)}
+              >
+                {collapsedReplies.has(comment.id) ? (
+                  <><ChevronDown className="h-3 w-3 mr-1" />Show {comment.replies.length} replies</>
+                ) : (
+                  <><ChevronUp className="h-3 w-3 mr-1" />Hide replies</>
+                )}
+              </Button>
+            </div>
+            {!collapsedReplies.has(comment.id) && (
+              <div>
+                {comment.replies.map((reply) => renderComment(reply, depth + 1))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Mention Dropdown */}
+        {showMentionDropdown && currentTextarea && (
+          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            {filteredMembers.length > 0 ? (
+              filteredMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                  onClick={() => handleMentionSelect(member)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs">
+                        {member.firstName[0]}{member.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>@{member.firstName} {member.lastName}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No users found
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleClose = () => {
     onClose();
     if (onRefresh) {
@@ -573,7 +961,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex items-center space-x-3">
             {getFileIcon(document.type)}
@@ -651,9 +1039,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="flex gap-6 overflow-hidden">
+        <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
           {/* Left side - File Preview */}
-          <div className="flex-1 space-y-4 overflow-y-auto">
+          <div className="flex-1 space-y-4 overflow-y-auto min-h-0">
             {/* Document Details */}
             <Card>
               <CardContent className="p-4">
@@ -770,7 +1158,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </div>
 
           {/* Right side - Project Info & Comments */}
-          <div className="w-96 flex flex-col space-y-4">
+          <div className="w-96 flex flex-col space-y-4 min-h-0">
             {/* Project Information */}
             {(document?.projectId || documentDetails?.project) && (
               <Card>
@@ -792,14 +1180,22 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             )}
             
             {/* Comments */}
-            <Card className="flex-1 flex flex-col">
-              <CardContent className="p-4 flex-1 flex flex-col">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="p-4 flex-1 flex flex-col min-h-0">
                 {/* Comments Header */}
                 <div 
                   className="flex items-center justify-between mb-4 cursor-pointer"
                   onClick={() => setIsCommentsCollapsed(!isCommentsCollapsed)}
                 >
-                  <h3 className="font-medium">Comments ({comments.length})</h3>
+                  <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Comments ({commentsLoading ? '...' : comments.length})</h3>
+                  {commentsLoading && (
+                    <div className="text-sm text-muted-foreground">Loading comments...</div>
+                  )}
+                  {commentsError && (
+                    <div className="text-sm text-red-500">Failed to load comments</div>
+                  )}
+                </div>
                   {isCommentsCollapsed ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
@@ -808,9 +1204,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 </div>
 
                 {!isCommentsCollapsed && (
-                  <>
+                  <div className="flex flex-col flex-1 min-h-0">
                     {/* Add Comment */}
-                    <div className="space-y-3 mb-4">
+                    <div className="space-y-3 mb-4 flex-shrink-0">
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">
                           Tag User (Required)
@@ -821,22 +1217,50 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="no-user">Select user to tag</SelectItem>
-                            {projectMembers.map((member) => (
-                              <SelectItem key={member.user.id} value={member.user.id}>
-                                {member.user.firstName} {member.user.lastName}
+                            {membersLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Loading members...
                               </SelectItem>
-                            ))}
+                            ) : (
+                              commentProjectMembers.map((member) => (
+                                <SelectItem key={member.id} value={member.id}>
+                                  {member.firstName} {member.lastName}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
                       
-                      <Textarea
-                        ref={textareaRef}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="min-h-[80px]"
-                      />
+                      <div className="relative">
+                        <Textarea
+                          ref={textareaRef}
+                          value={newComment}
+                          onChange={(e) => handleTextareaChange(e.target.value, 'new')}
+                          placeholder="Add a comment... (use @ to mention)"
+                          className="min-h-[80px]"
+                        />
+                        {showMentionDropdown && currentTextarea === 'new' && (
+                          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {filteredMembers.length > 0 ? (
+                              filteredMembers.map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => handleMentionSelect(member)}
+                                >
+                                  <Avatar className="h-6 w-6 mr-2">
+                                    <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{member.firstName} {member.lastName}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="flex items-center justify-between">
                         <div className="flex space-x-2">
@@ -845,66 +1269,32 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                             Add Image
                           </Button>
                         </div>
-                        <Button size="sm" onClick={handleAddComment}>
+                        <Button size="sm" onClick={handleAddComment} disabled={isAddingComment}>
                           <Send className="h-4 w-4 mr-2" />
                           Comment
                         </Button>
                       </div>
                     </div>
 
-                    <Separator className="mb-4" />
+                    <Separator className="mb-4 flex-shrink-0" />
 
                     {/* Comments List */}
-                    <div className="flex-1 overflow-y-auto space-y-4">
-                      {comments.map((comment) => (
-                        <div key={comment.id} className="space-y-2">
-                          <div className="flex items-start space-x-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs">
-                                {getUserInitials(comment.author.firstName, comment.author.lastName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-sm">
-                                  {comment.author.firstName} {comment.author.lastName}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {format(new Date(comment.createdAt), 'MMM dd, HH:mm')}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-700 break-words">
-                                {comment.content}
-                              </p>
-                              
-                              {/* Tagged Users */}
-                              {comment.taggedUsers.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {comment.taggedUsers.map((user) => (
-                                    <Badge key={user.id} variant="secondary" className="text-xs">
-                                      @{user.firstName} {user.lastName}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Attachments */}
-                              {comment.attachments && comment.attachments.length > 0 && (
-                                <div className="mt-2 space-y-1">
-                                  {comment.attachments.map((attachment) => (
-                                    <div key={attachment.id} className="flex items-center space-x-2 text-xs text-blue-600">
-                                      <FileText className="h-3 w-3" />
-                                      <span>{attachment.name}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                    <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+                      {commentsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-sm text-muted-foreground">Loading comments...</div>
                         </div>
-                      ))}
+                      ) : comments.length === 0 ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {comments.filter(comment => !comment.parentId).map((comment) => renderComment(comment))}
+                        </div>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>
