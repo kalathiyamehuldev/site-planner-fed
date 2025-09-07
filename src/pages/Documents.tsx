@@ -36,6 +36,7 @@ import {
   createDocument,
   updateDocument,
   deleteDocument,
+  downloadDocument,
   selectAllDocuments,
   Document,
   DocumentFilterParams
@@ -54,8 +55,9 @@ import {
   Folder as ReduxFolder
 } from "@/redux/slices/foldersSlice";
 import { useToast } from "@/hooks/use-toast";
-import UploadDocumentDialog from "@/components/documents/UploadDocumentDialog";
 import DeleteFolderModal from '@/components/DeleteFolderModal';
+import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
+import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 
 // File type categories for filtering
 const fileTypeCategories = [
@@ -139,6 +141,8 @@ const Documents = () => {
     isOpen: boolean;
     folder: Folder | null;
   }>({ isOpen: false, folder: null });
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<{id: string, name: string}[]>([]);
   const [contextMenu, setContextMenu] = useState<{
@@ -169,10 +173,17 @@ const Documents = () => {
   // Load data on component mount
   useEffect(() => {
     dispatch(fetchRootDocuments());
-    dispatch(fetchProjects());
-    dispatch(fetchAllTasksByCompany());
+    
+    // Fetch projects and tasks only if not already loaded
+    if (projects.length === 0) {
+      dispatch(fetchProjects());
+    }
+    if (tasks.length === 0) {
+      dispatch(fetchAllTasksByCompany());
+    }
+    
     dispatch(fetchFolders(undefined));
-  }, [dispatch]);
+  }, [dispatch, projects.length, tasks.length]);
 
   // Update folder project names when projects are loaded
   useEffect(() => {
@@ -536,8 +547,35 @@ const Documents = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleDownloadDocument = (document: Document) => {
-    toast({ title: "Download", description: `Downloading ${document.name}...` });
+  const handleDownloadDocument = async (document: Document) => {
+    if (!document.id) {
+      toast({
+        title: "Error",
+        description: "No file available for download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await dispatch(downloadDocument(document.id));
+      
+      if (downloadDocument.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: `${document.name} downloaded successfully`,
+        });
+      } else {
+        throw new Error(result.payload as string || 'Download failed');
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download document",
+        variant: "destructive",
+      });
+    }
   };
 
   // File icon helper
@@ -849,6 +887,10 @@ const Documents = () => {
                               animationDelay: `${0.05 * (currentFolders.length + index)}s`, 
                               animationFillMode: "forwards" 
                             }}
+                            onClick={() => {
+                              setSelectedDocument(doc);
+                              setShowDocumentPreview(true);
+                            }}
                           >
                             <div className="p-4 flex-1 flex flex-col">
                               <div className="flex items-start justify-between mb-3">
@@ -1001,7 +1043,11 @@ const Documents = () => {
                     {currentDocuments.map((document) => (
                       <div
                         key={document.id}
-                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors rounded-lg group"
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors rounded-lg group cursor-pointer"
+                        onClick={() => {
+                          setSelectedDocument(document);
+                          setShowDocumentPreview(true);
+                        }}
                       >
                         <div className="col-span-5 flex items-center gap-3 min-w-0">
                           {getFileIcon(document.type)}
@@ -1256,6 +1302,18 @@ const Documents = () => {
             }
           }}
         />
+
+        {/* Document Preview Modal */}
+        {selectedDocument && (
+          <DocumentPreviewModal
+            document={selectedDocument}
+            isOpen={showDocumentPreview}
+            onClose={() => {
+              setShowDocumentPreview(false);
+              setSelectedDocument(null);
+            }}
+          />
+        )}
       </div>
     </PageContainer>
   );

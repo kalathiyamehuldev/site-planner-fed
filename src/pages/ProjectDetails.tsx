@@ -21,7 +21,6 @@ import {
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
-import UploadDocumentDialog from "@/components/documents/UploadDocumentDialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchProjectById,
@@ -51,6 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 
 // Static data for progress (keeping as requested)
 const staticProjectData = {

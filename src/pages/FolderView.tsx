@@ -6,7 +6,8 @@ import {
   deleteDocument,
   updateDocument,
   selectAllDocuments,
-  Document
+  Document,
+  downloadDocument
 } from '@/redux/slices/documentsSlice';
 import { fetchProjects, selectAllProjects } from '@/redux/slices/projectsSlice';
 import { fetchAllTasksByCompany, selectAllTasks } from '@/redux/slices/tasksSlice';
@@ -55,9 +56,10 @@ import {
   Download,
   Calendar
 } from 'lucide-react';
-import UploadDocumentDialog from '@/components/documents/UploadDocumentDialog';
 import DeleteFolderModal from '@/components/DeleteFolderModal';
+import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { useToast } from '@/hooks/use-toast';
+import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialog';
 
 // Add CSS animations
 const styles = `
@@ -164,6 +166,8 @@ const FolderView: React.FC = () => {
   }>({ isOpen: false, folder: null });
   const [renameDocumentModal, setRenameDocumentModal] = useState<{ isOpen: boolean; document: Document | null }>({ isOpen: false, document: null });
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const editInputRef = useRef<HTMLInputElement>(null);
   
   // Helper function to find a folder in the tree structure
@@ -462,14 +466,34 @@ const FolderView: React.FC = () => {
   };
 
   // Document handling functions
-  const handleDownloadDocument = (doc: Document) => {
-    if (doc.url) {
-      const link = window.document.createElement('a');
-      link.href = doc.url;
-      link.download = doc.name;
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
+  const handleDownloadDocument = async (document: Document) => {
+    if (!document.id) {
+      toast({
+        title: "Error",
+        description: "No file available for download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await dispatch(downloadDocument(document.id));
+      
+      if (downloadDocument.fulfilled.match(result)) {
+        toast({
+          title: 'Success',
+          description: 'Document downloaded successfully',
+        });
+      } else {
+        throw new Error(result.payload as string || 'Download failed');
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to download document',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -856,6 +880,10 @@ const FolderView: React.FC = () => {
                       animationDelay: `${0.05 * (filteredFolders.length + index)}s`, 
                       animationFillMode: "forwards" 
                     }}
+                    onClick={() => {
+                      setSelectedDocument(doc);
+                      setShowDocumentPreview(true);
+                    }}
                   >
                     <div className="flex items-center justify-between h-full">
                       <div className="flex items-center flex-1 min-w-0 pr-2">
@@ -875,27 +903,39 @@ const FolderView: React.FC = () => {
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150">
+                          <button 
+                            className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <MoreVertical size={16} />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
-                            onClick={() => handleDownloadDocument(doc)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadDocument(doc);
+                            }}
                             className="cursor-pointer"
                           >
                             <Download className="mr-2 h-4 w-4" />
                             Download
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleEditDocument(doc)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditDocument(doc);
+                            }}
                             className="cursor-pointer"
                           >
                             <Edit3 className="mr-2 h-4 w-4" />
                             Rename
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteDocumentFile(doc.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocumentFile(doc.id);
+                            }}
                             className="cursor-pointer text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -982,13 +1022,22 @@ const FolderView: React.FC = () => {
           folderName={currentFolder?.name}
           folderProjectId={currentFolder?.projectId}
           onDocumentUploaded={() => {
-            // Refresh documents and folder tree after upload
-            if (folderId) {
-              dispatch(fetchDocumentsByFolder(folderId));
-            }
-            const projectId = getProjectId();
-            if (projectId) {
-              dispatch(fetchFolderTree(projectId));
+            try {
+              // Refresh documents and folder tree after upload
+              if (folderId) {
+                dispatch(fetchDocumentsByFolder(folderId));
+              }
+              const projectId = getProjectId();
+              if (projectId) {
+                dispatch(fetchFolderTree(projectId));
+              }
+            } catch (error) {
+              console.error('Error in onDocumentUploaded callback:', error);
+              toast({
+                title: "Error",
+                description: "Failed to refresh data after upload",
+                variant: "destructive",
+              });
             }
           }}
         />
@@ -1049,6 +1098,41 @@ const FolderView: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Document Preview Modal */}
+        {selectedDocument && (
+          <DocumentPreviewModal
+            document={selectedDocument}
+            isOpen={showDocumentPreview}
+            onClose={() => {
+              setShowDocumentPreview(false);
+              setSelectedDocument(null);
+            }}
+            onDelete={(documentId) => {
+              // Refresh documents after deletion
+              if (folderId) {
+                dispatch(fetchDocumentsByFolder(folderId));
+              }
+              
+              // Refresh folder tree to update document count and structure
+              const projectId = getProjectId();
+              if (projectId) {
+                dispatch(fetchFolderTree(projectId));
+              }
+            }}
+            onRefresh={() => {
+              // Refresh documents and folder tree
+              if (folderId) {
+                dispatch(fetchDocumentsByFolder(folderId));
+              }
+              
+              const projectId = getProjectId();
+              if (projectId) {
+                dispatch(fetchFolderTree(projectId));
+              }
+            }}
+          />
         )}
       </div>
     </PageContainer>
