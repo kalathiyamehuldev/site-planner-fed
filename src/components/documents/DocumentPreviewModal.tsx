@@ -112,7 +112,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const [documentName, setDocumentName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [newComment, setNewComment] = useState('');
-  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [mentionedUsers, setMentionedUsers] = useState<Array<{id: string, name: string}>>([]);
   const [isCommentsCollapsed, setIsCommentsCollapsed] = useState(false);
 
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -372,7 +372,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     
     setIsAddingComment(true);
     try {
-      const mentionedUserIds = selectedUser ? [selectedUser] : [];
+      const mentionedUserIds = mentionedUsers.map(user => user.id);
       
       await dispatch(createComment({
         content: newComment,
@@ -385,7 +385,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       await dispatch(fetchDocumentComments({ documentId: document.id }));
       
       setNewComment('');
-      setSelectedUser('');
+      setMentionedUsers([]);
       
       toast({
         title: 'Success',
@@ -547,6 +547,28 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     }
   };
 
+  // Helper function to extract mentioned users from text
+  const extractMentionedUsers = (text: string) => {
+    const mentionRegex = /@([^\s]+\s+[^\s]+)/g;
+    const mentions: Array<{id: string, name: string}> = [];
+    const seenUserIds = new Set<string>();
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionName = match[1];
+      const user = commentProjectMembers.find(member => 
+        `${member.firstName} ${member.lastName}` === mentionName
+      );
+      
+      if (user && !seenUserIds.has(user.id)) {
+        mentions.push({ id: user.id, name: mentionName });
+        seenUserIds.add(user.id);
+      }
+    }
+    
+    return mentions;
+  };
+
   // Helper functions for mention functionality
   const handleTextareaChange = (value: string, type: 'new' | 'edit' | 'reply') => {
     const lastAtIndex = value.lastIndexOf('@');
@@ -566,6 +588,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     // Update the appropriate state
     if (type === 'new') {
       setNewComment(value);
+      // Extract mentioned users for new comments
+      const extractedUsers = extractMentionedUsers(value);
+      setMentionedUsers(extractedUsers);
     } else if (type === 'edit') {
       setEditingContent(value);
     } else if (type === 'reply') {
@@ -580,7 +605,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       const lastAtIndex = newComment.lastIndexOf('@');
       const newValue = newComment.substring(0, lastAtIndex) + mentionText + ' ';
       setNewComment(newValue);
-      setSelectedUser(member.id);
+      // Extract mentioned users from the updated text
+      const extractedUsers = extractMentionedUsers(newValue);
+      setMentionedUsers(extractedUsers);
     } else if (currentTextarea === 'edit') {
       const lastAtIndex = editingContent.lastIndexOf('@');
       const newValue = editingContent.substring(0, lastAtIndex) + mentionText + ' ';
@@ -918,34 +945,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             )}
           </div>
         )}
-        
-        {/* Mention Dropdown */}
-        {showMentionDropdown && currentTextarea && (
-          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-            {filteredMembers.length > 0 ? (
-              filteredMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                  onClick={() => handleMentionSelect(member)}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {member.firstName[0]}{member.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>@{member.firstName} {member.lastName}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="px-3 py-2 text-sm text-gray-500">
-                No users found
-              </div>
-            )}
-          </div>
-        )}
+
       </div>
     );
   };
@@ -1206,32 +1206,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 {!isCommentsCollapsed && (
                   <div className="flex flex-col flex-1 min-h-0">
                     {/* Add Comment */}
-                    <div className="space-y-3 mb-4 flex-shrink-0">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-1 block">
-                          Tag User (Required)
-                        </label>
-                        <Select value={selectedUser || 'no-user'} onValueChange={(value) => setSelectedUser(value === 'no-user' ? '' : value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select user to tag" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-user">Select user to tag</SelectItem>
-                            {membersLoading ? (
-                              <SelectItem value="loading" disabled>
-                                Loading members...
-                              </SelectItem>
-                            ) : (
-                              commentProjectMembers.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  {member.firstName} {member.lastName}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
+                    <div className="space-y-3 mb-4 flex-shrink-0">                      
                       <div className="relative">
                         <Textarea
                           ref={textareaRef}
@@ -1263,12 +1238,12 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <div className="flex space-x-2">
+                        {/* <div className="flex space-x-2">
                           <Button variant="outline" size="sm" disabled>
                             <ImageIcon className="h-4 w-4 mr-2" />
                             Add Image
                           </Button>
-                        </div>
+                        </div> */}
                         <Button size="sm" onClick={handleAddComment} disabled={isAddingComment}>
                           <Send className="h-4 w-4 mr-2" />
                           Comment
