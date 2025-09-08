@@ -37,6 +37,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   Search,
@@ -894,9 +900,15 @@ const FolderView: React.FC = () => {
                           <p className="font-medium truncate text-sm" title={doc.name}>
                             {doc.name}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar size={12} />
-                            <span>{formatDate(doc.createdAt)}</span>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={12} />
+                              <span>{formatDate(doc.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <File size={12} />
+                              <span className="uppercase font-medium">{doc.files[0].fileType}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1059,46 +1071,50 @@ const FolderView: React.FC = () => {
          />
 
         {/* Rename Document Modal */}
-        {renameDocumentModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <h2 className="text-lg font-semibold mb-4">Rename Document</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Document Name</label>
-                  <Input
-                    type="text"
-                    value={newDocumentName}
-                    onChange={(e) => setNewDocumentName(e.target.value)}
-                    placeholder="Enter document name"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleRenameDocument();
-                      } else if (e.key === 'Escape') {
-                        handleCancelRename();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelRename}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleRenameDocument}
-                  disabled={!newDocumentName.trim()}
-                >
-                  Rename
-                </Button>
+        <Dialog open={renameDocumentModal.isOpen} onOpenChange={(open) => {
+          if (!open) {
+            handleCancelRename();
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Rename Document</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Document Name</label>
+                <Input
+                  type="text"
+                  value={newDocumentName}
+                  onChange={(e) => setNewDocumentName(e.target.value)}
+                  placeholder="Enter document name"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleRenameDocument();
+                    } else if (e.key === 'Escape') {
+                      handleCancelRename();
+                    }
+                  }}
+                />
               </div>
             </div>
-          </div>
-        )}
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={handleCancelRename}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRenameDocument}
+                disabled={!newDocumentName.trim()}
+              >
+                Rename
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Document Preview Modal */}
         {selectedDocument && (
