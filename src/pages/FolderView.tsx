@@ -820,7 +820,7 @@ const FolderView: React.FC = () => {
                             onChange={(e) => setEditingFolderName(e.target.value)}
                             onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
                             onKeyDown={(e) => handleKeyPress(e, folder.id)}
-                            className="w-full bg-transparent border-none outline-none text-sm font-medium"
+                            className="w-full bg-white border border-blue-300 rounded px-2 py-1 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
