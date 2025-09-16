@@ -69,6 +69,7 @@ import DeleteFolderModal from '@/components/DeleteFolderModal';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { useToast } from '@/hooks/use-toast';
 import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialog';
+import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
 
 // Add CSS animations
 const styles = `
@@ -189,6 +190,7 @@ const FolderView: React.FC = () => {
   const [newDocumentName, setNewDocumentName] = useState('');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
+  const [versionUploadModal, setVersionUploadModal] = useState<{ isOpen: boolean; document: Document | null }>({ isOpen: false, document: null });
   
   // Filter states
   const [selectedTask, setSelectedTask] = useState<string>('All');
@@ -664,6 +666,18 @@ const FolderView: React.FC = () => {
     }
   };
 
+  const handleCreateVersion = (document: Document) => {
+    setVersionUploadModal({ isOpen: true, document });
+  };
+
+  const handleVersionUploadSuccess = () => {
+    // Refresh documents after version upload
+    if (folderId) {
+      dispatch(fetchDocumentsByFolder(folderId));
+    }
+    setVersionUploadModal({ isOpen: false, document: null });
+  };
+
 
   
   const breadcrumbs = useMemo(() => {
@@ -1091,6 +1105,16 @@ const FolderView: React.FC = () => {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
+                                handleCreateVersion(doc);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              Create Version
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleDeleteDocumentFile(doc.id);
                               }}
                               className="cursor-pointer text-destructive focus:text-destructive"
@@ -1276,6 +1300,16 @@ const FolderView: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleCreateVersion(document);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            title="Create Version"
+                          >
+                            <Upload size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handleDeleteDocumentFile(document.id);
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
@@ -1450,6 +1484,20 @@ const FolderView: React.FC = () => {
                 dispatch(fetchFolderTree(projectId));
               }
             }}
+          />
+        )}
+
+        {/* Upload Version Dialog */}
+        {versionUploadModal.isOpen && versionUploadModal.document && (
+          <UploadVersionDialog
+            open={versionUploadModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setVersionUploadModal({ isOpen: false, document: null });
+              }
+            }}
+            document={versionUploadModal.document}
+            onVersionUploaded={handleVersionUploadSuccess}
           />
         )}
       </div>

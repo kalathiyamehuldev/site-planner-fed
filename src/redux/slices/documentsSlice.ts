@@ -534,28 +534,23 @@ export const uploadDocumentVersion = createAsyncThunk(
   'documents/uploadDocumentVersion',
   async ({ id, file, versionNotes }: { id: string; file: File; versionNotes?: string }, { rejectWithValue, getState }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        return rejectWithValue('No company selected');
-      }
-
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('companyId', companyId);
       if (versionNotes) {
         formData.append('versionNotes', versionNotes);
       }
 
-      const response = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/versions`, formData, {
+      const response:any = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/versions`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      });
+      });console.log('response', response);
       
-      if (response.data.status === 'success' && response.data.data) {
-        return transformApiDocument(response.data.data);
+      
+      if (response.status === 'success' && response.data) {
+        return transformApiDocument(response.data);
       } else {
-        return rejectWithValue(response.data.message || 'Failed to upload document version');
+        return rejectWithValue(response.message || 'Failed to upload document version');
       }
     } catch (error: any) {
       console.error('Error uploading document version:', error);
