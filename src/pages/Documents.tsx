@@ -446,8 +446,6 @@ const Documents = () => {
     setContextMenu({ isOpen: false, folderId: null, x: 0, y: 0 });
   };
 
-
-
   const handleDeleteFolder = () => {
     if (contextMenu.folderId) {
       const folder = folders.find(f => f.id === contextMenu.folderId);
@@ -618,22 +616,13 @@ const Documents = () => {
             >
               <FolderOpen size={16} className="mr-2" /> New Folder
             </MotionButton>
-            <MotionButton 
-              variant="default" 
-              size="sm" 
-              motion="subtle"
-              onClick={() => setShowUploadModal(true)}
-              className="w-full sm:w-auto"
-            >
-              <Upload size={16} className="mr-2" /> Upload Files
-            </MotionButton>
           </div>
         </div>
 
         {/* Search and Filters - Single Line */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 animate-fade-in animation-delay-[0.1s] w-full">
           {/* Search Input */}
-          <div className="flex-1 min-w-[180px] max-w-[300px] relative">
+          <div className="flex-1 min-w-[180px] max-w-full relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
@@ -645,7 +634,7 @@ const Documents = () => {
           </div>
           
           {/* Project Filter */}
-          <select
+          {/* <select
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[110px] max-w-[150px] flex-shrink-0"
@@ -659,7 +648,7 @@ const Documents = () => {
           </select>
           
           {/* Task Filter */}
-          <select
+          {/* <select
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
@@ -670,10 +659,10 @@ const Documents = () => {
                 {task.title}
               </option>
             ))}
-          </select>
+          </select> */}
           
           {/* File Type Filter */}
-          <select
+          {/* <select
             value={selectedFileType}
             onChange={(e) => setSelectedFileType(e.target.value)}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0"
@@ -683,7 +672,7 @@ const Documents = () => {
                 {type === "All" ? "All Types" : type}
               </option>
             ))}
-          </select>
+          </select> */}
           
           {/* View Mode Toggle */}
           <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
@@ -732,7 +721,7 @@ const Documents = () => {
 
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in animation-delay-[0.15s]">
-          <span className="font-medium text-foreground">Documents</span>
+          <span className="font-medium text-foreground">Project Folders</span>
           {folderPath.length > 0 && (
             <>
               <button
@@ -781,10 +770,10 @@ const Documents = () => {
                     <FileText className="mx-auto mb-4 text-muted-foreground" size={48} />
                     <h3 className="text-xl font-medium mb-2">No Items Found</h3>
                     <p className="text-muted-foreground mb-6">
-                      {selectedFolderId ? 'This folder is empty.' : 'No documents match your current filters. Try a different search or category.'}
+                      {selectedFolderId ? 'This folder is empty.' : 'No Project Documents found.'}
                     </p>
-                    <MotionButton variant="default" motion="subtle" onClick={() => setShowUploadModal(true)}>
-                      <Upload size={18} className="mr-2" /> Upload Documents
+                    <MotionButton variant="default" motion="subtle" onClick={createNewFolder}>
+                      <FolderOpen size={18} className="mr-2" /> New Folder
                     </MotionButton>
                   </GlassCard>
                 );

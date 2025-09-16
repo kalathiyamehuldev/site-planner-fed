@@ -10,7 +10,7 @@ import {
   downloadDocument
 } from '@/redux/slices/documentsSlice';
 import { fetchProjects, selectAllProjects } from '@/redux/slices/projectsSlice';
-import { fetchAllTasksByCompany, selectAllTasks } from '@/redux/slices/tasksSlice';
+import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
 import {
   fetchFolders,
   fetchFolderById,
@@ -60,7 +60,10 @@ import {
   ChevronRight,
   Upload,
   Download,
-  Calendar
+  Calendar,
+  Grid3X3,
+  List,
+  X
 } from 'lucide-react';
 import DeleteFolderModal from '@/components/DeleteFolderModal';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
@@ -136,6 +139,18 @@ const formatFileType = (type: string): string => {
   return typeMap[type.toLowerCase()] || type.toUpperCase() + ' File';
 };
 
+// File type categories for filtering
+const fileTypeCategories = [
+  "All",
+  "PDF",
+  "DOCX", 
+  "XLSX",
+  "PPTX",
+  "JPG",
+  "PNG",
+  "ZIP"
+];
+
 const FolderView: React.FC = () => {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
@@ -144,7 +159,7 @@ const FolderView: React.FC = () => {
   
   const documents = useAppSelector(selectAllDocuments);
   const projects = useAppSelector(selectAllProjects);
-  const tasks = useAppSelector(selectAllTasks);
+  const tasks = useAppSelector(selectProjectTasks);
   const folders = useAppSelector(selectAllFolders);
   const folderTree = useAppSelector(selectFolderTree);
   const documentsLoading = useAppSelector((state) => state.documents.loading);
@@ -174,7 +189,72 @@ const FolderView: React.FC = () => {
   const [newDocumentName, setNewDocumentName] = useState('');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
+  
+  // Filter states
+  const [selectedTask, setSelectedTask] = useState<string>('All');
+  const [selectedFileType, setSelectedFileType] = useState<string>('All');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper functions for getting names
+  const getTaskName = (document) => {
+    const task = tasks.find(t => t.id === document.taskId);
+    return task ? task.title : 'Unknown Task';
+  };
+
+  const formatFileSize = (bytes: number | string): string => {
+    const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
+    if (size === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(size) / Math.log(k));
+    return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  const getProjectName = (document: Document) => {
+    return projects.find(p => p.id === document.projectId)?.title || 'No Project';
+  };
+
+  const handleRenameDocument = async () => {
+    if (!renameDocumentModal.document || !newDocumentName.trim()) return;
+
+    try {
+      await dispatch(updateDocument({
+        id: renameDocumentModal.document.id,
+        documentData: { name: newDocumentName.trim() }
+      })).unwrap();
+      
+      toast({
+        title: "Success",
+        description: "Document renamed successfully.",
+      });
+      
+      // Refresh documents after rename
+      if (folderId) {
+        dispatch(fetchDocumentsByFolder(folderId));
+      }
+      
+      // Refresh folder tree to update document count and structure
+      const projectId = getProjectId();
+      if (projectId) {
+        dispatch(fetchFolderTree(projectId));
+      }
+      
+      setRenameDocumentModal({ isOpen: false, document: null });
+      setNewDocumentName('');
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to rename document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelRename = () => {
+    setRenameDocumentModal({ isOpen: false, document: null });
+    setNewDocumentName('');
+  };
   
   // Helper function to find a folder in the tree structure
   const findFolderInTree = (tree: FolderType[], targetId: string): FolderType | null => {
@@ -212,6 +292,42 @@ const FolderView: React.FC = () => {
   const subFolders = useMemo(() => {
     return currentFolder?.children || folders.filter(f => f.parentId === folderId);
   }, [currentFolder, folders, folderId]);
+
+  // Filtered documents based on search and filters
+  const filteredDocuments = useMemo(() => {
+    let filtered = folderDocuments;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(doc => 
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply task filter
+    if (selectedTask !== 'All') {
+      filtered = filtered.filter(doc => doc.taskId === selectedTask);
+    }
+
+    // Apply file type filter
+    if (selectedFileType !== 'All') {
+      filtered = filtered.filter(doc => {
+        const fileExtension = doc.files[0].fileType.toUpperCase();
+        return fileExtension === selectedFileType;
+      });
+    }
+
+    return filtered;
+  }, [folderDocuments, searchTerm, selectedTask, selectedFileType]);
+
+  // Filtered folders based on search
+  const filteredFolders = useMemo(() => {
+    if (!searchTerm) return subFolders;
+    
+    return subFolders.filter(folder => 
+      folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [subFolders, searchTerm]);
   
   // Add a separate loading state for initial folder data
   const [initialLoading, setInitialLoading] = useState(true);
@@ -236,15 +352,27 @@ const FolderView: React.FC = () => {
         }
       });
       
-      // Fetch projects and tasks only if not already loaded
+      // Fetch projects only if not already loaded
       if (projects.length === 0) {
         dispatch(fetchProjects());
       }
-      if (tasks.length === 0) {
-        dispatch(fetchAllTasksByCompany());
-      }
     }
-  }, [dispatch, folderId, projects.length, tasks.length]);
+  }, [dispatch, folderId, projects.length]);
+
+  // Reset filter states when navigating to different folders
+  useEffect(() => {
+    setSelectedTask('All');
+    setSelectedFileType('All');
+    setSearchTerm('');
+  }, [folderId]);
+
+  // Fetch tasks for the current folder's project
+  useEffect(() => {
+    const projectId = getProjectId();    
+    if (projectId) {
+      dispatch(fetchTasksByProject(projectId));
+    }
+  }, [dispatch, getProjectId, folderId]);
   
   // Fetch folder path for accurate breadcrumbs
   useEffect(() => {
@@ -508,48 +636,6 @@ const FolderView: React.FC = () => {
     setNewDocumentName(doc.name);
   };
 
-  const handleRenameDocument = async () => {
-    if (!renameDocumentModal.document || !newDocumentName.trim()) return;
-
-    try {
-      await dispatch(updateDocument({
-        id: renameDocumentModal.document.id,
-        documentData: { name: newDocumentName.trim() }
-      })).unwrap();
-      
-      toast({
-        title: "Success",
-        description: "Document renamed successfully.",
-      });
-      
-      // Refresh documents after rename
-      if (folderId) {
-        dispatch(fetchDocumentsByFolder(folderId));
-      }
-      
-      // Refresh folder tree to update document count and structure
-      const projectId = getProjectId();
-      if (projectId) {
-        dispatch(fetchFolderTree(projectId));
-      }
-      
-      setRenameDocumentModal({ isOpen: false, document: null });
-      setNewDocumentName('');
-    } catch (error) {
-      console.error('Error renaming document:', error);
-      toast({
-        title: "Error",
-        description: "Failed to rename document. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCancelRename = () => {
-    setRenameDocumentModal({ isOpen: false, document: null });
-    setNewDocumentName('');
-  };
-
   const handleDeleteDocumentFile = async (documentId: string) => {
     try {
       await dispatch(deleteDocument(documentId)).unwrap();
@@ -578,18 +664,7 @@ const FolderView: React.FC = () => {
     }
   };
 
-  const getProjectName = (document: Document): string => {
-    const project = projects.find(p => p.id === document.projectId);
-    return project?.title || 'No Project';
-  };
-  
-  const filteredDocuments = folderDocuments.filter(doc =>
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const filteredFolders = subFolders.filter(folder =>
-    folder.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
   
   const breadcrumbs = useMemo(() => {
     if (folderPath && folderPath.parts && folderPath.parts.length > 0 && folderTree) {
@@ -772,7 +847,7 @@ const FolderView: React.FC = () => {
         </div>
         {/* Search */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.15s]">
-          <div className="flex-1 min-w-0 relative order-1 lg:order-none">
+          <div className="flex-1 min-w-[180px] max-w-full relative order-1 lg:order-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
@@ -782,100 +857,88 @@ const FolderView: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-        </div>
-      
-        {/* Content Area */}
-        <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
-          {/* Folders */}
-          {filteredFolders.length > 0 && (
-            <div>
-              <h2 className="text-lg font-medium mb-4 text-foreground">Folders</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredFolders.map((folder, index) => (
-                <div 
-                  key={folder.id}
-                  className={cn(
-                    "relative flex flex-col p-3 cursor-pointer group",
-                    "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
-                    "border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
-                    "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
-                  )}
-                  style={{ 
-                    animationDelay: `${0.05 * index}s`, 
-                    animationFillMode: "forwards" 
-                  }}
-                  onClick={() => handleFolderClick(folder)}
-                >
-                  <div className="flex items-center justify-between h-full">
-                      <div className="flex items-center flex-1 min-w-0 pr-2">
-                      <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
-                        <Folder className="text-blue-600" size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {editingFolderId === folder.id ? (
-                          <input
-                            ref={editInputRef}
-                            type="text"
-                            value={editingFolderName}
-                            onChange={(e) => setEditingFolderName(e.target.value)}
-                            onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
-                            onKeyDown={(e) => handleKeyPress(e, folder.id)}
-                            className="w-full bg-white border border-blue-300 rounded px-2 py-1 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          <p className="font-medium truncate text-sm">{folder.name}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEditingFolder(folder);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDeleteFolderModal(folder);
-                          }}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
+          
+          {/* Task Filter */}
+          <select
+            value={selectedTask}
+            onChange={(e) => setSelectedTask(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
+          >
+            <option value="All">All Tasks</option>
+            {tasks.map(task => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+          
+          {/* File Type Filter */}
+          <select
+            value={selectedFileType}
+            onChange={(e) => setSelectedFileType(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0"
+          >
+            {fileTypeCategories.map(type => (
+              <option key={type} value={type}>
+                {type === "All" ? "All Types" : type}
+              </option>
+            ))}
+          </select>
+          
+          {/* View Mode Toggle */}
+          <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "px-3 py-2 text-sm transition-colors",
+                viewMode === "grid" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <Grid3X3 size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "px-3 py-2 text-sm transition-colors",
+                viewMode === "list" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <List size={16} />
+            </button>
           </div>
-        )}
-        
-          {/* Documents */}
-          {filteredDocuments.length > 0 && (
-            <div>
-              <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredDocuments.map((doc, index) => (
+          
+          {/* Clear Filters Button */}
+          {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
+            <MotionButton
+              variant="outline"
+              size="sm"
+              motion="subtle"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedTask("All");
+                setSelectedFileType("All");
+              }}
+              className="whitespace-nowrap"
+            >
+              <X size={16} className="mr-1" /> Clear
+            </MotionButton>
+          )}
+        </div>
+        {/* Content Area */}
+        {viewMode === 'grid' ? (
+          <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
+            {/* Folders */}
+            {filteredFolders.length > 0 && (
+              <div>
+                <h2 className="text-lg font-medium mb-4 text-foreground">Folders</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredFolders.map((folder, index) => (
                   <div 
-                    key={doc.id}
+                    key={folder.id}
                     className={cn(
                       "relative flex flex-col p-3 cursor-pointer group",
                       "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
@@ -883,39 +946,37 @@ const FolderView: React.FC = () => {
                       "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
                     )}
                     style={{ 
-                      animationDelay: `${0.05 * (filteredFolders.length + index)}s`, 
+                      animationDelay: `${0.05 * index}s`, 
                       animationFillMode: "forwards" 
                     }}
-                    onClick={() => {
-                      setSelectedDocument(doc);
-                      setShowDocumentPreview(true);
-                    }}
+                    onClick={() => handleFolderClick(folder)}
                   >
                     <div className="flex items-center justify-between h-full">
-                      <div className="flex items-center flex-1 min-w-0 pr-2">
+                        <div className="flex items-center flex-1 min-w-0 pr-2">
                         <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
-                          {getFileIcon(doc.type)}
+                          <Folder className="text-blue-600" size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate text-sm" title={doc.name}>
-                            {doc.name}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar size={12} />
-                              <span>{formatDate(doc.createdAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <File size={12} />
-                              <span className="uppercase font-medium">{doc.files[0].fileType}</span>
-                            </div>
-                          </div>
+                          {editingFolderId === folder.id ? (
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editingFolderName}
+                              onChange={(e) => setEditingFolderName(e.target.value)}
+                              onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
+                              onKeyDown={(e) => handleKeyPress(e, folder.id)}
+                              className="w-full bg-white border border-blue-300 rounded px-2 py-1 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <p className="font-medium truncate text-sm">{folder.name}</p>
+                          )}
                         </div>
                       </div>
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button 
+                          <button
                             className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
                             onClick={(e) => e.stopPropagation()}
                           >
@@ -926,17 +987,7 @@ const FolderView: React.FC = () => {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDownloadDocument(doc);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditDocument(doc);
+                              startEditingFolder(folder);
                             }}
                             className="cursor-pointer"
                           >
@@ -946,7 +997,7 @@ const FolderView: React.FC = () => {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteDocumentFile(doc.id);
+                              openDeleteFolderModal(folder);
                             }}
                             className="cursor-pointer text-destructive focus:text-destructive"
                           >
@@ -961,28 +1012,286 @@ const FolderView: React.FC = () => {
               </div>
             </div>
           )}
-        
-          {/* Empty State */}
-          {filteredFolders.length === 0 && filteredDocuments.length === 0 && (
-            <GlassCard className="p-8 text-center">
-              <Folder className="mx-auto mb-4 text-muted-foreground" size={48} />
-              <h3 className="text-xl font-medium mb-2">This folder is empty</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm ? 'No items match your search.' : 'Create a new folder or upload documents to get started.'}
-              </p>
-              {!searchTerm && (
-                <div className="flex items-center justify-center gap-3">
-                  <MotionButton onClick={handleCreateFolder} variant="outline" motion="subtle">
-                    <Plus size={18} className="mr-2" /> New Folder
-                  </MotionButton>
-                  <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
-                    <Upload size={18} className="mr-2" /> Upload Files
-                  </MotionButton>
+          
+            {/* Documents */}
+            {filteredDocuments.length > 0 && (
+              <div>
+                <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredDocuments.map((doc, index) => (
+                    <div 
+                      key={doc.id}
+                      className={cn(
+                        "relative cursor-pointer group opacity-0 animate-scale-in",
+                        "bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
+                        "transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden",
+                        "flex flex-col p-3 h-24 w-full"
+                      )}
+                      style={{ 
+                        animationDelay: `${0.05 * (filteredFolders.length + index)}s`, 
+                        animationFillMode: "forwards" 
+                      }}
+                      onClick={() => {
+                        setSelectedDocument(doc);
+                        setShowDocumentPreview(true);
+                      }}
+                    >
+                      <div className="flex items-center justify-between h-full">
+                        <div className="flex items-center flex-1 min-w-0 pr-2">
+                          <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
+                            {getFileIcon(doc.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate text-sm" title={doc.name}>
+                              {doc.name}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar size={12} />
+                                <span>{formatDate(doc.createdAt)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <File size={12} />
+                                <span className="uppercase font-medium">{doc.files[0].fileType}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button 
+                              className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadDocument(doc);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditDocument(doc);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Edit3 className="mr-2 h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDocumentFile(doc.id);
+                              }}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </GlassCard>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
+            {(() => {
+              if (filteredFolders.length === 0 && filteredDocuments.length === 0) {
+                return (
+                  <GlassCard className="p-8 text-center">
+                    <Folder className="mx-auto mb-4 text-muted-foreground" size={48} />
+                    <h3 className="text-xl font-medium mb-2">This folder is empty</h3>
+                    <p className="text-muted-foreground mb-6">
+                      {searchTerm ? 'No items match your search.' : 'Create a new folder or upload documents to get started.'}
+                    </p>
+                    {!searchTerm && (
+                      <div className="flex items-center justify-center gap-3">
+                        <MotionButton onClick={handleCreateFolder} variant="outline" motion="subtle">
+                          <Plus size={18} className="mr-2" /> New Folder
+                        </MotionButton>
+                        <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
+                          <Upload size={18} className="mr-2" /> Upload Files
+                        </MotionButton>
+                      </div>
+                    )}
+                  </GlassCard>
+                );
+              }
+              
+              return (
+                <GlassCard className="p-6">
+                  <div className="space-y-2">
+                    {/* List Header */}
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
+                      <div className="col-span-5">Name</div>
+                      <div className="col-span-2">Task</div>
+                      <div className="col-span-2">Type</div>
+                      <div className="col-span-2">Modified</div>
+                      <div className="col-span-1">Actions</div>
+                    </div>
+                    
+                    {/* Folders */}
+                    {filteredFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer rounded-lg group"
+                        onClick={() => handleFolderClick(folder)}
+                      >
+                        <div className="col-span-5 flex items-center gap-3 min-w-0">
+                          <Folder className="text-blue-500 flex-shrink-0" size={20} />
+                          {editingFolderId === folder.id ? (
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editingFolderName}
+                              onChange={(e) => setEditingFolderName(e.target.value)}
+                              onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
+                              onKeyDown={(e) => handleKeyPress(e, folder.id)}
+                              className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="font-medium truncate group-hover:text-primary transition-colors">
+                              {folder.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground truncate">
+                          {projects.find(p => p.id === folder.projectId)?.title || '-'}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          Folder
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          {formatDate(folder.createdAt)}
+                        </div>
+                        <div className="col-span-1 flex items-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startEditingFolder(folder);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteFolderModal(folder);
+                                }}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Documents */}
+                    {filteredDocuments.map((document) => (
+                      <div
+                        key={document.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-accent/50 transition-colors rounded-lg group cursor-pointer"
+                        onClick={() => {
+                          setSelectedDocument(document);
+                          setShowDocumentPreview(true);
+                        }}
+                      >
+                        <div className="col-span-5 flex items-center gap-3 min-w-0">
+                          {getFileIcon(document.files[0].fileType)}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate group-hover:text-primary transition-colors">
+                              {document.name}
+                            </div>
+                            {document.description && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {document.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground truncate">
+                          {getTaskName(document)}
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          <div>
+                            <div>{formatFileType(document.files[0].fileType || '')}</div>
+                            <div className="text-xs">{formatFileSize(document.files?.[0]?.fileSize || 0)}</div>
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+                          {formatDate(document.createdAt)}
+                        </div>
+                        <div className="col-span-1 flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadDocument(document);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            title="Download"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditDocument(document);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            title="Edit"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocumentFile(document.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              );
+            })()}
+          </div>
+        )}
         
         {/* Create Folder Modal */}
         {showCreateFolderModal && (
@@ -1044,77 +1353,70 @@ const FolderView: React.FC = () => {
                 dispatch(fetchFolderTree(projectId));
               }
             } catch (error) {
-              console.error('Error in onDocumentUploaded callback:', error);
-              toast({
-                title: "Error",
-                description: "Failed to refresh data after upload",
-                variant: "destructive",
-              });
+              console.error('Error refreshing after upload:', error);
             }
           }}
         />
 
         {/* Delete Folder Modal */}
-         <DeleteFolderModal
-           open={deleteFolderModal.isOpen}
-           onOpenChange={(open) => {
-             if (!open) {
-               setDeleteFolderModal({ isOpen: false, folder: null });
-             }
-           }}
-           folder={deleteFolderModal.folder}
-           onConfirm={(cascade) => {
-             if (deleteFolderModal.folder) {
-               handleDeleteFolder(deleteFolderModal.folder.id, cascade);
-             }
-           }}
-         />
+        <DeleteFolderModal
+          open={deleteFolderModal.isOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteFolderModal({ isOpen: false, folder: null });
+            }
+          }}
+          folder={deleteFolderModal.folder}
+          onConfirm={(cascade) => {
+            if (deleteFolderModal.folder) {
+              handleDeleteFolder(deleteFolderModal.folder.id, cascade);
+            }
+          }}
+        />
 
         {/* Rename Document Modal */}
-        <Dialog open={renameDocumentModal.isOpen} onOpenChange={(open) => {
-          if (!open) {
-            handleCancelRename();
-          }
-        }}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Rename Document</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Document Name</label>
-                <Input
-                  type="text"
-                  value={newDocumentName}
-                  onChange={(e) => setNewDocumentName(e.target.value)}
-                  placeholder="Enter document name"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleRenameDocument();
-                    } else if (e.key === 'Escape') {
-                      handleCancelRename();
-                    }
-                  }}
-                />
+        {renameDocumentModal.isOpen && renameDocumentModal.document && (
+          <Dialog open={renameDocumentModal.isOpen} onOpenChange={(open) => setRenameDocumentModal({ isOpen: open, document: null })}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Rename Document</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Document Name</label>
+                  <Input
+                    type="text"
+                    value={newDocumentName}
+                    onChange={(e) => setNewDocumentName(e.target.value)}
+                    placeholder="Enter document name"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleRenameDocument();
+                      } else if (e.key === 'Escape') {
+                        handleCancelRename();
+                      }
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={handleCancelRename}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRenameDocument}
-                disabled={!newDocumentName.trim()}
-              >
-                Rename
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelRename}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRenameDocument}
+                  disabled={!newDocumentName.trim()}
+                >
+                  Rename
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Document Preview Modal */}
         {selectedDocument && (

@@ -105,7 +105,7 @@ export const fetchProjects = createAsyncThunk(
       }
       const response: any = await api.get(`/projects?companyId=${companyId}`);
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to fetch projects');
+        return rejectWithValue(response.message || response.error|| 'Failed to fetch projects');
       }
       return (response?.items || []).map(transformApiProject);
     } catch (error: any) {
@@ -131,7 +131,7 @@ export const fetchProjectById = createAsyncThunk(
       const response = await api.get(`/projects/${id}?companyId=${companyId}`) as ApiResponse<{ project: ApiProject }>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to fetch project');
+        return rejectWithValue(response.message || response.error|| 'Failed to fetch project');
       }
       
       return transformApiProject(response.data!.project);
@@ -165,7 +165,7 @@ export const createProject = createAsyncThunk(
       const response = await api.post(`/projects?companyId=${companyId}`, apiData) as ApiResponse<{ project: ApiProject }>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to create project');
+        return rejectWithValue(response.message || response.error || 'Failed to create project');
       }
       
       return transformApiProject(response.data!.project);
@@ -192,7 +192,7 @@ export const updateProjectAsync = createAsyncThunk(
       const response = await api.put(`/projects/${id}?companyId=${companyId}`, projectData) as ApiResponse<{ project: ApiProject }>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to update project');
+        return rejectWithValue(response.message || response.error|| 'Failed to update project');
       }
       
       return transformApiProject(response.data!.project);
@@ -219,7 +219,7 @@ export const deleteProjectAsync = createAsyncThunk(
       const response = await api.delete(`/projects/${id}?companyId=${companyId}`) as ApiResponse<null>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to delete project');
+        return rejectWithValue(response.message || response.error|| 'Failed to delete project');
       }
       
       return id;
@@ -243,7 +243,7 @@ export const addMemberToProject = createAsyncThunk(
       const response = await api.post(`/projects/${projectId}/members/${userId}`, { role }) as ApiResponse<{ projectMember: ProjectMember }>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to add member to project');
+        return rejectWithValue(response.message || response.error|| 'Failed to add member to project');
       }
       
       return response.data!.projectMember;
@@ -266,7 +266,7 @@ export const removeMemberFromProject = createAsyncThunk(
       const response = await api.delete(`/projects/${projectId}/members/${userId}`) as ApiResponse<null>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to remove member from project');
+        return rejectWithValue(response.message || response.error|| 'Failed to remove member from project');
       }
       
       return { projectId, userId };
@@ -289,7 +289,7 @@ export const getProjectMembers = createAsyncThunk(
       const response = await api.get(`/projects/${projectId}/members`) as ApiResponse<{ members: ProjectMember[] }>;
       
       if (response.status === 'error') {
-        return rejectWithValue(response.error || response.message || 'Failed to fetch project members');
+        return rejectWithValue(response.message || response.error|| 'Failed to fetch project members');
       }
       
       return { projectId, members: response.data!.members };
