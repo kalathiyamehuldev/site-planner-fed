@@ -50,7 +50,7 @@ const initialState: AuthState = {
   selectedCompany: null,
   needsCompanySelection: false,
   availableCompanies: [],
-  permissions: []
+  permissions: JSON.parse(localStorage.getItem('userPermissions') || '[]')
 };
 
 // Helper function to fetch permissions after authentication
@@ -71,7 +71,6 @@ export const fetchUserPermissions = createAsyncThunk<
             const resultAction = await dispatch(fetchPermissionsByRole(roleId));
             
             if (fetchPermissionsByRole.fulfilled.match(resultAction)) {
-                console.log("AUTH Fetched permissions for role ID:", roleId, resultAction.payload);
                 return resultAction.payload;
             } else if (fetchPermissionsByRole.rejected.match(resultAction)) {
                 return rejectWithValue('Failed to fetch permissions');
@@ -188,7 +187,6 @@ export const registerCompany = createAsyncThunk<
             // If user has a role, fetch permissions
             if (data.user.role && data.user.role.id) {
                 const role = await dispatch(fetchUserPermissions(data.user.role.id));
-                console.log("Auth role 5=",role);
             }
             return result;
             }
@@ -202,7 +200,6 @@ export const registerCompany = createAsyncThunk<
             // If user has a role, fetch permissions
             if (data.user.role && data.user.role.id) {
                 const role = await dispatch(fetchUserPermissions(data.user.role.id));
-                console.log("Auth role 4=",role);
             }
             return result;
         } catch (error: any) {
@@ -232,10 +229,7 @@ export const selectCompany = createAsyncThunk<
                 throw new Error('Company not found');
             }
             localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
-            console.log("AUr", auth);
-            
             const permission = auth?.user?.userCompanies?.find(c => c.companyId === selectedCompany.id);
-            console.log("pr",permission);
             // After selecting a company, fetch user permissions
             if(permission) await dispatch(fetchUserPermissions(permission.roleId));
             
@@ -341,6 +335,8 @@ const authSlice = createSlice({
             .addCase(fetchUserPermissions.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.permissions = action.payload || [];
+                // Persist permissions to localStorage
+                localStorage.setItem('userPermissions', JSON.stringify(action.payload || []));
                 state.error = null;
             })
             .addCase(fetchUserPermissions.rejected, (state) => {

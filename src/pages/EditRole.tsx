@@ -186,8 +186,6 @@ const EditRolePage: React.FC = () => {
     try {
       if (!roleId) return;
       
-      console.log('Submitting role update with data:', formData);
-      
       // Get companyId from localStorage or auth state
       const selectedCompany = JSON.parse(localStorage.getItem('selectedCompany') || '{}');
       const companyId = selectedCompany?.id;
@@ -208,8 +206,6 @@ const EditRolePage: React.FC = () => {
           actions: perm.actions
         }))
       };
-      console.log("EDIT roleDAte",roleData);
-      
       
       await dispatch(updateRole({ id: roleId, roleData })).unwrap();
       toast({ title: "Success", description: "Role updated successfully" });

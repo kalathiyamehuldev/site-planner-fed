@@ -20,9 +20,6 @@ const Projects = () => {
   const { hasPermission, isSuperAdmin } = usePermission();
   const resource = 'projects';
 
-  console.log('Projects component loaded, initializing permissions checks');
-  console.log('Initial hasPermission function:', hasPermission);
-
   const [filter, setFilter] = useState<
     "all" | "active" | "completed" | "onhold" | "inprogress"
   >("all");

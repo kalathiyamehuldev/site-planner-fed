@@ -33,33 +33,24 @@ export const hasPermission = (
   resource: Resource,
   action: Action
 ): boolean => {
-  console.log('Permission check:', { resource, action });
-  console.log('Available permissions:', permissions);
   
   if (!permissions) {
-    console.log('No permissions available, returning false');
     return false;
   }
   
   const resourcePermission = permissions.find(p => p.resource === resource);
-  console.log('Found resource permission:', resourcePermission);
-  
   if (!resourcePermission) {
-    console.log(`No permission found for ${resource}, returning false`);
     return false;
   }
   
   // Special case for sidebar visibility: only need manage permission for 'read' action
   if (action === 'read' && resourcePermission.actions.manage) {
-    console.log(`User has manage permission for ${resource}, allowing read access for sidebar`);
     return true;
   }
   
   // For other actions, check the specific permission only
   // This ensures manage permission doesn't automatically grant other permissions
   const hasAction = resourcePermission.actions[action] || false;
-  console.log(`Permission check result for ${resource}:${action}: ${hasAction}`);
-  
   return hasAction;
 };
 

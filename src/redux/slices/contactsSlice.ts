@@ -21,6 +21,8 @@ export interface Contact {
   type: 'client' | 'vendor' | 'partner';
   isFavorite: boolean;
   projects?: string[];
+  projectIds?: string[];
+  projectsData?: Array<{ id: string; name: string }>;
   lastContact?: string;
   notes?: string;
   companyId: string;

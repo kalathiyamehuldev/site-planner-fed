@@ -35,34 +35,42 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import usePermission from "@/hooks/usePermission";
+type SidebarItem = {
+  name: string;
+  path: string;
+  icon: React.ElementType;
+  color: string;
+};
 
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const { hasPermission } = usePermission();
 
   const handleLogout = () => {
     dispatch(logout());
   };
 
-  const mainItems = [
-    { name: "Dashboard", path: "/", icon: LayoutGrid, color: "text-blue-600" },
-    { name: "Projects", path: "/projects", icon: FileText, color: "text-green-600" }, // resource = projects
-    { name: "Tasks", path: "/tasks", icon: CheckSquare, color: "text-purple-600" }, // resource = tasks
-    { name: "Admin", path: "/admin", icon: Shield, color: "text-red-600" }, // resource = users
-    { name: "Roles", path: "/roles", icon: Shield, color: "text-orange-600" }, // resource = roles
-  ];
+  const mainItems: SidebarItem[] = [
+  { name: "Dashboard", path: "/", icon: LayoutGrid, color: "text-blue-600" },
+  ...(hasPermission("projects","manage") ? [{ name: "Projects", path: "/projects", icon: FileText, color: "text-green-600" }] : []),
+  ...(hasPermission("tasks","manage") ? [{ name: "Tasks", path: "/tasks", icon: CheckSquare, color: "text-purple-600" }] : []),
+  ...(hasPermission("users","manage") ? [{ name: "Admin", path: "/admin", icon: Shield, color: "text-red-600" }] : []),
+  ...(hasPermission("roles","manage") ? [{ name: "Roles", path: "/roles", icon: Shield, color: "text-orange-600" }] : []),
+];
 
   const toolItems = [
-    { name: "Time Tracking", path: "/time-tracking", icon: Clock, color: "text-orange-600" }, // resource = time_tracking
+    ...(hasPermission("time_tracking","manage") ? [{ name: "Time Tracking", path: "/time-tracking", icon: Clock, color: "text-orange-600" }] : []), // resource = time_tracking
     { name: "To-Do List", path: "/todo", icon: CheckSquare, color: "text-indigo-600" },
     // { name: "Invoices", path: "/invoices", icon: CreditCard, color: "text-yellow-600" }, // resource = invoices
     // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag, color: "text-pink-600" },
     // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag, color: "text-teal-600" },
-    { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" }, // resource = documents
+     ...(hasPermission("documents","manage") ? [{ name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" }] : []), // resource = documents
   ];
 
   const libraryItems = [
-    { name: "Address Book", path: "/address-book", icon: Users, color: "text-cyan-600" }, // resource = contacts
+    ...(hasPermission("contacts","manage") ? [{  name: "Address Book", path: "/address-book", icon: Users, color: "text-cyan-600" }] : []), // resource = contacts
     // { name: "Image Library", path: "/image-library", icon: FileImage, color: "text-emerald-600" },
     // { name: "Product Library", path: "/product-library", icon: Package, color: "text-violet-600" },
   ];
@@ -112,7 +120,7 @@ const AppSidebar: React.FC = () => {
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItems items={mainItems} />
+              <SidebarMenuItems items={mainItems.filter(Boolean) as SidebarItem[]} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

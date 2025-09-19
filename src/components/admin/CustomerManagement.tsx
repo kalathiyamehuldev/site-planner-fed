@@ -173,15 +173,16 @@ const CustomerManagement: React.FC = () => {
     try {
       if (editingCustomer) {
         // Update customer
+        const { selectedProjects, ...updateData } = formData;
         const updatePayload: UpdateCustomerData = {};
         
         // Only include changed fields
-        if (formData.firstName !== editingCustomer.firstName) updatePayload.firstName = formData.firstName;
-        if (formData.lastName !== editingCustomer.lastName) updatePayload.lastName = formData.lastName;
-        if (formData.email !== editingCustomer.email) updatePayload.email = formData.email;
-        if (formData.phone !== editingCustomer.phone) updatePayload.phone = formData.phone;
-        if (formData.address !== editingCustomer.address) updatePayload.address = formData.address;
-        updatePayload.projectIds = formData.selectedProjects;
+        if (updateData.firstName !== editingCustomer.firstName) updatePayload.firstName = updateData.firstName;
+        if (updateData.lastName !== editingCustomer.lastName) updatePayload.lastName = updateData.lastName;
+        if (updateData.email !== editingCustomer.email) updatePayload.email = updateData.email;
+        if (updateData.phone !== editingCustomer.phone) updatePayload.phone = updateData.phone;
+        if (updateData.address !== editingCustomer.address) updatePayload.address = updateData.address;
+        updatePayload.projectIds = selectedProjects;
         const result = await dispatch(updateCustomer({ 
           id: editingCustomer.id, 
           data: updatePayload 
@@ -200,6 +201,7 @@ const CustomerManagement: React.FC = () => {
           phone: formData.phone,
           address: formData.address,
           password: formData.password,
+          projectIds: formData.selectedProjects,
         };
         
         const result = await dispatch(createCustomer(createPayload)).unwrap();
@@ -221,6 +223,9 @@ const CustomerManagement: React.FC = () => {
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer);
+    // Extract project IDs from customer's projectMembers
+    const projectIds = customer.projects?.map(pm => pm.project.id) || [];
+    
     setFormData({
       firstName: customer.firstName,
       lastName: customer.lastName,
@@ -228,7 +233,7 @@ const CustomerManagement: React.FC = () => {
       phone: customer.phone || '',
       address: customer.address || '',
       password: '', // Don't populate password when editing
-      selectedProjects: customer.projectIds || [],
+      selectedProjects: projectIds,
     });
     setFormErrors({}); // Clear any existing errors
     setIsDialogOpen(true);

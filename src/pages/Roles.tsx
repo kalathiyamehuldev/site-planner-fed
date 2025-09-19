@@ -85,8 +85,6 @@ const RolesPage: React.FC = () => {
 
   // Super admin or users with manage permission can access roles page
   const canManageRoles = hasPermission('users', 'manage') || isSuperAdmin;
-  console.log("canManageRoles in Roles", canManageRoles);
-  
 
   if (!canManageRoles) {
     return (

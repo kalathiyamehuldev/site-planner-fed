@@ -39,6 +39,7 @@ import {
 } from '@/redux/slices/projectsSlice';
 import { fetchRoles, selectAllRoles, selectRolesLoading } from '@/redux/slices/rolesSlice';
 import usePermission from '@/hooks/usePermission';
+import DeleteMemberModal from './DeleteMemberModal';
 
 interface MemberFormData {
   firstName: string;
@@ -72,6 +73,9 @@ const MemberManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [deletingMember, setDeletingMember] = useState<Member | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<MemberFormData>({
     firstName: '',
     lastName: '',
@@ -238,6 +242,9 @@ const MemberManagement: React.FC = () => {
 
   const handleEdit = (member: Member) => {
     setEditingMember(member);
+    // Extract project IDs from member's projectMembers
+    const projectIds = member.projectMembers?.map(pm => pm.project.id) || [];
+    
     setFormData({
       firstName: member.firstName,
       lastName: member.lastName,
@@ -246,24 +253,33 @@ const MemberManagement: React.FC = () => {
       address: member.address || '',
       roleId: member.role.id,
       password: '', // Don't populate password for editing
-      selectedProjects: [],
+      selectedProjects: projectIds,
     });
     setFormErrors({});
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    // show a modal that asks same question as below and works same on delete button click
-    if (window.confirm('Are you sure you want to delete this member?')) {
-      try {
-        const result = await dispatch(deleteMember(id)).unwrap();
-        toast({
-          title: 'Success',
-          description: result.message || 'Member deleted successfully',
-        });
-      } catch (error) {
-        // Error handling is done in the Redux slice and useEffect
-      }
+  const handleDelete = (member: Member) => {
+    setDeletingMember(member);
+    setShowDeleteModal(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!deletingMember) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await dispatch(deleteMember(deletingMember.id)).unwrap();
+      toast({
+        title: 'Success',
+        description: result.message || 'Member deleted successfully',
+      });
+      setShowDeleteModal(false);
+    } catch (error) {
+      // Error handling is done in the Redux slice and useEffect
+    } finally {
+      setIsDeleting(false);
+      setDeletingMember(null);
     }
   };
 
@@ -566,7 +582,7 @@ const MemberManagement: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(member.id)}
+                          onClick={() => handleDelete(member)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -583,6 +599,16 @@ const MemberManagement: React.FC = () => {
       </div>
     </div>
   );
+    
+    {/* Delete Member Modal */}
+    <DeleteMemberModal
+      open={showDeleteModal}
+      onOpenChange={setShowDeleteModal}
+      member={deletingMember}
+      onConfirm={handleConfirmDelete}
+      loading={isDeleting}
+    />
+  
 };
 
 export default MemberManagement;

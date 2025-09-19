@@ -213,24 +213,15 @@ export const fetchProjectMembers = createAsyncThunk(
   'comments/fetchProjectMembers',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      console.log('🚀 fetchProjectMembers thunk called with projectId:', projectId);
-      console.log('🚀 Making API call to:', `/comments/project/${projectId}/users`);
-      
       const response = await api.get(`/comments/project/${projectId}/users`) as ApiResponse<ProjectMember[]>;
       
-      console.log('✅ Project members API response:', response);
-      
       if (response.status === 'error') {
-        console.error('❌ API returned error status:', response);
         return rejectWithValue(response.error || response.message || 'Failed to fetch project members');
       }
       
       const members = response.data || [];
-      console.log('✅ Extracted project members:', members.length, 'members');
-      console.log('✅ First member sample:', members[0]);
       return members;
     } catch (error: any) {
-      console.error('❌ Error fetching project members:', error);
       if (error.response?.data) {
         const apiError = error.response.data as ApiResponse;
         return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch project members');

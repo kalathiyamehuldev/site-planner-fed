@@ -80,6 +80,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
       // Fetch projects and tags
       dispatch(fetchProjects());
       dispatch(fetchTags());
+      console.log("Contact Modal Contact:", contact);
       
       if (mode === 'edit' && contact) {
         setFormData({
@@ -88,7 +89,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           phone: contact.phone || '',
           type: contact.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: contact.isFavorite || false,
-          selectedProjects: [],
+          selectedProjects: contact.projectIds || [],
           tagNames: contact.tags?.map((tag) => tag.name) || []
         });
       } else if (mode === 'add') {
@@ -316,7 +317,6 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
 
 
             {/* Associated Projects */}
-            {formData.type === 'Vendor' && (
             <div className="space-y-2">
               <Label>Associated Projects</Label>
               
@@ -364,7 +364,6 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                 </SelectContent>
               </Select>
             </div>
-            )}
 
             {/* Tags - show only for vendor type */}
             {formData.type === 'Vendor' && (

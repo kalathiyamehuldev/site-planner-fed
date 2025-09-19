@@ -56,6 +56,7 @@ export interface Vendor {
   updatedAt: string;
   tags?: string[];
   projectIds?: string[];
+  projects?: { project: {id: string; name: string} }[];
 }
 
 export interface Customer {
@@ -71,6 +72,7 @@ export interface Customer {
   createdAt: string;
   updatedAt: string;
   projectIds?: string[];
+  projects?: { project: {id: string; name: string} }[];
 }
 
 export interface CreateMemberData {

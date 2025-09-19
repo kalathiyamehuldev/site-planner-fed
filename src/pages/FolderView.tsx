@@ -1154,7 +1154,7 @@ const FolderView: React.FC = () => {
                     <Folder className="mx-auto mb-4 text-muted-foreground" size={48} />
                     <h3 className="text-xl font-medium mb-2">This folder is empty</h3>
                     <p className="text-muted-foreground mb-6">
-                      {searchTerm ? 'No items match your search.' : 'Create a new folder or upload documents to get started.'}
+                      {searchTerm ? 'No items match your search.' : 'No files or folders found. Upload files or create a new folder to get started.'}
                     </p>
                     {!searchTerm && (
                       <div className="flex items-center justify-center gap-3">
@@ -1163,9 +1163,10 @@ const FolderView: React.FC = () => {
                             <Plus size={18} className="mr-2" /> New Folder
                           </MotionButton>
                         )}
-                        {hasPermission('documents','create') && (<MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
-                          <Upload size={18} className="mr-2" /> Upload Files
-                        </MotionButton>
+                        {hasPermission('documents','create') && (
+                          <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
+                            <Upload size={18} className="mr-2" /> Upload Files
+                          </MotionButton>
                         )}
                       </div>
                     )}

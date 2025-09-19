@@ -7,50 +7,59 @@ import { ApiPermission } from '../redux/slices/rolesSlice';
 /**
  * Custom hook to check user permissions
  * Provides utility functions to check if the current user has specific permissions
+ * Company users bypass permission checks and have full access
  */
 export const usePermission = () => {
   const permissions = useSelector<RootState, ApiPermission[] | undefined>(
     (state) => state.auth.permissions
   );
   
-  console.log('usePermission hook initialized');
-  console.log('Current permissions from store:', permissions);
-
-  const isSuperAdmin = useCallback(() => {
-    console.log('isSuperAdmin check called');
+  const user = useSelector<RootState, any>((state) => state.auth.user);
+  const isCompanyUser = user?.isCompany === true;
+    const isSuperAdmin = useCallback(() => {
+    // Company users are treated as super admins
+    if (isCompanyUser) {
+      return true;
+    }
     const result = isSuperAdminUtil(permissions);
-    console.log('isSuperAdmin result:', result);
     return result;
-  }, [permissions]);
+  }, [permissions, isCompanyUser]);
 
   const hasPermission = useCallback(
     (resource: Resource, action: Action): boolean => {
-      console.log('hasPermission called with:', { resource, action });
+      // Company users bypass permission checks
+      if (isCompanyUser) {
+        console.log('Company user detected, bypassing permission check');
+        return true;
+      }
       const result = hasPermissionUtil(permissions, resource, action);
-      console.log('hasPermission result:', result);
       return result;
     },
-    [permissions]
+    [permissions, isCompanyUser]
   );
 
   const hasAnyPermission = useCallback(
     (permissionRequirements: Array<{ resource: Resource; action: Action }>): boolean => {
-      console.log('hasAnyPermission called with:', permissionRequirements);
+      // Company users bypass permission checks
+      if (isCompanyUser) {
+        return true;
+      }
       const result = hasAnyPermissionUtil(permissions, permissionRequirements);
-      console.log('hasAnyPermission result:', result);
       return result;
     },
-    [permissions]
+    [permissions, isCompanyUser]
   );
 
   const hasAllPermissions = useCallback(
     (permissionRequirements: Array<{ resource: Resource; action: Action }>): boolean => {
-      console.log('hasAllPermissions called with:', permissionRequirements);
+      // Company users bypass permission checks
+      if (isCompanyUser) {
+        return true;
+      }
       const result = hasAllPermissionsUtil(permissions, permissionRequirements);
-      console.log('hasAllPermissions result:', result);
       return result;
     },
-    [permissions]
+    [permissions, isCompanyUser]
   );
 
   return {

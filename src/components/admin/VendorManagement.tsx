@@ -202,17 +202,17 @@ const VendorManagement: React.FC = () => {
       if (editingVendor) {
         // Update vendor
         const updatePayload: UpdateVendorData = {};
-        
+        const { selectedProjects, ...updateData } = formData;
         // Only include changed fields
-        if (formData.firstName !== editingVendor.firstName) updatePayload.firstName = formData.firstName;
-        if (formData.lastName !== editingVendor.lastName) updatePayload.lastName = formData.lastName;
-        if (formData.email !== editingVendor.email) updatePayload.email = formData.email;
-        if (formData.phone !== editingVendor.phone) updatePayload.phone = formData.phone;
-        if (formData.address !== editingVendor.address) updatePayload.address = formData.address;
-        if (JSON.stringify(formData.tags) !== JSON.stringify(editingVendor.tags || [])) {
-          updatePayload.tags = formData.tags;
+        if (updateData.firstName !== editingVendor.firstName) updatePayload.firstName = updateData.firstName;
+        if (updateData.lastName !== editingVendor.lastName) updatePayload.lastName = updateData.lastName;
+        if (updateData.email !== editingVendor.email) updatePayload.email = updateData.email;
+        if (updateData.phone !== editingVendor.phone) updatePayload.phone = updateData.phone;
+        if (updateData.address !== editingVendor.address) updatePayload.address = updateData.address;
+        if (JSON.stringify(updateData.tags) !== JSON.stringify(editingVendor.tags || [])) {
+          updatePayload.tags = updateData.tags;
         }
-        updatePayload.projectIds = formData.selectedProjects;
+        updatePayload.projectIds = selectedProjects;
         const result = await dispatch(updateVendor({ 
           id: editingVendor.id, 
           data: updatePayload 
@@ -254,6 +254,9 @@ const VendorManagement: React.FC = () => {
 
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
+    // Extract project IDs from customer's projectMembers
+    const projectIds = vendor.projects?.map(pm => pm.project.id) || [];
+    
     setFormData({
       firstName: vendor.firstName,
       lastName: vendor.lastName,
@@ -262,7 +265,7 @@ const VendorManagement: React.FC = () => {
       address: vendor.address || '',
       password: '', // Don't populate password for editing
       tags: vendor.tags || [],
-      selectedProjects: vendor.projectIds || [],
+      selectedProjects: projectIds || [],
     });
     setFormErrors({});
     setIsDialogOpen(true);

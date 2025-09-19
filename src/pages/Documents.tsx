@@ -390,7 +390,6 @@ const Documents = () => {
     if (folderId) {
       const folder = folders.find(f => f.id === folderId);
       if (folder) {
-        console.log('Navigating to folder:', { folderId, folder });
         setSelectedFolderId(folderId);
         setFolderPath(prev => [...prev, { id: folder.id, name: folder.name }]);
         // Fetch documents for this folder
@@ -415,7 +414,6 @@ const Documents = () => {
       
       // Fetch documents for the parent folder or all documents if at root
       if (newSelectedFolderId) {
-        console.log('Going back to parent folder:', newSelectedFolderId);
         dispatch(fetchDocumentsByFolder(newSelectedFolderId));
       } else {
         dispatch(fetchRootDocuments());

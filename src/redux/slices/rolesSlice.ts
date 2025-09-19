@@ -131,7 +131,6 @@ export const fetchPermissionsByRole = createAsyncThunk(
       if (response.status === 'error') {
         return rejectWithValue(response.message || response.error || 'Failed to fetch permissions');
       }
-      console.log("Fetched permissions for role ID:", roleId, response.data);
       
       return response.data as ApiPermission[];
     } catch (error: any) {
@@ -205,8 +204,6 @@ export const deleteRole = createAsyncThunk(
   async (roleId: string, { rejectWithValue }) => {
     try {
       const response: any = await api.delete(`/roles/${roleId}`);
-      console.log('delete role response', response);
-      
       if (response.status === 'error') {
         return rejectWithValue(response.message || response.error || 'Failed to delete role');
       }
@@ -280,8 +277,6 @@ export const rolesSlice = createSlice({
       })
       .addCase(fetchRoles.fulfilled, (state, action) => {
         state.loading = false;
-        console.log("roles in fetchRoles.fulfilled", action.payload);
-        
         state.roles = action.payload;
         state.error = null;
       })
