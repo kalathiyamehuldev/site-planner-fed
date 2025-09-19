@@ -8,22 +8,108 @@ import {
     ResetPasswordDto,
     CompanySelectionDto
 } from '@/common/types/auth.types';
+import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
 import { toast } from "sonner";
+import { fetchPermissionsByRole, ApiPermission } from './rolesSlice';
 
-const initialState: AuthState = {
-    user: null,
-    selectedCompany: null,
-    availableCompanies: [],
-    isAuthenticated: false,
-    needsCompanySelection: false,
-    isLoading: false,
-    error: null
+// Define Company interface if not already imported
+interface Company {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+  // Add any other required properties
+}
+
+
+
+// Define AsyncThunkConfig type
+type AsyncThunkConfig = {
+  rejectValue: string;
 };
 
-export const login = createAsyncThunk(
+// Define interfaces for other thunks
+interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+// Define initial state
+const initialState: AuthState = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+  selectedCompany: null,
+  needsCompanySelection: false,
+  availableCompanies: [],
+  permissions: []
+};
+
+// Helper function to fetch permissions after authentication
+export const fetchUserPermissions = createAsyncThunk<
+    any,
+    string | undefined,
+    AsyncThunkConfig
+>(
+    'auth/fetchUserPermissions',
+    async (roleId, { dispatch, rejectWithValue }) => {
+        try {
+            if (!roleId) {
+                console.error('No role ID provided for fetching permissions');
+                return rejectWithValue('No role ID provided');
+            }
+            
+            // Fetch permissions for the user's role
+            const resultAction = await dispatch(fetchPermissionsByRole(roleId));
+            
+            if (fetchPermissionsByRole.fulfilled.match(resultAction)) {
+                console.log("AUTH Fetched permissions for role ID:", roleId, resultAction.payload);
+                return resultAction.payload;
+            } else if (fetchPermissionsByRole.rejected.match(resultAction)) {
+                return rejectWithValue('Failed to fetch permissions');
+            }
+            
+            return [];
+        } catch (error: any) {
+            console.error('Failed to fetch user permissions:', error);
+            return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+        }
+    }
+);
+
+// Define a union type for the return values
+interface LoginResponseWithCompanies {
+    user: any;
+    companies: Company[];
+    needsCompanySelection: boolean;
+}
+
+interface LoginResponseWithSelectedCompany {
+    user: any;
+    selectedCompany: Company;
+    needsCompanySelection: boolean;
+}
+
+interface LoginResponseBasic {
+    user: any;
+    needsCompanySelection: boolean;
+}
+// Login thunk
+export const login = createAsyncThunk<
+    LoginResponseWithCompanies | LoginResponseWithSelectedCompany | LoginResponseBasic,
+    LoginDto,
+    AsyncThunkConfig
+>(
     'auth/login',
-    async (credentials: LoginDto, { rejectWithValue }) => {
+    async (credentials: LoginDto, { dispatch, rejectWithValue }) => {
         try {
             const response: any = await api.post('/auth/login', credentials);
             if (response.status != "success") {
@@ -41,16 +127,26 @@ export const login = createAsyncThunk(
             } else if (data.companies && data.companies.length === 1) {
                 // Auto-select the only company
                 localStorage.setItem('selectedCompany', JSON.stringify(data.companies[0]));
-                return {
+                const result: LoginResponseWithSelectedCompany = {
                     user: data.user,
                     selectedCompany: data.companies[0],
                     needsCompanySelection: false
                 };
+                // If user has a role, fetch permissions
+                if (data.role && data.role.id) {
+                    await dispatch(fetchUserPermissions(data.role.id));
+                }
+                return result;
             }
-            return {
-                user: data.user,
-                needsCompanySelection: false
-            };
+            const result: LoginResponseBasic = {
+                    user: data.user,
+                    needsCompanySelection: false
+                };
+                // If user has a role, fetch permissions
+                if (data.role && data.role.id) {
+                    await dispatch(fetchUserPermissions(data.role.id));
+                }
+                return result as LoginResponseBasic;
         } catch (error: any) {
             console.log("error", error)
             return rejectWithValue(error.message || 'Login failed');
@@ -58,9 +154,21 @@ export const login = createAsyncThunk(
     }
 );
 
-export const registerCompany = createAsyncThunk(
+// Register company
+interface RegisterCompanyResponse {
+    success: boolean;
+    company: Company;
+    user: any;
+    needsCompanySelection: boolean;
+}
+
+export const registerCompany = createAsyncThunk<
+    RegisterCompanyResponse,
+    CreateCompanyDto,
+    AsyncThunkConfig
+>(
     'auth/registerCompany',
-    async (companyData: CreateCompanyDto, { rejectWithValue }) => {
+    async (companyData: CreateCompanyDto, { dispatch, rejectWithValue }) => {
         try {
             const response: any = await api.post('/auth/register-company', companyData);
             if (response.status != "success") {
@@ -71,26 +179,52 @@ export const registerCompany = createAsyncThunk(
             // Since company registration creates a single company, auto-select it
             if (data.user.companies && data.user.companies.length === 1) {
                 localStorage.setItem('selectedCompany', JSON.stringify(data.user.companies[0]));
-                return {
-                    user: data.user,
-                    selectedCompany: data.user.companies[0],
-                    needsCompanySelection: false
-                };
-            }
-
-            return {
+                const result: RegisterCompanyResponse = {
+                success: true,
+                company: data.user.companies[0],
                 user: data.user,
                 needsCompanySelection: false
             };
+            // If user has a role, fetch permissions
+            if (data.user.role && data.user.role.id) {
+                const role = await dispatch(fetchUserPermissions(data.user.role.id));
+                console.log("Auth role 5=",role);
+            }
+            return result;
+            }
+
+            const result: RegisterCompanyResponse = {
+                success: true,
+                company: null as any, // No company selected in this case
+                user: data.user,
+                needsCompanySelection: false
+            };
+            // If user has a role, fetch permissions
+            if (data.user.role && data.user.role.id) {
+                const role = await dispatch(fetchUserPermissions(data.user.role.id));
+                console.log("Auth role 4=",role);
+            }
+            return result;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Company registration failed');
         }
     }
 );
 
-export const selectCompany = createAsyncThunk(
+// Define interface for company selection response
+interface CompanySelectionResponse {
+    selectedCompany: Company;
+    needsCompanySelection: boolean;
+}
+
+// Select company thunk
+export const selectCompany = createAsyncThunk<
+    CompanySelectionResponse,
+    CompanySelectionDto,
+    AsyncThunkConfig
+>(
     'auth/selectCompany',
-    async (companyData: CompanySelectionDto, { rejectWithValue, getState }) => {
+    async (companyData: CompanySelectionDto, { rejectWithValue, getState, dispatch }) => {
         try {
             const { auth } = getState() as { auth: AuthState };
             const selectedCompany = auth.availableCompanies.find(c => c.id === companyData.companyId);
@@ -98,6 +232,13 @@ export const selectCompany = createAsyncThunk(
                 throw new Error('Company not found');
             }
             localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
+            console.log("AUr", auth);
+            
+            const permission = auth?.user?.userCompanies?.find(c => c.companyId === selectedCompany.id);
+            console.log("pr",permission);
+            // After selecting a company, fetch user permissions
+            if(permission) await dispatch(fetchUserPermissions(permission.roleId));
+            
             return {
                 selectedCompany,
                 needsCompanySelection: false
@@ -161,7 +302,11 @@ export const logout = createAsyncThunk(
 const authSlice = createSlice({
     name: 'auth',
     initialState,
-    reducers: {},
+    reducers: {
+        setPermissions: (state, action) => {
+            state.permissions = action.payload;
+        }
+    },
     extraReducers: (builder) => {
         builder
             // Login
@@ -174,15 +319,32 @@ const authSlice = createSlice({
                 state.isAuthenticated = true;
                 state.user = action.payload.user;
                 state.error = null;
-                if (action.payload.needsCompanySelection) {
+                
+                // Type guard to handle different response types
+                const response = action.payload;
+                if ('companies' in response && Array.isArray(response.companies) && response.companies.length > 0) {
+                    state.availableCompanies = response.companies;
                     state.needsCompanySelection = true;
-                    state.availableCompanies = action.payload.companies as any[] || [];
-                } else {
+                } else if ('selectedCompany' in response && response.selectedCompany) {
+                    state.selectedCompany = response.selectedCompany;
                     state.needsCompanySelection = false;
-                    state.selectedCompany = action.payload.selectedCompany as any || null;
+                } else {
+                    state.selectedCompany = null;
+                    state.needsCompanySelection = false;
                 }
 
                 toast.success('Login successful');
+            })
+            .addCase(fetchUserPermissions.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(fetchUserPermissions.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.permissions = action.payload || [];
+                state.error = null;
+            })
+            .addCase(fetchUserPermissions.rejected, (state) => {
+                state.isLoading = false;
             })
             .addCase(login.rejected, (state, action) => {
                 state.isLoading = false;
@@ -198,7 +360,13 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.isAuthenticated = true;
                 state.user = action.payload.user;
-                state.selectedCompany = action.payload.selectedCompany as any || null;
+                
+                if (action.payload.company) {
+                    state.selectedCompany = action.payload.company;
+                } else {
+                    state.selectedCompany = null;
+                }
+                
                 state.needsCompanySelection = action.payload.needsCompanySelection;
                 state.error = null;
                 toast.success('Company registration successful');
@@ -215,8 +383,8 @@ const authSlice = createSlice({
             })
             .addCase(selectCompany.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.selectedCompany = action.payload as any;
-                state.needsCompanySelection = false;
+                state.selectedCompany = action.payload.selectedCompany || null;
+                state.needsCompanySelection = action.payload.needsCompanySelection;
                 state.error = null;
                 toast.success('Company selected successfully');
             })
@@ -264,5 +432,15 @@ const authSlice = createSlice({
             })
     }
 });
+
+// Selectors
+export const selectUser = (state: RootState) => state.auth.user;
+export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectSelectedCompany = (state: RootState) => state.auth.selectedCompany;
+export const selectAvailableCompanies = (state: RootState) => state.auth.availableCompanies;
+export const selectNeedsCompanySelection = (state: RootState) => state.auth.needsCompanySelection;
+export const selectAuthError = (state: RootState) => state.auth.error;
+export const selectAuthLoading = (state: RootState) => state.auth.isLoading;
+export const selectPermissions = (state: RootState) => state.auth.permissions;
 
 export default authSlice.reducer;

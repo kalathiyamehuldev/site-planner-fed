@@ -35,6 +35,7 @@ import {
   ProjectMember,
 } from "@/redux/slices/projectsSlice";
 import { fetchMembers, Member } from "@/redux/slices/adminSlice";
+import usePermission from "@/hooks/usePermission";
 
 interface ProjectMemberManagementProps {
   projectId: string;
@@ -45,10 +46,12 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
+  const { hasPermission } = usePermission();
+  const resource = 'projects';
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [selectedRole, setSelectedRole] = useState<string>("VIEWER");
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -85,10 +88,10 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
 
   // Handle adding member to project
   const handleAddMember = async () => {
-    if (!selectedUserId || !selectedRole) {
+    if (!selectedUserId || !selectedMember) {
       toast({
         title: "Error",
-        description: "Please select a user and role",
+        description: "Please select a user",
         variant: "destructive",
       });
       return;
@@ -99,7 +102,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         addMemberToProject({
           projectId,
           userId: selectedUserId,
-          role: selectedRole,
+          role: selectedMember.role.id,
         })
       );
 
@@ -117,7 +120,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
 
         setIsAddDialogOpen(false);
         setSelectedUserId("");
-        setSelectedRole("VIEWER");
+        setSelectedMember(null);
       } else {
         toast({
           title: "Error",
@@ -180,27 +183,32 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Project Members</h3>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Member to Project</DialogTitle>
-              <DialogDescription>
-                Select a team member to add to this project and assign their
-                role.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Select Member</label>
+        {hasPermission(resource, 'create') && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Member to Project</DialogTitle>
+                <DialogDescription>
+                  Select a team member to add to this project and assign their
+                  role.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Select Member</label>
                 <Select
                   value={selectedUserId}
-                  onValueChange={setSelectedUserId}
+                  onValueChange={(value) => {
+                    setSelectedUserId(value);
+                    const member = companyMembers.find(m => m.id === value);
+                    setSelectedMember(member || null);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a member" />
@@ -214,7 +222,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium">Role</label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
@@ -226,7 +234,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                     <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
             </div>
             <DialogFooter>
               <Button
@@ -244,6 +252,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {memberLoading && projectMembers.length === 0 ? (
@@ -280,23 +289,25 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                 <TableCell>{member.user.email}</TableCell>
                 <TableCell>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {member.role}
+                    {member.role.name}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleRemoveMember(
-                        member.user.id,
-                        `${member.user.firstName} ${member.user.lastName}`
-                      )
-                    }
-                    disabled={memberLoading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {hasPermission(resource, 'delete') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleRemoveMember(
+                          member.user.id,
+                          `${member.user.firstName} ${member.user.lastName}`
+                        )
+                      }
+                      disabled={memberLoading}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

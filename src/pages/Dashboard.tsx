@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
+import usePermission from "@/hooks/usePermission";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -37,7 +38,7 @@ const Dashboard = () => {
   const allTasks = useAppSelector(selectAllTasks);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-
+  const { hasPermission, isSuperAdmin } = usePermission();
   const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks">(
     "overview"
   );
@@ -204,7 +205,7 @@ const Dashboard = () => {
               seamlessly.
             </p>
             <div className="flex flex-wrap gap-4">
-              <MotionButton
+              {hasPermission('projects', 'create') && (<MotionButton
                 onClick={() => navigate("/projects")}
                 variant="default"
                 size="lg"
@@ -212,6 +213,7 @@ const Dashboard = () => {
               >
                 Create New Project <Plus size={18} className="ml-2" />
               </MotionButton>
+              )}
               <MotionButton variant="outline" size="lg" motion="subtle">
                 Tour Dashboard
               </MotionButton>
@@ -224,7 +226,7 @@ const Dashboard = () => {
           style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
+            {(isSuperAdmin || hasPermission('projects', 'read')) && (<StatCard
               icon={FileText}
               label="Active Projects"
               value={allProjects
@@ -234,7 +236,8 @@ const Dashboard = () => {
               className="animation-delay-[0.1s]"
               bgColor="bg-blue-50"
               iconColor="text-blue-600"
-            />
+            />)}
+            {(isSuperAdmin || hasPermission('tasks', 'read')) && (
             <StatCard
               icon={CheckSquare}
               label="Pending Tasks"
@@ -243,7 +246,8 @@ const Dashboard = () => {
               className="animation-delay-[0.2s]"
               bgColor="bg-green-50"
               iconColor="text-green-600"
-            />
+            />)}
+            {(isSuperAdmin || hasPermission('time_tracking', 'read')) && (
             <StatCard
               icon={Clock}
               label="Tracked Hours"
@@ -252,7 +256,8 @@ const Dashboard = () => {
               className="animation-delay-[0.3s]"
               bgColor="bg-purple-50"
               iconColor="text-purple-600"
-            />
+            />)}
+            {(isSuperAdmin || hasPermission('projects', 'read')) && (
             <StatCard
               icon={LayoutGrid}
               label="Completed Projects"
@@ -263,7 +268,7 @@ const Dashboard = () => {
               className="animation-delay-[0.4s]"
               bgColor="bg-orange-50"
               iconColor="text-orange-600"
-            />
+            />)}
           </div>
         </section>
 
@@ -316,6 +321,7 @@ const Dashboard = () => {
         >
           {activeTab === "overview" && (
             <div className="space-y-8">
+                {hasPermission('projects', 'read') && (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-medium">Recent Projects</h2>
@@ -343,7 +349,9 @@ const Dashboard = () => {
                   ))}
                 </div>
               </div>
+                )}
 
+              {hasPermission('tasks', 'read') && (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-medium">Upcoming Tasks</h2>
@@ -365,6 +373,7 @@ const Dashboard = () => {
                   showProject={true}
                 />
               </div>
+            )}
             </div>
           )}
 

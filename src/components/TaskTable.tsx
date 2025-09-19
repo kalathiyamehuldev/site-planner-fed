@@ -12,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import usePermission from "@/hooks/usePermission";
 
 interface TaskTableProps {
   tasks: any[];
@@ -24,7 +25,8 @@ interface TaskTableProps {
 
 const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, showProject = true }: TaskTableProps) => {
   const isMobile = useIsMobile();
-  
+  const { hasPermission } = usePermission();
+  const resource = 'tasks';
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",
@@ -150,7 +152,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Link
+                    {hasPermission(resource, 'read') && (<Link
                       to={`/tasks/${task.id}`}
                       className="inline-flex items-center gap-1 text-primary font-medium text-sm px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors"
                       onClick={(e) => e.stopPropagation()}
@@ -158,7 +160,8 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       <Eye size={14} />
                       View
                     </Link>
-                    {onEditTask && (
+                    )}
+                    {hasPermission(resource, 'update') && onEditTask && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -171,7 +174,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <Edit size={14} />
                       </Button>
                     )}
-                    {onDeleteTask && (
+                    {hasPermission(resource, 'delete') && onDeleteTask && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -372,7 +375,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   </td>
                   <td className="p-3 md:p-4 text-right">
                     <div className="flex items-center justify-end gap-1 md:gap-2">
-                      <Link
+                      {hasPermission(resource, 'read') && (<Link 
                         to={`/tasks/${task.id}`}
                         className="inline-flex items-center gap-1 text-primary font-medium text-xs md:text-sm hover:gap-2 transition-all duration-200 px-2 py-1 rounded hover:bg-primary/10"
                         onClick={(e) => e.stopPropagation()}
@@ -382,8 +385,8 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <span className="hidden sm:inline">View</span>
                         <ArrowRight size={12} className="transition-transform hover:translate-x-1 md:hidden" />
                         <ArrowRight size={14} className="transition-transform hover:translate-x-1 hidden md:block" />
-                      </Link>
-                      {onEditTask && (
+                      </Link>)}
+                      {hasPermission(resource, 'update') && onEditTask && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -397,7 +400,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                           <Edit size={14} className="hidden md:block" />
                         </Button>
                       )}
-                      {onDeleteTask && (
+                      {hasPermission(resource, 'delete') && onDeleteTask && (
                         <Button
                           variant="ghost"
                           size="sm"

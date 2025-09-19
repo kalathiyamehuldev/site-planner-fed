@@ -13,6 +13,7 @@ import authReducer from './slices/authSlice';
 import adminReducer from './slices/adminSlice';
 import foldersReducer from './slices/foldersSlice';
 import commentsReducer from './slices/commentsSlice';
+import rolesReducer from './slices/rolesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     admin: adminReducer,
     folders: foldersReducer,
     comments: commentsReducer,
+    roles: rolesReducer,
   },
 });
 

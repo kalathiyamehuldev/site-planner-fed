@@ -10,12 +10,18 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, selectProjectLoading, selectProjectError, fetchProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectCard from "@/components/ProjectCard";
+import usePermission from "@/hooks/usePermission";
 
 const Projects = () => {
   const dispatch = useAppDispatch();
   const projects = useAppSelector(selectAllProjects);
   const loading = useAppSelector(selectProjectLoading);
   const error = useAppSelector(selectProjectError);
+  const { hasPermission, isSuperAdmin } = usePermission();
+  const resource = 'projects';
+
+  console.log('Projects component loaded, initializing permissions checks');
+  console.log('Initial hasPermission function:', hasPermission);
 
   const [filter, setFilter] = useState<
     "all" | "active" | "completed" | "onhold" | "inprogress"
@@ -51,7 +57,9 @@ const Projects = () => {
   });
 
   const handleProjectClick = (projectId: string) => {
-    dispatch(setSelectedProject(projectId));
+    if (hasPermission(resource, 'read')) {
+      dispatch(setSelectedProject(projectId));
+    }
   };
 
   return (
@@ -64,14 +72,16 @@ const Projects = () => {
             <p className="text-muted-foreground">
               Manage all your interior design projects
             </p>
-          </div>
-          <MotionButton
-            variant="default"
-            motion="subtle"
-            onClick={() => setIsAddDialogOpen(true)}
-          >
-            <Plus size={18} className="mr-2" /> New Project
-          </MotionButton>
+            </div>
+            {hasPermission(resource, 'create') && (
+              <MotionButton
+                variant="default"
+              motion="subtle"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus size={18} className="mr-2" /> New Project
+            </MotionButton>
+          )}
         </div>
 
         {/* Filters and Search */}
@@ -167,13 +177,15 @@ const Projects = () => {
         {!loading && !error && filteredProjects.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No projects found</p>
-            <MotionButton
-              variant="default"
-              motion="subtle"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus size={18} className="mr-2" /> Create Your First Project
-            </MotionButton>
+            {(isSuperAdmin || hasPermission(resource, 'create')) && (
+              <MotionButton
+                variant="default"
+                motion="subtle"
+                onClick={() => setIsAddDialogOpen(true)}
+              >
+                <Plus size={18} className="mr-2" /> Create Your First Project
+              </MotionButton>
+            )}
           </div>
         )}
 

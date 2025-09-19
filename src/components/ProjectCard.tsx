@@ -7,11 +7,13 @@ import { FileText, Calendar, Users, Clock, ArrowRight, Trash2 } from "lucide-rea
 import { useAppDispatch } from "@/redux/hooks";
 import { deleteProjectAsync } from "@/redux/slices/projectsSlice";
 import { useToast } from "@/hooks/use-toast";
-import { Tooltip,
+import {
+  Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import usePermission from "@/hooks/usePermission";
 
 interface ProjectCardProps {
   id: string;
@@ -40,10 +42,13 @@ const ProjectCard = ({
 }: ProjectCardProps) => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
+  const { hasPermission, isSuperAdmin } = usePermission();
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!isSuperAdmin && !hasPermission('projects', 'delete')) return;
     
     if (!window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
       return;
@@ -117,13 +122,15 @@ const ProjectCard = ({
                </span>
              </div>
              <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 translate-x-full group-hover:translate-x-0">
-               <button
-                 onClick={handleDelete}
-                 className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                 title="Delete project"
-               >
-                 <Trash2 size={14} />
-               </button>
+               {(isSuperAdmin || hasPermission('projects', 'delete')) && (
+                 <button
+                   onClick={handleDelete}
+                   className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                   title="Delete project"
+                 >
+                   <Trash2 size={14} />
+                 </button>
+               )}
              </div>
            </div>
         </div>
@@ -154,16 +161,18 @@ const ProjectCard = ({
           </div>
         </div>
 
-        <Link
-          to={`/projects/${id}`}
-          className="mt-6 flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all duration-200"
-        >
-          View Details{" "}
-          <ArrowRight
-            size={16}
-            className="transition-transform group-hover:translate-x-1"
-          />
-        </Link>
+        {(isSuperAdmin || hasPermission('projects', 'read')) && (
+          <Link
+            to={`/projects/${id}`}
+            className="mt-6 flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all duration-200"
+          >
+            View Details
+            <ArrowRight
+              size={16}
+              className="transition-transform group-hover:translate-x-1"
+            />
+          </Link>
+        )}
       </div>
     </GlassCard>
   );

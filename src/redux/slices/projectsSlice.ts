@@ -29,7 +29,10 @@ export interface ApiProject {
 
 export interface ProjectMember {
   id: string;
-  role: string;
+  role: {
+    id: string;
+    name: string;
+  };
   user: {
     id: string;
     firstName: string;

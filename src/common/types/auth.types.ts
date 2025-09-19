@@ -13,6 +13,8 @@ export enum UserType {
 
 export interface Company {
     id: string;
+    companyId?: string;
+    roleId?: string;
     name: string;
     email: string;
     phone?: string;
@@ -27,7 +29,10 @@ export interface User {
     lastName: string;
     email: string;
     userType: UserType;
-    role: UserRole;
+    role: {
+        id: string;
+        name: string;
+    };
     companyId?: string;
     company?: Company;
     userCompanies?: Company[];
@@ -74,6 +79,7 @@ export interface AuthState {
     availableCompanies: Company[];
     isAuthenticated: boolean;
     needsCompanySelection: boolean;
+    permissions: [];
     isLoading: boolean;
     error: string | null;
 }

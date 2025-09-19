@@ -32,6 +32,7 @@ import {
   Member,
   UpdateMemberData,
 } from '@/redux/slices/adminSlice';
+import { fetchRoles, selectAllRoles, selectRolesLoading } from '@/redux/slices/rolesSlice';
 
 interface MemberFormData {
   firstName: string;
@@ -39,7 +40,7 @@ interface MemberFormData {
   email: string;
   phone: string;
   address: string;
-  role: string;
+  roleId: string;
   password: string;
 }
 
@@ -56,6 +57,8 @@ const MemberManagement: React.FC = () => {
   const { toast } = useToast();
   const { members } = useSelector((state: RootState) => state.admin);
   const { items: membersList, loading, error } = members;
+  const roles = useSelector(selectAllRoles);
+  const rolesLoading = useSelector(selectRolesLoading);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,7 +69,7 @@ const MemberManagement: React.FC = () => {
     email: '',
     phone: '',
     address: '',
-    role: '',
+    roleId: '',
     password: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -90,7 +93,7 @@ const MemberManagement: React.FC = () => {
       errors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.role) {
+    if (!formData.roleId) {
       errors.role = 'Role is required';
     }
 
@@ -106,7 +109,7 @@ const MemberManagement: React.FC = () => {
     const hasRequiredFields = formData.firstName.trim() && 
                              formData.lastName.trim() && 
                              formData.email.trim() && 
-                             formData.role &&
+                             formData.roleId &&
                              (!!editingMember || formData.password.trim());
     const hasValidEmail = emailRegex.test(formData.email);
     return hasRequiredFields && hasValidEmail;
@@ -123,6 +126,7 @@ const MemberManagement: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchMembers());
+    dispatch(fetchRoles());
   }, [dispatch]);
 
   useEffect(() => {
@@ -155,7 +159,7 @@ const MemberManagement: React.FC = () => {
         if (updateData.email !== editingMember.email) updatePayload.email = updateData.email;
         if (updateData.phone !== editingMember.phone) updatePayload.phone = updateData.phone;
         if (updateData.address !== editingMember.address) updatePayload.address = updateData.address;
-        if (updateData.role !== editingMember.role) updatePayload.role = updateData.role;
+        if (updateData.roleId !== editingMember.role.id) updatePayload.roleId = updateData.roleId;
         
         await dispatch(updateMember({ 
           id: editingMember.id, 
@@ -195,7 +199,7 @@ const MemberManagement: React.FC = () => {
       email: '',
       phone: '',
       address: '',
-      role: '',
+      roleId: '',
       password: '',
     });
     setFormErrors({});
@@ -210,7 +214,7 @@ const MemberManagement: React.FC = () => {
       email: member.email,
       phone: member.phone || '',
       address: member.address || '',
-      role: member.role,
+      roleId: member.role.id,
       password: '', // Don't populate password for editing
     });
     setFormErrors({});
@@ -236,7 +240,7 @@ const MemberManagement: React.FC = () => {
       member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.role.toLowerCase().includes(searchTerm.toLowerCase())
+      member.role.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -332,17 +336,25 @@ const MemberManagement: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
                   <Select
-                    value={formData.role}
-                    onValueChange={(value) => handleInputChange('role', value)}
+                    value={formData.roleId}
+                    onValueChange={(value) => handleInputChange('roleId', value)}
                     required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="VIEWER">Viewer</SelectItem>
+                      {rolesLoading ? (
+                        <SelectItem value="">Loading roles...</SelectItem>
+                      ) : roles.length === 0 ? (
+                        <SelectItem value="">No roles available</SelectItem>
+                      ) : (
+                        roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {formErrors.role && (
@@ -426,7 +438,7 @@ const MemberManagement: React.FC = () => {
                     <span className="text-sm">{member.address || '-'}</span>
                   </td>
                   <td className="p-4">
-                    <span className="text-sm">{member.role}</span>
+                    <span className="text-sm">{member.role.name}</span>
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${

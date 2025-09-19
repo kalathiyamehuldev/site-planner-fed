@@ -17,7 +17,10 @@ export interface Member {
   email: string;
   phone?: string;
   address?: string;
-  role: string;
+  role: {
+    id: string;
+    name: string;
+  };
   isActive: boolean;
   companyId: string;
   createdAt: string;
@@ -66,7 +69,7 @@ export interface CreateMemberData {
   email: string;
   phone?: string;
   address?: string;
-  role: string;
+  roleId: string;
   password: string;
   companyId: string;
 }
@@ -77,7 +80,7 @@ export interface UpdateMemberData {
   email?: string;
   phone?: string;
   address?: string;
-  role?: string;
+  roleId?: string;
   isActive?: boolean;
 }
 

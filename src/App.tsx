@@ -32,6 +32,9 @@ import ImageLibrary from "./pages/ImageLibrary";
 import ProductLibrary from "./pages/ProductLibrary";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import RolesPage from "./pages/Roles";
+import CreateRolePage from "./pages/CreateRole";
+import EditRolePage from "./pages/EditRole";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +111,9 @@ const App = () => (
                             path="/product-library"
                             element={<ProductLibrary />}
                           />
+                          <Route path="/roles" element={<RolesPage />}/>
+                          <Route path="/roles/create" element={<CreateRolePage />}/>
+                          <Route path="/roles/edit/:roleId" element={<EditRolePage />}/>
                           <Route path="/admin" element={<Admin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

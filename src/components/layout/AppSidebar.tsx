@@ -46,22 +46,23 @@ const AppSidebar: React.FC = () => {
 
   const mainItems = [
     { name: "Dashboard", path: "/", icon: LayoutGrid, color: "text-blue-600" },
-    { name: "Projects", path: "/projects", icon: FileText, color: "text-green-600" },
-    { name: "Tasks", path: "/tasks", icon: CheckSquare, color: "text-purple-600" },
-    { name: "Admin", path: "/admin", icon: Shield, color: "text-red-600" },
+    { name: "Projects", path: "/projects", icon: FileText, color: "text-green-600" }, // resource = projects
+    { name: "Tasks", path: "/tasks", icon: CheckSquare, color: "text-purple-600" }, // resource = tasks
+    { name: "Admin", path: "/admin", icon: Shield, color: "text-red-600" }, // resource = users
+    { name: "Roles", path: "/roles", icon: Shield, color: "text-orange-600" }, // resource = roles
   ];
 
   const toolItems = [
-    { name: "Time Tracking", path: "/time-tracking", icon: Clock, color: "text-orange-600" },
+    { name: "Time Tracking", path: "/time-tracking", icon: Clock, color: "text-orange-600" }, // resource = time_tracking
     { name: "To-Do List", path: "/todo", icon: CheckSquare, color: "text-indigo-600" },
-    // { name: "Invoices", path: "/invoices", icon: CreditCard, color: "text-yellow-600" },
+    // { name: "Invoices", path: "/invoices", icon: CreditCard, color: "text-yellow-600" }, // resource = invoices
     // { name: "Procurement Hub", path: "/procurement", icon: ShoppingBag, color: "text-pink-600" },
     // { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag, color: "text-teal-600" },
-    { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" },
+    { name: "Documents", path: "/documents", icon: FolderArchive, color: "text-gray-600" }, // resource = documents
   ];
 
   const libraryItems = [
-    { name: "Address Book", path: "/address-book", icon: Users, color: "text-cyan-600" },
+    { name: "Address Book", path: "/address-book", icon: Users, color: "text-cyan-600" }, // resource = contacts
     // { name: "Image Library", path: "/image-library", icon: FileImage, color: "text-emerald-600" },
     // { name: "Product Library", path: "/product-library", icon: Package, color: "text-violet-600" },
   ];

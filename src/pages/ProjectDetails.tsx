@@ -40,6 +40,7 @@ import {
   selectProjectDocumentsLoading,
 } from "@/redux/slices/documentsSlice";
 import { useToast } from "@/hooks/use-toast";
+import usePermission from "@/hooks/usePermission";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,6 +116,11 @@ const formatFileType = (type: string): string => {
 // Remove static documents - will use API data instead
 
 const ProjectDetails = () => {
+  const { hasPermission } = usePermission();
+  const resource = 'projects';
+  const taskResource = 'tasks';
+  const documentResource = 'documents';
+  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [uploadDocumentDialogOpen, setUploadDocumentDialogOpen] = useState(false);
@@ -307,22 +313,26 @@ const ProjectDetails = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <MotionButton
-              variant="outline"
-              size="sm"
-              motion="subtle"
-              onClick={() => setEditDialogOpen(true)}
-            >
-              <Edit size={16} className="mr-2" /> Edit Project
-            </MotionButton>
-            <MotionButton
-              variant="default"
-              size="sm"
-              motion="subtle"
-              onClick={() => setAddTaskDialogOpen(true)}
-            >
-              <Plus size={16} className="mr-2" /> Add Task
-            </MotionButton>
+            {hasPermission(resource, 'update') && (
+              <MotionButton
+                variant="outline"
+                size="sm"
+                motion="subtle"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                <Edit size={16} className="mr-2" /> Edit Project
+              </MotionButton>
+            )}
+            {hasPermission(taskResource, 'create') && (
+              <MotionButton
+                variant="default"
+                size="sm"
+                motion="subtle"
+                onClick={() => setAddTaskDialogOpen(true)}
+              >
+                <Plus size={16} className="mr-2" /> Add Task
+              </MotionButton>
+            )}
           </div>
         </div>
 
@@ -496,14 +506,16 @@ const ProjectDetails = () => {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">All Tasks</h2>
-              <MotionButton
-                variant="default"
-                size="sm"
-                motion="subtle"
-                onClick={() => setAddTaskDialogOpen(true)}
-              >
-                <Plus size={16} className="mr-2" /> Add Task
-              </MotionButton>
+              {hasPermission(taskResource, 'create') && (
+                <MotionButton
+                  variant="default"
+                  size="sm"
+                  motion="subtle"
+                  onClick={() => setAddTaskDialogOpen(true)}
+                >
+                  <Plus size={16} className="mr-2" /> Add Task
+                </MotionButton>
+              )}
             </div>
             {tasksLoading ? (
               <div className="flex items-center justify-center p-12">
@@ -523,14 +535,16 @@ const ProjectDetails = () => {
           <TabsContent value="documents" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Documents</h2>
-              <MotionButton 
-                variant="default" 
-                size="sm" 
-                motion="subtle"
-                onClick={() => setUploadDocumentDialogOpen(true)}
-              >
-                <Plus size={16} className="mr-2" /> Upload Document
-              </MotionButton>
+              {hasPermission(documentResource, 'create') && (
+                <MotionButton 
+                  variant="default" 
+                  size="sm" 
+                  motion="subtle"
+                  onClick={() => setUploadDocumentDialogOpen(true)}
+                >
+                  <Plus size={16} className="mr-2" /> Upload Document
+                </MotionButton>
+              )}
             </div>
             <GlassCard className="overflow-hidden animate-scale-in">
               {documentsLoading ? (
@@ -577,15 +591,17 @@ const ProjectDetails = () => {
                           {/* <td className="p-4">-</td> */}
                           <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td className="p-4 text-right">
-                            <MotionButton
-                              variant="ghost"
-                              size="sm"
-                              motion="subtle"
-                              className="text-primary"
-                              onClick={() => handleDownloadDocument(doc.url, doc.name)}
-                            >
-                              Download
-                            </MotionButton>
+                            {hasPermission(documentResource, 'read') && (
+                              <MotionButton
+                                variant="ghost"
+                                size="sm"
+                                motion="subtle"
+                                className="text-primary"
+                                onClick={() => handleDownloadDocument(doc.url, doc.name)}
+                              >
+                                Download
+                              </MotionButton>
+                            )}
                           </td>
                         </tr>
                       ))}
