@@ -58,6 +58,7 @@ import { useToast } from "@/hooks/use-toast";
 import DeleteFolderModal from '@/components/DeleteFolderModal';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
+import usePermission from "@/hooks/usePermission";
 
 // File type categories for filtering
 const fileTypeCategories = [
@@ -169,7 +170,7 @@ const Documents = () => {
     taskId: '',
     file: null as File | null
   });
-
+  const { hasPermission } = usePermission();
   // Load data on component mount
   useEffect(() => {
     dispatch(fetchRootDocuments());
@@ -606,17 +607,19 @@ const Documents = () => {
             <h1 className="text-2xl sm:text-3xl font-light mb-2 truncate">Documents</h1>
             <p className="text-muted-foreground text-sm sm:text-base">Store and organize all your project files</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-            <MotionButton 
-              variant="outline" 
-              size="sm" 
-              motion="subtle" 
-              className="w-full sm:w-auto"
-              onClick={createNewFolder}
-            >
-              <FolderOpen size={16} className="mr-2" /> New Folder
-            </MotionButton>
-          </div>
+          {hasPermission('folders', 'create') && (
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+              <MotionButton 
+                variant="outline" 
+                size="sm" 
+                motion="subtle" 
+                className="w-full sm:w-auto"
+                onClick={createNewFolder}
+              >
+                <FolderOpen size={16} className="mr-2" /> New Folder
+              </MotionButton>
+            </div>
+          )}
         </div>
 
         {/* Search and Filters - Single Line */}
@@ -772,9 +775,11 @@ const Documents = () => {
                     <p className="text-muted-foreground mb-6">
                       {selectedFolderId ? 'This folder is empty.' : 'No Project Documents found.'}
                     </p>
-                    <MotionButton variant="default" motion="subtle" onClick={createNewFolder}>
-                      <FolderOpen size={18} className="mr-2" /> New Folder
-                    </MotionButton>
+                    {hasPermission('folders', 'create') && (
+                      <MotionButton variant="default" motion="subtle" onClick={createNewFolder}>
+                        <FolderOpen size={18} className="mr-2" /> New Folder
+                      </MotionButton>
+                    )}
                   </GlassCard>
                 );
               }
@@ -917,18 +922,22 @@ const Documents = () => {
                                 >
                                   <Download size={14} />
                                 </button>
-                                <button 
-                                  onClick={() => handleEditDocument(doc)}
-                                  className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
-                                >
-                                  <Edit3 size={14} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteDocument(doc)}
-                                  className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {hasPermission('documents', 'update') && (
+                                  <button 
+                                    onClick={() => handleEditDocument(doc)}
+                                    className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                                  >
+                                    <Edit3 size={14} />
+                                  </button>
+                                )}
+                                {hasPermission('documents', 'delete') && (
+                                  <button 
+                                    onClick={() => handleDeleteDocument(doc)}
+                                    className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </GlassCard>
@@ -953,9 +962,11 @@ const Documents = () => {
                     <p className="text-muted-foreground mb-6">
                       {selectedFolderId ? 'This folder is empty.' : 'No documents match your current filters. Try a different search or category.'}
                     </p>
-                    <MotionButton variant="default" motion="subtle" onClick={() => setShowUploadModal(true)}>
-                      <Upload size={18} className="mr-2" /> Upload Documents
-                    </MotionButton>
+                    {hasPermission('documents', 'create') && (
+                      <MotionButton variant="default" motion="subtle" onClick={() => setShowUploadModal(true)}>
+                        <Upload size={18} className="mr-2" /> Upload Documents
+                      </MotionButton>
+                    )}
                   </GlassCard>
                 );
               }
@@ -1071,20 +1082,23 @@ const Documents = () => {
                           >
                             <Download size={14} />
                           </button>
-                          <button
-                            onClick={() => handleEditDocument(document)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                            title="Edit"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDocument(document)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {hasPermission('documents', 'update') && (
+                            <button
+                              onClick={() => handleEditDocument(document)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                              title="Edit"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                          )}
+                          {hasPermission('documents', 'delete') && (
+                            <button
+                              onClick={() => handleDeleteDocument(document)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                          </button>)}
                         </div>
                       </div>
                     ))}
@@ -1109,13 +1123,14 @@ const Documents = () => {
                 top: contextMenu.y,
               }}
             >
+              {hasPermission('folders', 'update') && (
               <button
                 onClick={handleEditFolder}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               >
                 <Edit3 size={14} />
                 Edit
-              </button>
+              </button>)}
               <button
                 onClick={handleDownloadFolder}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -1124,13 +1139,15 @@ const Documents = () => {
                 Download
               </button>
               <div className="border-t border-gray-200 my-1" />
-              <button
-                onClick={handleDeleteFolder}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
+              {hasPermission('folders', 'delete') && (
+                <button
+                  onClick={handleDeleteFolder}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              )}
             </div>
           </>
         )}

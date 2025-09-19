@@ -121,17 +121,17 @@ const ProjectCard = ({
                  {status}
                </span>
              </div>
-             <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 translate-x-full group-hover:translate-x-0">
-               {(isSuperAdmin || hasPermission('projects', 'delete')) && (
-                 <button
-                   onClick={handleDelete}
-                   className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                   title="Delete project"
-                 >
-                   <Trash2 size={14} />
-                 </button>
+               {(hasPermission('projects', 'delete')) && (
+                <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 translate-x-full group-hover:translate-x-0">
+                    <button
+                      onClick={handleDelete}
+                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete project"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                </div>
                )}
-             </div>
            </div>
         </div>
 
@@ -161,7 +161,7 @@ const ProjectCard = ({
           </div>
         </div>
 
-        {(isSuperAdmin || hasPermission('projects', 'read')) && (
+        {(hasPermission('projects', 'read')) && (
           <Link
             to={`/projects/${id}`}
             className="mt-6 flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all duration-200"

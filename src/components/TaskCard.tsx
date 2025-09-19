@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import { Clock, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import usePermission from "@/hooks/usePermission";
 
 interface TaskCardProps {
   id: string;
@@ -32,6 +33,9 @@ const TaskCard = ({
   onClick,
   style,
 }: TaskCardProps) => {
+  const { hasPermission } = usePermission();
+  const resource = 'tasks';
+  
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",

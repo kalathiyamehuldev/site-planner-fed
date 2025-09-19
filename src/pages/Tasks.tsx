@@ -28,12 +28,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import usePermission from "@/hooks/usePermission";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const allTasks = useAppSelector(selectAllTasks);
   const projects = useAppSelector(selectAllProjects);
+  const { hasPermission } = usePermission();
 
   const [filter, setFilter] = useState<
     "all" | "mine" | "high-priority" | "upcoming"
@@ -219,6 +221,7 @@ const Tasks = () => {
                 List
               </button>
             </div>
+            {hasPermission('tasks', 'create') && (
             <MotionButton 
               variant="default" 
               motion="subtle"
@@ -226,6 +229,7 @@ const Tasks = () => {
             >
               <Plus size={18} className="mr-2" /> New Task
             </MotionButton>
+            )}
           </div>
         </div>
 

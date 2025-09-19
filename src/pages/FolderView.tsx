@@ -70,6 +70,7 @@ import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { useToast } from '@/hooks/use-toast';
 import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialog';
 import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
+import usePermission from '@/hooks/usePermission';
 
 // Add CSS animations
 const styles = `
@@ -157,7 +158,7 @@ const FolderView: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  
+  const { hasPermission } = usePermission();
   const documents = useAppSelector(selectAllDocuments);
   const projects = useAppSelector(selectAllProjects);
   const tasks = useAppSelector(selectProjectTasks);
@@ -810,24 +811,28 @@ const FolderView: React.FC = () => {
             <p className="text-muted-foreground text-sm sm:text-base">Manage files and folders in this directory</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-            <MotionButton
-              variant="outline"
-              size="sm"
-              motion="subtle"
-              className="w-full sm:w-auto"
-              onClick={handleCreateFolder}
-            >
-              <Plus size={16} className="mr-2" /> New Folder
-            </MotionButton>
-            <MotionButton
-              variant="default"
-              size="sm"
-              motion="subtle"
-              onClick={() => setIsUploadDialogOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              <Upload size={16} className="mr-2" /> Upload Files
-            </MotionButton>
+            {hasPermission('folders', 'create') && (
+              <MotionButton
+                variant="outline"
+                size="sm"
+                motion="subtle"
+                className="w-full sm:w-auto"
+                onClick={handleCreateFolder}
+              >
+                <Plus size={16} className="mr-2" /> New Folder
+              </MotionButton>
+            )}
+            {hasPermission('documents', 'create') && (
+              <MotionButton
+                variant="default"
+                size="sm"
+                motion="subtle"
+                onClick={() => setIsUploadDialogOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                <Upload size={16} className="mr-2" /> Upload Files
+              </MotionButton>
+            )}
           </div>
         </div>
 
@@ -988,38 +993,42 @@ const FolderView: React.FC = () => {
                         </div>
                       </div>
                       
+                        {(hasPermission('folders', 'update') || hasPermission('folders', 'delete')) && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical size={16} />
-                          </button>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditingFolder(folder);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <Edit3 className="mr-2 h-4 w-4" />
+                          {hasPermission('folders', 'update') && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditingFolder(folder);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Edit3 className="mr-2 h-4 w-4" />
                             Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDeleteFolderModal(folder);
-                            }}
-                            className="cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                          </DropdownMenuItem>)}
+                          {hasPermission('folders', 'delete') && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteFolderModal(folder);
+                              }}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
-                      </DropdownMenu>
+                      </DropdownMenu>)}
                     </div>
                   </div>
                 ))}
@@ -1092,38 +1101,43 @@ const FolderView: React.FC = () => {
                               <Download className="mr-2 h-4 w-4" />
                               Download
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditDocument(doc);
-                              }}
-                              className="cursor-pointer"
-                            >
+                            {hasPermission('documents', 'update') && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditDocument(doc);
+                                }}
+                                className="cursor-pointer"
+                              >
                               <Edit3 className="mr-2 h-4 w-4" />
                               Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCreateVersion(doc);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Upload className="mr-2 h-4 w-4" />
-                              Create Version
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteDocumentFile(doc.id);
-                              }}
-                              className="cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuItem>)}
+                            {hasPermission('documents', 'update') && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCreateVersion(doc);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Upload className="mr-2 h-4 w-4" />
+                                Create Version
+                              </DropdownMenuItem>
+                            )}
+                            {hasPermission('documents', 'delete') && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDocumentFile(doc.id);
+                                }}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                       </div>
                     </div>
                   ))}
@@ -1144,12 +1158,15 @@ const FolderView: React.FC = () => {
                     </p>
                     {!searchTerm && (
                       <div className="flex items-center justify-center gap-3">
-                        <MotionButton onClick={handleCreateFolder} variant="outline" motion="subtle">
-                          <Plus size={18} className="mr-2" /> New Folder
-                        </MotionButton>
-                        <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
+                        {hasPermission('folders', 'create') && (
+                          <MotionButton onClick={handleCreateFolder} variant="outline" motion="subtle">
+                            <Plus size={18} className="mr-2" /> New Folder
+                          </MotionButton>
+                        )}
+                        {hasPermission('documents','create') && (<MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
                           <Upload size={18} className="mr-2" /> Upload Files
                         </MotionButton>
+                        )}
                       </div>
                     )}
                   </GlassCard>
@@ -1165,7 +1182,7 @@ const FolderView: React.FC = () => {
                       <div className="col-span-2">Task</div>
                       <div className="col-span-2">Type</div>
                       <div className="col-span-2">Modified</div>
-                      <div className="col-span-1">Actions</div>
+                      {(hasPermission('folders', 'update') || hasPermission('folders', 'delete')) && <div className="col-span-1">Actions</div>}
                     </div>
                     
                     {/* Folders */}
@@ -1215,26 +1232,29 @@ const FolderView: React.FC = () => {
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startEditingFolder(folder);
-                                }}
-                                className="cursor-pointer"
-                              >
+                              {hasPermission('folders', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditingFolder(folder);
+                                  }}
+                                  className="cursor-pointer"
+                                >
                                 <Edit3 className="mr-2 h-4 w-4" />
                                 Rename
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openDeleteFolderModal(folder);
-                                }}
-                                className="cursor-pointer text-destructive focus:text-destructive"
-                              >
+                              </DropdownMenuItem>)}
+                              {hasPermission('folders', 'delete') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openDeleteFolderModal(folder);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -1287,36 +1307,41 @@ const FolderView: React.FC = () => {
                           >
                             <Download size={14} />
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditDocument(document);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                            title="Edit"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateVersion(document);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                            title="Create Version"
-                          >
-                            <Upload size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteDocumentFile(document.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
-                            title="Delete"
+                          {hasPermission('documents', 'update') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditDocument(document);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                              title="Edit"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                          )}
+                          {hasPermission('documents', 'create') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateVersion(document);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                              title="Create Version"
+                            >
+                              <Upload size={14} />
+                            </button>
+                          )}
+                          {hasPermission('documents', 'delete') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDocumentFile(document.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
+                              title="Delete"
                           >
                             <Trash2 size={14} />
-                          </button>
+                          </button>)}
                         </div>
                       </div>
                     ))}

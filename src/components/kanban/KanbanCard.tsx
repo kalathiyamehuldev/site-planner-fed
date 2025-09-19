@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import usePermission from "@/hooks/usePermission";
 
 interface KanbanCardProps {
   task: any;
@@ -35,6 +36,8 @@ const KanbanCard = ({
   className 
 }: KanbanCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const { hasPermission } = usePermission();
+  const resource = 'tasks';
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -200,17 +203,19 @@ const KanbanCard = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-secondary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditTask?.(task);
-                  }}
-                >
-                  <Edit size={12} />
-                </Button>
+                {hasPermission(resource, 'update') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditTask?.(task);
+                    }}
+                  >
+                    <Edit size={12} />
+                  </Button>
+                )}
               </TooltipTrigger>
               <TooltipContent>
                 <p>Edit task</p>
@@ -221,17 +226,19 @@ const KanbanCard = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteTask?.(task.id);
-                  }}
-                >
-                  <Trash2 size={12} />
-                </Button>
+                {hasPermission(resource, 'delete') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteTask?.(task.id);
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </Button>
+                )}
               </TooltipTrigger>
               <TooltipContent>
                 <p>Delete task</p>

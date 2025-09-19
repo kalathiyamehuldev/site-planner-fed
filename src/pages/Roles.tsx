@@ -29,21 +29,14 @@ const RolesPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const roles = useAppSelector(selectAllRoles);
-  console.log("roles in Roles", roles);
-  
+  const {hasPermission, isSuperAdmin} = usePermission();
   const isLoading = useAppSelector(selectRolesLoading);
-  const { hasPermission, isSuperAdmin } = usePermission();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteRoleId, setDeleteRoleId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    console.log('Roles page loaded, checking permissions...');
-    console.log('hasPermission function:', hasPermission);
-    console.log('isSuperAdmin function:', isSuperAdmin);
-    console.log('Can manage roles:', hasPermission('users', 'manage') || isSuperAdmin);
-    
     dispatch(fetchRoles());
   }, [dispatch, hasPermission, isSuperAdmin]);
 
@@ -121,13 +114,15 @@ const RolesPage: React.FC = () => {
               Manage user roles and permissions
             </p>
           </div>
-          <MotionButton
-            variant="default"
-            motion="subtle"
-            onClick={handleCreateRole}
-          >
-            <Plus size={18} className="mr-2" /> Create Role
-          </MotionButton>
+          {hasPermission('roles', 'create') && (
+            <MotionButton
+              variant="default"
+              motion="subtle"
+              onClick={handleCreateRole}
+            >
+              <Plus size={18} className="mr-2" /> Create Role
+            </MotionButton>
+          )}
         </div>
 
         {/* Search */}

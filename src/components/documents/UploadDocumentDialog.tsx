@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import usePermission from '@/hooks/usePermission';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
 
 interface ConflictData {
@@ -117,22 +118,35 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [showConflictDialog, setShowConflictDialog] = useState(false);
-    const [conflictDocumentId, setConflictDocumentId] = useState<string | null>(null);
-    const [pendingUploadData, setPendingUploadData] = useState<{
-      file: File;
-      name: string;
-      projectId: string;
-      taskId?: string;
-      folderId?: string;
-    } | null>(null);
+  const [conflictDocumentId, setConflictDocumentId] = useState<string | null>(null);
+  const [pendingUploadData, setPendingUploadData] = useState<{
+    file: File;
+    name: string;
+    projectId: string;
+    taskId?: string;
+    folderId?: string;
+  } | null>(null);
+  const { hasPermission } = usePermission();
+  const resource = 'documents';
 
     // Fetch tasks when dialog opens or project changes
     useEffect(() => {
+      // Check if user has permission to upload documents
+      if (open && !hasPermission(resource, 'create')) {
+        toast({
+          title: "Permission Denied",
+          description: "You don't have permission to upload documents",
+          variant: "destructive"
+        });
+        onOpenChange(false);
+        return;
+      }
+      
       const currentProjectId = projectId || formData.projectId;
       if (open && currentProjectId) {
         dispatch(fetchTasksByProject(currentProjectId));
       }
-    }, [open, projectId, formData.projectId, dispatch]);
+    }, [open, projectId, formData.projectId, dispatch, hasPermission, resource, toast, onOpenChange]);
 
     // Watch for conflicts in Redux state
     useEffect(() => {

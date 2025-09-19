@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Document, fetchDocumentDetails, updateDocument, deleteDocument, downloadDocument, fetchFilePreview, selectFilePreview, selectPreviewLoading } from '@/redux/slices/documentsSlice';
 import { getProjectMembers, ProjectMember } from '@/redux/slices/projectsSlice';
 import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import usePermission from '@/hooks/usePermission';
 import { 
   fetchDocumentComments, 
   createComment, 
@@ -133,6 +134,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [currentTextarea, setCurrentTextarea] = useState<'new' | 'edit' | 'reply' | null>(null);
   const [collapsedReplies, setCollapsedReplies] = useState<Set<string>>(new Set());
+  // Permission check
+  const { hasPermission } = usePermission();
+  const resource = 'documents';
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -997,9 +1001,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           <div className="flex items-center space-x-2">
             {isEditMode ? (
               <>
-                <Button size="sm" onClick={handleSaveAll} disabled={isUpdating}>
+                {hasPermission(resource,'update') && (<Button size="sm" onClick={handleSaveAll} disabled={isUpdating}>
                   Save
-                </Button>
+                </Button>)}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1017,22 +1021,26 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditMode(true)}>
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
+                  {hasPermission(resource, 'update') && (
+                    <DropdownMenuItem onClick={() => setIsEditMode(true)}>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleDownloadDocument}>
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                     onClick={() => setShowDeleteModal(true)}
-                     className="text-red-600"
-                     disabled={isUpdating}
-                   >
-                     <Trash2 className="h-4 w-4 mr-2" />
-                     Delete
-                   </DropdownMenuItem>
+                  {hasPermission(resource, 'delete') && (
+                    <DropdownMenuItem 
+                      onClick={() => setShowDeleteModal(true)}
+                      className="text-red-600"
+                      disabled={isUpdating}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -1109,7 +1117,8 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setIsEditingDescription(true)}
+                      onClick={() => hasPermission(resource, 'update') && setIsEditingDescription(true)}
+                      className={!hasPermission(resource, 'update') ? 'hidden' : ''}
                     >
                       <Edit3 className="h-4 w-4" />
                     </Button>

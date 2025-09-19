@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/contacts/ContactModal";
 import DeleteContactDialog from "@/components/contacts/DeleteContactDialog";
+import usePermission from "@/hooks/usePermission";
 import {
   Plus,
   Search,
@@ -54,6 +55,8 @@ const AddressBook = () => {
   const selectedContact = useSelector(selectSelectedContact);
   const projects = useSelector(selectAllProjects);
   const error = useSelector(selectContactsError);
+  const { hasPermission } = usePermission();
+  const resource = 'contacts';
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("All");
@@ -229,6 +232,7 @@ const AddressBook = () => {
             variant="default"
             motion="subtle"
             onClick={handleAddContact}
+            className={!hasPermission(resource, 'create') ? 'hidden' : ''}
           >
             <Plus size={18} className="mr-2" /> Add Contact
           </MotionButton>
@@ -493,6 +497,7 @@ const AddressBook = () => {
                         size="sm"
                         motion="subtle"
                         onClick={() => handleEditContact(selectedContact)}
+                        className={!hasPermission(resource, 'update') ? 'hidden' : ''}
                       >
                         <Edit size={16} className="mr-1" /> Edit
                       </MotionButton>
@@ -501,6 +506,7 @@ const AddressBook = () => {
                         size="sm"
                         motion="subtle"
                         onClick={() => handleDeleteContact(selectedContact)}
+                        className={!hasPermission(resource, 'delete') ? 'hidden' : ''}
                       >
                         <Trash2 size={16} className="mr-1" /> Delete
                       </MotionButton>
@@ -700,7 +706,7 @@ const AddressBook = () => {
                     </div>
 
                     {/* Notes Section */}
-                    <div className="space-y-4">
+                    {/* <div className="space-y-4">
                       <h3 className="text-lg font-semibold mb-4 flex items-center">
                         <FileText className="w-5 h-5 mr-2 text-primary" />
                         Notes
@@ -721,7 +727,7 @@ const AddressBook = () => {
                           </MotionButton>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </GlassCard>
@@ -739,13 +745,15 @@ const AddressBook = () => {
                     Select a contact from the list to view their details, or add
                     a new contact to your address book.
                   </p>
-                  <MotionButton
-                    variant="default"
-                    motion="subtle"
-                    onClick={handleAddContact}
-                  >
-                    <Plus size={18} className="mr-2" /> Add New Contact
-                  </MotionButton>
+                  {hasPermission(resource, 'create') && (
+                    <MotionButton
+                      variant="default"
+                      motion="subtle"
+                      onClick={handleAddContact}
+                    >
+                      <Plus size={18} className="mr-2" /> Add New Contact
+                    </MotionButton>
+                  )}
                 </div>
               </GlassCard>
             )}

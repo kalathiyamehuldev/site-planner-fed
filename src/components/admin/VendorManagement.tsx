@@ -27,6 +27,7 @@ import {
   Vendor,
   UpdateVendorData,
 } from '@/redux/slices/adminSlice';
+import usePermission from '@/hooks/usePermission';
 
 interface VendorFormData {
   firstName: string;
@@ -52,6 +53,7 @@ const VendorManagement: React.FC = () => {
   const { items: vendors, loading, error } = useSelector((state: RootState) => state.admin.vendors);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { hasPermission } = usePermission();
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<VendorFormData>({
     firstName: '',
@@ -285,7 +287,8 @@ const VendorManagement: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {hasPermission('users', 'create') && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingVendor(null);
@@ -394,7 +397,7 @@ const VendorManagement: React.FC = () => {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>)}
         </div>
       </div>
 
@@ -408,7 +411,7 @@ const VendorManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Tags</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                {hasPermission('users', 'update') && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -464,22 +467,26 @@ const VendorManagement: React.FC = () => {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(vendor)}
-                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(vendor.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {hasPermission('users', 'update') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(vendor)}
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {hasPermission('users', 'delete') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(vendor.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

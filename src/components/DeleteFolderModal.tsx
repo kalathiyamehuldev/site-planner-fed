@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Folder, FileText } from 'lucide-react';
 import { Folder as FolderType } from '@/redux/slices/foldersSlice';
+import usePermission from '@/hooks/usePermission';
 
 interface DeleteFolderModalProps {
   open: boolean;
@@ -26,7 +27,11 @@ const DeleteFolderModal: React.FC<DeleteFolderModalProps> = ({
   onConfirm,
   loading = false
 }) => {
+  const { hasPermission } = usePermission();
+  const resource = 'documents';
+  
   if (!folder) return null;
+  if (!hasPermission(resource, 'delete')) return null;
 
   const hasChildren = folder.children && folder.children.length > 0;
   const hasDocuments = folder.documentCount > 0;

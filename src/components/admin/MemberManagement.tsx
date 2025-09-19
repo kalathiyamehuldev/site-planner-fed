@@ -33,6 +33,7 @@ import {
   UpdateMemberData,
 } from '@/redux/slices/adminSlice';
 import { fetchRoles, selectAllRoles, selectRolesLoading } from '@/redux/slices/rolesSlice';
+import usePermission from '@/hooks/usePermission';
 
 interface MemberFormData {
   firstName: string;
@@ -59,7 +60,7 @@ const MemberManagement: React.FC = () => {
   const { items: membersList, loading, error } = members;
   const roles = useSelector(selectAllRoles);
   const rolesLoading = useSelector(selectRolesLoading);
-
+  const { hasPermission } = usePermission();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -222,6 +223,7 @@ const MemberManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    // show a modal that asks same question as below and works same on delete button click
     if (window.confirm('Are you sure you want to delete this member?')) {
       try {
         await dispatch(deleteMember(id)).unwrap();
@@ -257,7 +259,8 @@ const MemberManagement: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {hasPermission('users', 'create') && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingMember(null);
@@ -385,6 +388,7 @@ const MemberManagement: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        )}
         </div>
       </div>
 
@@ -399,7 +403,9 @@ const MemberManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Address</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Role</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                {(hasPermission('users','update') || hasPermission('users','delete')) && (
+                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -451,22 +457,26 @@ const MemberManagement: React.FC = () => {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(member)}
-                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(member.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {hasPermission('users','update') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(member)}
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {hasPermission('users','delete') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(member.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, FileText } from 'lucide-react';
 import { Document } from '@/redux/slices/documentsSlice';
+import usePermission from '@/hooks/usePermission';
 
 interface DeleteDocumentModalProps {
   open: boolean;
@@ -26,7 +27,11 @@ const DeleteDocumentModal: React.FC<DeleteDocumentModalProps> = ({
   onConfirm,
   loading = false
 }) => {
+  const { hasPermission } = usePermission();
+  const resource = 'documents';
+  
   if (!document) return null;
+  if (!hasPermission(resource, 'delete')) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

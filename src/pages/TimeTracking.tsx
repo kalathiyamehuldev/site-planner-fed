@@ -86,6 +86,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { convertToDecimalDuration } from "@/lib/timeUtils";
+import usePermission from "@/hooks/usePermission";
 
 const TimeTracking = () => {
   const dispatch = useAppDispatch();
@@ -102,7 +103,7 @@ const TimeTracking = () => {
   const loading = useAppSelector(selectTimeTrackingLoading);
   const error = useAppSelector(selectTimeTrackingError);
   const pagination = useAppSelector(selectTimeTrackingPagination);
-
+  const {hasPermission} = usePermission();
   // Debug logging
   console.log('TimeTracking Debug:', {
     timeEntriesCount: timeEntries.length,
@@ -761,9 +762,11 @@ console.log("timeEntryData",timeEntryData);
             <MotionButton variant="outline" size="sm" motion="subtle">
               <Download size={16} className="mr-2" /> Export
             </MotionButton>
-            <MotionButton variant="default" size="sm" motion="subtle" onClick={handleNewTimeEntry}>
-              <Plus size={16} className="mr-2" /> New Time Entry
-            </MotionButton>
+            {hasPermission('time_tracking', 'create') && (
+              <MotionButton variant="default" size="sm" motion="subtle" onClick={handleNewTimeEntry}>
+                <Plus size={16} className="mr-2" /> New Time Entry
+              </MotionButton>
+            )}
           </div>
         </div>
 
@@ -804,14 +807,16 @@ console.log("timeEntryData",timeEntryData);
                   : "00:00:00"}
               </div>
 
-              <MotionButton
-                variant={isTimerRunning ? "outline" : "default"}
-                size="icon"
-                motion="subtle"
-                onClick={isTimerRunning ? handleStopTimer : handleStartTimer}
-              >
-                {isTimerRunning ? <Pause size={18} /> : <Play size={18} />}
-              </MotionButton>
+              {hasPermission('time_tracking', 'create') && (
+                <MotionButton
+                  variant={isTimerRunning ? "outline" : "default"}
+                  size="icon"
+                  motion="subtle"
+                  onClick={isTimerRunning ? handleStopTimer : handleStartTimer}
+                >
+                  {isTimerRunning ? <Pause size={18} /> : <Play size={18} />}
+                </MotionButton>
+              )}
             </div>
           </div>
         </GlassCard>
@@ -1378,9 +1383,10 @@ console.log("timeEntryData",timeEntryData);
         </div>
 
         {/* New Time Entry Form */}
-        <div className="animate-fade-in animation-delay-[0.3s]">
-          <GlassCard className="p-6">
-            <h3 className="text-lg font-medium mb-4">Add New Time Entry</h3>
+        {hasPermission('time_tracking', 'create') && (
+          <div className="animate-fade-in animation-delay-[0.3s]">
+            <GlassCard className="p-6">
+              <h3 className="text-lg font-medium mb-4">Add New Time Entry</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
@@ -1600,17 +1606,19 @@ console.log("timeEntryData",timeEntryData);
             </div>
           </GlassCard>
         </div>
+        )}
       </div>
 
       {/* Edit Time Entry Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Time Entry</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+      {hasPermission('time_tracking', 'update') && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Time Entry</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
               <Textarea
                 id="edit-description"
                 placeholder="What did you work on?"
@@ -1744,9 +1752,10 @@ console.log("timeEntryData",timeEntryData);
           </div>
         </DialogContent>
       </Dialog>
-      
+      )}
       {/* Timer Start Modal */}
-      <Dialog open={isTimerModalOpen} onOpenChange={setIsTimerModalOpen}>
+      {hasPermission('time_tracking', 'create') && (
+        <Dialog open={isTimerModalOpen} onOpenChange={setIsTimerModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Start Timer</DialogTitle>
@@ -1848,6 +1857,7 @@ console.log("timeEntryData",timeEntryData);
           </div>
         </DialogContent>
       </Dialog>
+      )}
       
       {/* Stop Timer Confirmation Dialog */}
       <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
@@ -1949,7 +1959,8 @@ console.log("timeEntryData",timeEntryData);
       </Dialog>
       
       {/* New Time Entry Modal */}
-      <Dialog open={isNewTimeEntryModalOpen} onOpenChange={setIsNewTimeEntryModalOpen}>
+      {hasPermission('time_tracking', 'create') && (
+        <Dialog open={isNewTimeEntryModalOpen} onOpenChange={setIsNewTimeEntryModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
@@ -2091,6 +2102,7 @@ console.log("timeEntryData",timeEntryData);
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </PageContainer>
   );
 };

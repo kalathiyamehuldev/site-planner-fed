@@ -4,6 +4,7 @@ import KanbanCard from "./KanbanCard";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import usePermission from "@/hooks/usePermission";
 
 interface KanbanBoardProps {
   tasks: any[];
@@ -25,6 +26,8 @@ const KanbanBoard = ({
   className 
 }: KanbanBoardProps) => {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const { hasPermission } = usePermission();
+  const resource = 'tasks';
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
     e.preventDefault();
@@ -136,7 +139,7 @@ const KanbanBoard = ({
                     {column.count}
                   </span>
                 </div>
-                <Button
+                {hasPermission(resource, 'create') && (<Button
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 hover:bg-gray-100"
@@ -144,6 +147,7 @@ const KanbanBoard = ({
                 >
                   <Plus size={14} />
                 </Button>
+              )}
               </div>
 
               {/* Column Content */}

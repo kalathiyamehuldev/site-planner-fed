@@ -25,6 +25,7 @@ import {
   Customer,
   UpdateCustomerData,
 } from '@/redux/slices/adminSlice';
+import usePermission from '@/hooks/usePermission';
 
 interface CustomerFormData {
   firstName: string;
@@ -58,7 +59,7 @@ const CustomerManagement: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
-
+  const { hasPermission } = usePermission();
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -233,14 +234,16 @@ const CustomerManagement: React.FC = () => {
         <div className="flex gap-2">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingCustomer(null);
-              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
-              setFormErrors({});
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
+            {hasPermission('users', 'create') && (
+              <Button onClick={() => {
+                setEditingCustomer(null);
+                setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+                setFormErrors({});
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+            )}
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -350,7 +353,7 @@ const CustomerManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Company</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                {(hasPermission('users', 'update') || hasPermission('users', 'delete')) && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -399,22 +402,26 @@ const CustomerManagement: React.FC = () => {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(customer)}
-                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Edit className="h-4 w-4" />
+                        {hasPermission('users', 'update') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(customer)}
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {hasPermission('users', 'delete') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(customer.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(customer.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

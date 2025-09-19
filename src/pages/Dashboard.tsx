@@ -379,12 +379,13 @@ const Dashboard = () => {
 
           {activeTab === "projects" && (
             <div>
+              {hasPermission('projects', 'create') && (
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-medium">All Projects</h2>
                 <MotionButton variant="default" size="sm" motion="subtle">
                   New Project <Plus size={16} className="ml-1" />
                 </MotionButton>
-              </div>
+              </div>)}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {allProjects.map((project, index) => (
                   <ProjectCard
@@ -403,12 +404,13 @@ const Dashboard = () => {
 
           {activeTab === "tasks" && (
             <div>
+              {hasPermission('tasks', 'create') && (
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-medium">All Tasks</h2>
                 <MotionButton variant="default" size="sm" motion="subtle">
                   New Task <Plus size={16} className="ml-1" />
                 </MotionButton>
-              </div>
+              </div>)}
               <TaskTable
                 tasks={allTasks}
                 onEditTask={handleEditTask}

@@ -13,7 +13,7 @@ import usePermission from '@/hooks/usePermission';
 import PageContainer from '@/components/layout/PageContainer';
 
 // Define resource and action types
-const RESOURCES = ['projects', 'documents', 'tasks', 'time_tracking', 'invoices', 'contacts', 'folders', 'users'] as const;
+const RESOURCES = ['projects', 'documents', 'tasks', 'time_tracking', 'invoices', 'contacts', 'folders', 'users', 'roles'] as const;
 const ACTIONS = [ 'manage' , 'read', 'create', 'update', 'delete'] as const;
 
 type Resource = typeof RESOURCES[number];
