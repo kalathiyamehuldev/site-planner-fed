@@ -316,6 +316,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
 
 
             {/* Associated Projects */}
+            {formData.type === 'Vendor' && (
             <div className="space-y-2">
               <Label>Associated Projects</Label>
               
@@ -363,6 +364,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             {/* Tags - show only for vendor type */}
             {formData.type === 'Vendor' && (
@@ -399,7 +401,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
             )}
 
             {/* Favorite */}
-            <div className="space-y-2">
+            <div className="space-y-2 mt-8">
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"

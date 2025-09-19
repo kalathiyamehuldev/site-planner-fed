@@ -4,7 +4,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +20,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  fetchProjects,
+  selectAllProjects,
+  selectProjectLoading,
+} from '@/redux/slices/projectsSlice';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import TagSelector from '@/components/ui/tag-selector';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +48,7 @@ interface VendorFormData {
   address: string;
   password: string;
   tags: string[];
+  selectedProjects: string[];
 }
 
 interface FormErrors {
@@ -51,6 +63,8 @@ const VendorManagement: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { items: vendors, loading, error } = useSelector((state: RootState) => state.admin.vendors);
+  const projects = useSelector(selectAllProjects);
+  const projectsLoading = useSelector(selectProjectLoading);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { hasPermission } = usePermission();
@@ -63,6 +77,7 @@ const VendorManagement: React.FC = () => {
     address: '',
     password: '',
     tags: [],
+    selectedProjects: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
@@ -111,7 +126,26 @@ const VendorManagement: React.FC = () => {
   };
   useEffect(() => {
     dispatch(fetchVendors());
+    dispatch(fetchProjects());
   }, [dispatch]);
+  
+  // Handle project selection
+  const handleProjectSelect = (projectId: string) => {
+    if (!formData.selectedProjects.includes(projectId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedProjects: [...prev.selectedProjects, projectId]
+      }));
+    }
+  };
+
+  // Handle project removal
+  const handleProjectRemove = (projectId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+    }));
+  };
 
   // Check for redirect from tag creation
   useEffect(() => {
@@ -132,7 +166,8 @@ const VendorManagement: React.FC = () => {
         // Just add the new tag to empty form
         setFormData(prev => ({
           ...prev,
-          tags: [...new Set([...prev.tags, locationState.newTag!.name])]
+          tags: [...new Set([...locationState.formData.tags, locationState.newTag.name])],
+          selectedProjects: locationState.formData.selectedProjects || []
         }));
       }
       
@@ -177,15 +212,15 @@ const VendorManagement: React.FC = () => {
         if (JSON.stringify(formData.tags) !== JSON.stringify(editingVendor.tags || [])) {
           updatePayload.tags = formData.tags;
         }
-        
-        await dispatch(updateVendor({ 
+        updatePayload.projectIds = formData.selectedProjects;
+        const result = await dispatch(updateVendor({ 
           id: editingVendor.id, 
           data: updatePayload 
         })).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Vendor updated successfully',
+          description: result.message || 'Vendor updated successfully',
         });
       } else {
         // Create vendor
@@ -197,20 +232,21 @@ const VendorManagement: React.FC = () => {
           address: formData.address,
           password: formData.password,
           tags: formData.tags,
+          projectIds: formData.selectedProjects,
         };
         
-        await dispatch(createVendor(createPayload)).unwrap();
+        const result = await dispatch(createVendor(createPayload)).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Vendor created successfully',
+          description: result.message || 'Vendor created successfully',
         });
       }
       
       setFormErrors({});
       setIsDialogOpen(false);
       setEditingVendor(null);
-      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] });
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] , selectedProjects: []});
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -226,6 +262,7 @@ const VendorManagement: React.FC = () => {
       address: vendor.address || '',
       password: '', // Don't populate password for editing
       tags: vendor.tags || [],
+      selectedProjects: vendor.projectIds || [],
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -255,10 +292,10 @@ const VendorManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this vendor?')) return;
 
     try {
-      await dispatch(deleteVendor(vendorId)).unwrap();
+      const result = await dispatch(deleteVendor(vendorId)).unwrap();
       toast({
         title: 'Success',
-        description: 'Vendor deleted successfully',
+        description: result.message || 'Vendor deleted successfully',
       });
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
@@ -292,7 +329,7 @@ const VendorManagement: React.FC = () => {
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingVendor(null);
-              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] });
+              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] , selectedProjects: []});
               setFormErrors({});
             }}>
               <Plus className="h-4 w-4 mr-2" />
@@ -343,6 +380,55 @@ const VendorManagement: React.FC = () => {
                     onTagsChange={(tags) => setFormData({ ...formData, tags })}
                     onTagCreated={handleTagCreated}
                   />
+                </div>
+                 
+                {/* Associated Projects */}
+                <div className="space-y-2">
+                  <Label>Associated Projects</Label>
+                  
+                  {/* Selected Projects Tags */}
+                  {formData.selectedProjects.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {formData.selectedProjects.map((projectId) => {
+                        const project = projects.find(p => p.id === projectId);
+                        return (
+                          <div
+                            key={projectId}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                          >
+                            {project?.title || 'Unknown Project'}
+                            <button
+                              type="button"
+                              onClick={() => handleProjectRemove(projectId)}
+                              className="ml-1 text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Project Selection Dropdown */}
+                  <Select 
+                    onValueChange={handleProjectSelect}
+                    disabled={projectsLoading}
+                    value=""
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects
+                        .filter(project => !formData.selectedProjects.includes(project.id))
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>

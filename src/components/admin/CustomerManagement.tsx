@@ -3,7 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +22,12 @@ import {
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
+import {
+  fetchProjects,
+  selectAllProjects,
+  selectProjectLoading,
+} from '@/redux/slices/projectsSlice';
+import { UserRole } from '@/common/types/auth.types';
 import {
   fetchCustomers,
   createCustomer,
@@ -34,6 +46,7 @@ interface CustomerFormData {
   phone: string;
   address: string;
   password: string;
+  selectedProjects: string[];
 }
 
 interface FormErrors {
@@ -49,6 +62,8 @@ const CustomerManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const projects = useSelector(selectAllProjects);
+  const projectsLoading = useSelector(selectProjectLoading);
   const [formData, setFormData] = useState<CustomerFormData>({
     firstName: '',
     lastName: '',
@@ -56,6 +71,7 @@ const CustomerManagement: React.FC = () => {
     phone: '',
     address: '',
     password: '',
+    selectedProjects: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
@@ -115,7 +131,26 @@ const CustomerManagement: React.FC = () => {
   };
   useEffect(() => {
     dispatch(fetchCustomers());
+    dispatch(fetchProjects());
   }, [dispatch]);
+
+  // Handle project selection
+  const handleProjectSelect = (projectId: string) => {
+    if (!formData.selectedProjects.includes(projectId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedProjects: [...prev.selectedProjects, projectId]
+      }));
+    }
+  };
+
+  // Handle project removal
+  const handleProjectRemove = (projectId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+    }));
+  };
 
   useEffect(() => {
     if (error) {
@@ -146,15 +181,15 @@ const CustomerManagement: React.FC = () => {
         if (formData.email !== editingCustomer.email) updatePayload.email = formData.email;
         if (formData.phone !== editingCustomer.phone) updatePayload.phone = formData.phone;
         if (formData.address !== editingCustomer.address) updatePayload.address = formData.address;
-        
-        await dispatch(updateCustomer({ 
+        updatePayload.projectIds = formData.selectedProjects;
+        const result = await dispatch(updateCustomer({ 
           id: editingCustomer.id, 
           data: updatePayload 
         })).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Customer updated successfully',
+          description: result.message || 'Customer updated successfully',
         });
       } else {
         // Create customer
@@ -167,17 +202,17 @@ const CustomerManagement: React.FC = () => {
           password: formData.password,
         };
         
-        await dispatch(createCustomer(createPayload)).unwrap();
+        const result = await dispatch(createCustomer(createPayload)).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Customer created successfully',
+          description: result.message || 'Customer created successfully',
         });
       }
       
       setIsDialogOpen(false);
       setEditingCustomer(null);
-      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
       setFormErrors({});
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
@@ -193,6 +228,7 @@ const CustomerManagement: React.FC = () => {
       phone: customer.phone || '',
       address: customer.address || '',
       password: '', // Don't populate password when editing
+      selectedProjects: customer.projectIds || [],
     });
     setFormErrors({}); // Clear any existing errors
     setIsDialogOpen(true);
@@ -202,10 +238,10 @@ const CustomerManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this customer?')) return;
 
     try {
-      await dispatch(deleteCustomer(customerId)).unwrap();
+      const result = await dispatch(deleteCustomer(customerId)).unwrap();
       toast({
         title: 'Success',
-        description: 'Customer deleted successfully',
+        description: result.message || 'Customer deleted successfully',
       });
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
@@ -237,7 +273,7 @@ const CustomerManagement: React.FC = () => {
             {hasPermission('users', 'create') && (
               <Button onClick={() => {
                 setEditingCustomer(null);
-                setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '' });
+                setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
                 setFormErrors({});
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -314,6 +350,55 @@ const CustomerManagement: React.FC = () => {
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
                   />
+                </div>
+                
+                {/* Associated Projects */}
+                <div className="space-y-2">
+                  <Label>Associated Projects</Label>
+                  
+                  {/* Selected Projects Tags */}
+                  {formData.selectedProjects.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {formData.selectedProjects.map((projectId) => {
+                        const project = projects.find(p => p.id === projectId);
+                        return (
+                          <div
+                            key={projectId}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                          >
+                            {project?.title || 'Unknown Project'}
+                            <button
+                              type="button"
+                              onClick={() => handleProjectRemove(projectId)}
+                              className="ml-1 text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Project Selection Dropdown */}
+                  <Select 
+                    onValueChange={handleProjectSelect}
+                    disabled={projectsLoading}
+                    value=""
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects
+                        .filter(project => !formData.selectedProjects.includes(project.id))
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {!editingCustomer && (
                   <div className="space-y-2">

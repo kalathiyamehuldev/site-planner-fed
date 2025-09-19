@@ -32,6 +32,11 @@ import {
   Member,
   UpdateMemberData,
 } from '@/redux/slices/adminSlice';
+import {
+  fetchProjects,
+  selectAllProjects,
+  selectProjectLoading,
+} from '@/redux/slices/projectsSlice';
 import { fetchRoles, selectAllRoles, selectRolesLoading } from '@/redux/slices/rolesSlice';
 import usePermission from '@/hooks/usePermission';
 
@@ -43,6 +48,7 @@ interface MemberFormData {
   address: string;
   roleId: string;
   password: string;
+  selectedProjects: string[];
 }
 
 interface FormErrors {
@@ -57,6 +63,8 @@ const MemberManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
   const { members } = useSelector((state: RootState) => state.admin);
+  const projects = useSelector(selectAllProjects);
+  const projectsLoading = useSelector(selectProjectLoading);
   const { items: membersList, loading, error } = members;
   const roles = useSelector(selectAllRoles);
   const rolesLoading = useSelector(selectRolesLoading);
@@ -72,6 +80,7 @@ const MemberManagement: React.FC = () => {
     address: '',
     roleId: '',
     password: '',
+    selectedProjects: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
@@ -127,6 +136,7 @@ const MemberManagement: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchMembers());
+    dispatch(fetchProjects());
     dispatch(fetchRoles());
   }, [dispatch]);
 
@@ -151,7 +161,7 @@ const MemberManagement: React.FC = () => {
     try {
       if (editingMember) {
         // Update member (exclude password from update)
-        const { password, ...updateData } = formData;
+        const { password, selectedProjects, ...updateData } = formData;
         const updatePayload: UpdateMemberData = {};
         
         // Only include changed fields
@@ -161,27 +171,28 @@ const MemberManagement: React.FC = () => {
         if (updateData.phone !== editingMember.phone) updatePayload.phone = updateData.phone;
         if (updateData.address !== editingMember.address) updatePayload.address = updateData.address;
         if (updateData.roleId !== editingMember.role.id) updatePayload.roleId = updateData.roleId;
-        
-        await dispatch(updateMember({ 
+        updatePayload.projectIds = selectedProjects;
+        const result = await dispatch(updateMember({ 
           id: editingMember.id, 
           data: updatePayload 
         })).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Member updated successfully',
+          description: result.message || 'Member updated successfully',
         });
       } else {
         // Create member
         const createPayload = {
           ...formData,
+           projectIds: formData.selectedProjects,
         };
         
-        await dispatch(createMember(createPayload)).unwrap();
+        const result = await dispatch(createMember(createPayload)).unwrap();
         
         toast({
           title: 'Success',
-          description: 'Member created successfully',
+          description: result.message || 'Member created successfully',
         });
       }
       
@@ -202,9 +213,27 @@ const MemberManagement: React.FC = () => {
       address: '',
       roleId: '',
       password: '',
+      selectedProjects: [],
     });
     setFormErrors({});
     setEditingMember(null);
+  };
+  /// Handle project selection
+  const handleProjectSelect = (projectId: string) => {
+    if (!formData.selectedProjects.includes(projectId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedProjects: [...prev.selectedProjects, projectId]
+      }));
+    }
+  };
+
+  // Handle project removal
+  const handleProjectRemove = (projectId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+    }));
   };
 
   const handleEdit = (member: Member) => {
@@ -217,6 +246,7 @@ const MemberManagement: React.FC = () => {
       address: member.address || '',
       roleId: member.role.id,
       password: '', // Don't populate password for editing
+      selectedProjects: [],
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -226,10 +256,10 @@ const MemberManagement: React.FC = () => {
     // show a modal that asks same question as below and works same on delete button click
     if (window.confirm('Are you sure you want to delete this member?')) {
       try {
-        await dispatch(deleteMember(id)).unwrap();
+        const result = await dispatch(deleteMember(id)).unwrap();
         toast({
           title: 'Success',
-          description: 'Member deleted successfully',
+          description: result.message || 'Member deleted successfully',
         });
       } catch (error) {
         // Error handling is done in the Redux slice and useEffect
@@ -380,6 +410,52 @@ const MemberManagement: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* Associated Projects */}
+                <div className="space-y-2">
+                  <Label>Associated Projects</Label>
+                  {/* Selected Projects Tags */}
+                  {formData.selectedProjects.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {formData.selectedProjects.map((projectId) => {
+                        const project = projects.find(p => p.id === projectId);
+                        return (
+                          <div
+                            key={projectId}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                          >
+                            {project?.title || 'Unknown Project'}
+                            <button
+                              type="button"
+                              onClick={() => handleProjectRemove(projectId)}
+                              className="ml-1 text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Project Selection Dropdown */}
+                  <Select 
+                    onValueChange={handleProjectSelect}
+                    disabled={projectsLoading}
+                    value=""
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects
+                        .filter(project => !formData.selectedProjects.includes(project.id))
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               <DialogFooter>
                 <Button type="submit" disabled={loading || !isFormValid()}>
                   {loading ? 'Saving...' : editingMember ? 'Update' : 'Create'}
@@ -402,6 +478,7 @@ const MemberManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Address</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Role</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 {(hasPermission('users','update') || hasPermission('users','delete')) && (
                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
@@ -411,13 +488,13 @@ const MemberManagement: React.FC = () => {
             <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center py-8">
+                <td colSpan={8} className="text-center py-8">
                   Loading members...
                 </td>
               </tr>
             ) : filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-8">
+                <td colSpan={8} className="text-center py-8">
                   No members found
                 </td>
               </tr>
@@ -445,6 +522,24 @@ const MemberManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <span className="text-sm">{member.role.name}</span>
+                  </td>
+
+                  <td className="p-4">
+                    <div className="text-sm">
+                      {member.projectMembers && member.projectMembers.length > 0 ? (
+                        <div className="space-y-1">
+                          {member.projectMembers.map((pm, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                {pm.project.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No projects</span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${

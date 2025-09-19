@@ -23,6 +23,14 @@ export interface Member {
   };
   isActive: boolean;
   companyId: string;
+  projectIds: string[];
+  projectMembers?: {
+    project: {
+      id: string;
+      name: string;
+    };
+    role: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +55,7 @@ export interface Vendor {
   createdAt: string;
   updatedAt: string;
   tags?: string[];
+  projectIds?: string[];
 }
 
 export interface Customer {
@@ -61,6 +70,7 @@ export interface Customer {
   companyId: string;
   createdAt: string;
   updatedAt: string;
+  projectIds?: string[];
 }
 
 export interface CreateMemberData {
@@ -72,6 +82,7 @@ export interface CreateMemberData {
   roleId: string;
   password: string;
   companyId: string;
+  projectIds?: string[];
 }
 
 export interface UpdateMemberData {
@@ -82,6 +93,7 @@ export interface UpdateMemberData {
   address?: string;
   roleId?: string;
   isActive?: boolean;
+  projectIds?: string[];
 }
 
 export interface CreateVendorData {
@@ -94,6 +106,7 @@ export interface CreateVendorData {
   password: string;
   companyId: string;
   tags?: string[];
+  projectIds?: string[];
 }
 
 export interface UpdateVendorData {
@@ -104,6 +117,7 @@ export interface UpdateVendorData {
   address?: string;
   isActive?: boolean;
   tags?: string[];
+  projectIds?: string[];
 }
 
 export interface CreateCustomerData {
@@ -115,6 +129,7 @@ export interface CreateCustomerData {
   companyName?: string;
   password: string;
   companyId: string;
+  projectIds?: string[];
 }
 
 export interface UpdateCustomerData {
@@ -124,6 +139,7 @@ export interface UpdateCustomerData {
   phone?: string;
   address?: string;
   isActive?: boolean;
+  projectIds?: string[];
 }
 
 interface AdminState {
@@ -224,7 +240,7 @@ export const createMember = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to create member');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -251,7 +267,7 @@ export const updateMember = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to update member');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -278,7 +294,7 @@ export const deleteMember = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to delete member');
       }
       
-      return id;
+      return { id, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -336,7 +352,7 @@ export const createVendor = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to create vendor');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -363,7 +379,7 @@ export const updateVendor = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to update vendor');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -390,7 +406,7 @@ export const deleteVendor = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to delete vendor');
       }
       
-      return id;
+      return { id, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -448,7 +464,7 @@ export const createCustomer = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to create customer');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -475,7 +491,7 @@ export const updateCustomer = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to update customer');
       }
       
-      return response.data!;
+      return { data: response.data!, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -502,7 +518,7 @@ export const deleteCustomer = createAsyncThunk(
         return rejectWithValue(response.error || response.message || 'Failed to delete customer');
       }
       
-      return id;
+      return { id, message: response.message };
     } catch (error: any) {
       // Handle axios error response
       if (error.response?.data) {
@@ -615,7 +631,7 @@ const adminSlice = createSlice({
       })
       .addCase(createMember.fulfilled, (state, action) => {
         state.members.loading = false;
-        state.members.items.push(action.payload);
+        state.members.items.push(action.payload.data);
         state.members.error = null;
       })
       .addCase(createMember.rejected, (state, action) => {
@@ -628,9 +644,9 @@ const adminSlice = createSlice({
       })
       .addCase(updateMember.fulfilled, (state, action) => {
         state.members.loading = false;
-        const index = state.members.items.findIndex(item => item.id === action.payload.id);
+        const index = state.members.items.findIndex(item => item.id === action.payload.data.id);
         if (index !== -1) {
-          state.members.items[index] = action.payload;
+          state.members.items[index] = action.payload.data;
         }
         state.members.error = null;
       })
@@ -644,7 +660,7 @@ const adminSlice = createSlice({
       })
       .addCase(deleteMember.fulfilled, (state, action) => {
         state.members.loading = false;
-        state.members.items = state.members.items.filter(item => item.id !== action.payload);
+        state.members.items = state.members.items.filter(item => item.id !== action.payload.id);
       })
       .addCase(deleteMember.rejected, (state, action) => {
         state.members.loading = false;
@@ -670,7 +686,7 @@ const adminSlice = createSlice({
       })
       .addCase(createVendor.fulfilled, (state, action) => {
         state.vendors.loading = false;
-        state.vendors.items.push(action.payload);
+        state.vendors.items.push(action.payload.data);
         state.vendors.error = null;
       })
       .addCase(createVendor.rejected, (state, action) => {
@@ -683,9 +699,9 @@ const adminSlice = createSlice({
       })
       .addCase(updateVendor.fulfilled, (state, action) => {
         state.vendors.loading = false;
-        const index = state.vendors.items.findIndex(item => item.id === action.payload.id);
+        const index = state.vendors.items.findIndex(item => item.id === action.payload.data.id);
         if (index !== -1) {
-          state.vendors.items[index] = action.payload;
+          state.vendors.items[index] = action.payload.data;
         }
         state.vendors.error = null;
       })
@@ -699,7 +715,7 @@ const adminSlice = createSlice({
       })
       .addCase(deleteVendor.fulfilled, (state, action) => {
         state.vendors.loading = false;
-        state.vendors.items = state.vendors.items.filter(item => item.id !== action.payload);
+        state.vendors.items = state.vendors.items.filter(item => item.id !== action.payload.id);
       })
       .addCase(deleteVendor.rejected, (state, action) => {
         state.vendors.loading = false;
@@ -725,7 +741,7 @@ const adminSlice = createSlice({
       })
       .addCase(createCustomer.fulfilled, (state, action) => {
         state.customers.loading = false;
-        state.customers.items.push(action.payload);
+        state.customers.items.push(action.payload.data);
         state.customers.error = null;
       })
       .addCase(createCustomer.rejected, (state, action) => {
@@ -738,9 +754,9 @@ const adminSlice = createSlice({
       })
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.customers.loading = false;
-        const index = state.customers.items.findIndex(item => item.id === action.payload.id);
+        const index = state.customers.items.findIndex(item => item.id === action.payload.data.id);
         if (index !== -1) {
-          state.customers.items[index] = action.payload;
+          state.customers.items[index] = action.payload.data;
         }
         state.customers.error = null;
       })
@@ -754,7 +770,7 @@ const adminSlice = createSlice({
       })
       .addCase(deleteCustomer.fulfilled, (state, action) => {
         state.customers.loading = false;
-        state.customers.items = state.customers.items.filter(item => item.id !== action.payload);
+        state.customers.items = state.customers.items.filter(item => item.id !== action.payload.id);
       })
       .addCase(deleteCustomer.rejected, (state, action) => {
         state.customers.loading = false;
