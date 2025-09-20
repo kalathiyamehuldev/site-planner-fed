@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Contact, CreateContactDto, UpdateContactDto, createContactAsync, updateContactAsync, selectContactsLoading, selectContactsError, clearError, fetchAllContactsByCompany } from '@/redux/slices/contactsSlice';
-import { fetchProjects, selectAllProjects, selectProjectLoading } from '@/redux/slices/projectsSlice';
+import { fetchProjects, Project, selectAllProjects, selectProjectLoading } from '@/redux/slices/projectsSlice';
 import { fetchTags, Tag } from '@/redux/slices/adminSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ interface ContactFormData {
   phone: string;
   type: 'Client' | 'Vendor' | 'Architect';
   isFavorite: boolean;
-  selectedProjects: string[];
+  selectedProjects: Project[];
   tagNames: string[];
 }
 
@@ -83,13 +83,24 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
       console.log("Contact Modal Contact:", contact);
       
       if (mode === 'edit' && contact) {
+        // Find full project objects that match the contact's project IDs or names
+        const contactProjectIds = contact.projects || [];
+        const selectedProjectObjects = projects.filter(project => 
+          // Match by ID if projects are objects with IDs, or by title if projects are strings
+          contactProjectIds.some(contactProjectIds => 
+            typeof contactProjectIds === 'string' 
+              ? contactProjectIds === project.id || contactProjectIds === project.title
+              : contactProjectIds === project.id
+          )
+        );
+        
         setFormData({
           name: contact.name || '',
           email: contact.email || '',
           phone: contact.phone || '',
           type: contact.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: contact.isFavorite || false,
-          selectedProjects: contact.projectIds || [],
+          selectedProjects: selectedProjectObjects,
           tagNames: contact.tags?.map((tag) => tag.name) || []
         });
       } else if (mode === 'add') {
@@ -122,10 +133,11 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
 
   // Handle project selection
   const handleProjectSelect = (projectId: string) => {
-    if (!formData.selectedProjects.includes(projectId)) {
+    const projectToAdd = projects.find(p => p.id === projectId);
+    if (projectToAdd && !formData.selectedProjects.some(p => p.id === projectId)) {
       setFormData(prev => ({
         ...prev,
-        selectedProjects: [...prev.selectedProjects, projectId]
+        selectedProjects: [...prev.selectedProjects, projectToAdd]
       }));
     }
   };
@@ -134,7 +146,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
   const handleProjectRemove = (projectId: string) => {
     setFormData(prev => ({
       ...prev,
-      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+      selectedProjects: prev.selectedProjects.filter(project => project.id !== projectId)
     }));
   };
 
@@ -181,7 +193,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           phone: formData.phone || undefined,
           type: formData.type as 'Client' | 'Vendor' | 'Architect',
           isFavorite: formData.isFavorite,
-          projectIds: formData.selectedProjects,
+          projectIds: formData.selectedProjects.map(project => project.id),
           tagIds: tagIds,
         };
         const result = await dispatch(createContactAsync(createData));
@@ -200,11 +212,13 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           ? formData.tagNames.map(name => allTags.find(tag => tag.name === name)?.id).filter(Boolean) as string[]
           : undefined;
 
+          console.log("Contact Modal Contact:", formData);
         const updateData: UpdateContactDto = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || undefined,
           type: formData.type as 'Client' | 'Vendor' | 'Architect',
+          projectIds: formData.selectedProjects.map(project => project.id),
           isFavorite: formData.isFavorite,
           tagIds: tagIds,
         };
@@ -317,30 +331,28 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
 
 
             {/* Associated Projects */}
-            <div className="space-y-2">
-              <Label>Associated Projects</Label>
-              
-              {/* Selected Projects Tags */}
-              {formData.selectedProjects.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.selectedProjects.map((projectId) => {
-                    const project = projects.find(p => p.id === projectId);
-                    return (
+            {formData.type === 'Vendor' && (
+              <div className="space-y-2">
+                <Label>Associated Projects</Label>
+                
+                {/* Selected Projects Tags */}
+                {formData.selectedProjects.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.selectedProjects.map((project) => (
                       <div
-                        key={projectId}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                      key={project.id}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
+                    >
+                      {project.title || 'Unknown Project'}
+                      <button
+                        type="button"
+                        onClick={() => handleProjectRemove(project.id)}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
                       >
-                        {project?.title || 'Unknown Project'}
-                        <button
-                          type="button"
-                          onClick={() => handleProjectRemove(projectId)}
-                          className="ml-1 text-blue-600 hover:text-blue-800"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
               
@@ -355,7 +367,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                 </SelectTrigger>
                 <SelectContent>
                   {projects
-                    .filter(project => !formData.selectedProjects.includes(project.id))
+                    .filter(project => !formData.selectedProjects.some(selected => selected.id === project.id))
                     .map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.title}
@@ -363,7 +375,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
                     ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div>)}
 
             {/* Tags - show only for vendor type */}
             {formData.type === 'Vendor' && (

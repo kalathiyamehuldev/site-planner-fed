@@ -492,7 +492,6 @@ const MemberManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Address</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Role</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
@@ -532,9 +531,6 @@ const MemberManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <span className="text-sm">{member.phone || '-'}</span>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-sm">{member.address || '-'}</span>
                   </td>
                   <td className="p-4">
                     <span className="text-sm">{member.role.name}</span>

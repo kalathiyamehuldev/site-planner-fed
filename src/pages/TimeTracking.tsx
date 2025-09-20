@@ -1244,9 +1244,9 @@ console.log("timeEntryData",timeEntryData);
 
             <TabsContent value="summary" className="mt-0">
               <GlassCard className="p-8">
-                <h3 className="text-xl font-medium mb-6">Time Summary</h3>
+                <h3 className="text-xl font-medium mb-6">Time Summary Comming Soon ...</h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <h4 className="text-muted-foreground font-medium mb-4">
                       Hours by Project
@@ -1377,7 +1377,7 @@ console.log("timeEntryData",timeEntryData);
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </GlassCard>
             </TabsContent>
           </Tabs>

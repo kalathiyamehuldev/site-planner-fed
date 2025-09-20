@@ -443,7 +443,6 @@ const CustomerManagement: React.FC = () => {
               <tr className="border-b">
                 <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Company</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
@@ -478,9 +477,6 @@ const CustomerManagement: React.FC = () => {
                     </td>
                     <td className="p-4">
                       <span className="text-sm">{customer.email}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm">{customer.companyName || '-'}</span>
                     </td>
                     <td className="p-4">
                       <span className="text-sm">{customer.phone || '-'}</span>
