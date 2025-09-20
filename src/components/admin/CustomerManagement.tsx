@@ -216,6 +216,9 @@ const CustomerManagement: React.FC = () => {
       setEditingCustomer(null);
       setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
       setFormErrors({});
+      
+      // Refresh customers data to update the UI
+      dispatch(fetchCustomers());
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -223,8 +226,8 @@ const CustomerManagement: React.FC = () => {
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer);
-    // Extract project IDs from customer's projectMembers
-    const projectIds = customer.projects?.map(pm => pm.project.id) || [];
+    // Extract project IDs from customer's rojects
+    const projectIds = customer.projects?.map(cp => cp.project.id) || [];
     
     setFormData({
       firstName: customer.firstName,
@@ -442,6 +445,7 @@ const CustomerManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Company</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 {(hasPermission('users', 'update') || hasPermission('users', 'delete')) && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
               </tr>
@@ -480,6 +484,21 @@ const CustomerManagement: React.FC = () => {
                     </td>
                     <td className="p-4">
                       <span className="text-sm">{customer.phone || '-'}</span>
+                    </td>
+                    <td className="p-4">
+                      <div className="text-sm">
+                        {customer.projects && customer.projects.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {customer.projects.map((cp, idx) => (
+                              <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {cp.project.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${

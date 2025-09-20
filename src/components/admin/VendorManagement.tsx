@@ -247,6 +247,9 @@ const VendorManagement: React.FC = () => {
       setIsDialogOpen(false);
       setEditingVendor(null);
       setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] , selectedProjects: []});
+      
+      // Refresh vendors data to update the UI
+      dispatch(fetchVendors());
     } catch (error) {
       // Error handling is done in the Redux slice and useEffect
     }
@@ -254,8 +257,8 @@ const VendorManagement: React.FC = () => {
 
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
-    // Extract project IDs from customer's projectMembers
-    const projectIds = vendor.projects?.map(pm => pm.project.id) || [];
+    // Extract project IDs from vendor's vendorProjects
+    const projectIds = vendor.projects?.map(vp => vp.project.id) || [];
     
     setFormData({
       firstName: vendor.firstName,
@@ -265,7 +268,7 @@ const VendorManagement: React.FC = () => {
       address: vendor.address || '',
       password: '', // Don't populate password for editing
       tags: vendor.tags || [],
-      selectedProjects: projectIds || [],
+      selectedProjects: projectIds,
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -498,6 +501,7 @@ const VendorManagement: React.FC = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Tags</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                 {hasPermission('users', 'update') && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
@@ -534,6 +538,21 @@ const VendorManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <span className="text-sm">{vendor.phone || '-'}</span>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-sm">
+                      {vendor.projects && vendor.projects.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.projects.map((vp, idx) => (
+                            <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                              {vp.project.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex flex-wrap gap-1">

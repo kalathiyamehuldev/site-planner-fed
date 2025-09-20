@@ -37,6 +37,7 @@ const TodoList = () => {
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTodoText, setNewTodoText] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
+  const [filterProject, setFilterProject] = useState("");
   const [selectedDueDate, setSelectedDueDate] = useState("");
   const [editTodoId, setEditTodoId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -46,9 +47,9 @@ const TodoList = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    // Fetch all todos initially, then filter by project if selected
-    dispatch(fetchTodos(selectedProject ? { projectId: selectedProject } : {}));
-  }, [dispatch, selectedProject]);
+    // Fetch all todos initially, then filter by project if filter is selected
+    dispatch(fetchTodos(filterProject ? { projectId: filterProject } : {}));
+  }, [dispatch, filterProject]);
 
   useEffect(() => {
     // Clear error after 5 seconds
@@ -140,7 +141,25 @@ const TodoList = () => {
             )}
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
+              <div className="relative">
+                <select
+                  className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                  value={filterProject}
+                  onChange={(e) => setFilterProject(e.target.value)}
+                >
+                  <option value="">Filter by project</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
+                  size={16}
+                />
+              </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -227,7 +246,7 @@ const TodoList = () => {
               <div className="text-2xl mb-2">✓</div>
               <h3 className="text-lg font-medium mb-1">No todos found!</h3>
               <p className="text-muted-foreground">
-                {selectedProject 
+                {filterProject 
                   ? "No todos found for the selected project. Add some tasks to get started."
                   : "Your to-do list is empty. Add some tasks to get started."
                 }

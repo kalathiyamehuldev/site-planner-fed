@@ -11,7 +11,7 @@ interface TaskCardProps {
   title: string;
   projectName: string;
   status: "Not Started" | "In Progress" | "On Hold" | "Completed";
-  priority: "Low" | "Medium" | "High";
+  priority: "Low" | "Medium" | "High" | "Urgent";
   dueDate: string;
   estimatedHours: number;
   assignedTo: string;

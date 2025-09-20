@@ -29,7 +29,6 @@ export const usePermission = () => {
     (resource: Resource, action: Action): boolean => {
       // Company users bypass permission checks
       if (isCompanyUser) {
-        console.log('Company user detected, bypassing permission check');
         return true;
       }
       const result = hasPermissionUtil(permissions, resource, action);

@@ -173,7 +173,7 @@ const Documents = () => {
   const { hasPermission } = usePermission();
   // Load data on component mount
   useEffect(() => {
-    dispatch(fetchRootDocuments());
+    // dispatch(fetchRootDocuments());
     
     // Fetch projects and tasks only if not already loaded
     if (projects.length === 0) {
@@ -401,7 +401,7 @@ const Documents = () => {
       setSelectedFolderId(null);
       setFolderPath([]);
       // Fetch root documents when going back to root
-      dispatch(fetchRootDocuments());
+      // dispatch(fetchRootDocuments());
     }
   };
 
@@ -415,9 +415,10 @@ const Documents = () => {
       // Fetch documents for the parent folder or all documents if at root
       if (newSelectedFolderId) {
         dispatch(fetchDocumentsByFolder(newSelectedFolderId));
-      } else {
-        dispatch(fetchRootDocuments());
-      }
+      } 
+      // else {
+      //   dispatch(fetchRootDocuments());
+      // }
     }
   };
 

@@ -602,6 +602,7 @@ console.log("timeEntryData",timeEntryData);
         endTime: newTimeEntry.endTimeInput,
         duration: calculatedDuration || 0,
         isBillable: newTimeEntry.isBillable ?? true,
+        status: 'DONE',
         hourlyRate: newTimeEntry.hourlyRate,
         taskId: newTimeEntry.taskId,
         projectId: newTimeEntry.projectId,
@@ -1501,28 +1502,6 @@ console.log("timeEntryData",timeEntryData);
                     setNewTimeEntry((prev) => ({
                       ...prev,
                       endTimeInput: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Hours
-                </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  placeholder="0.0"
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={newTimeEntry.duration || ""}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      duration: e.target.value
-                        ? parseFloat(e.target.value)
-                        : undefined,
                     }))
                   }
                 />
