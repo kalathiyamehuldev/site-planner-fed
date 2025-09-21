@@ -19,7 +19,9 @@ import {
   CreditCard,
   FolderArchive,
   LogOut,
-  Shield
+  Shield,
+  Menu,
+  X
 } from "lucide-react";
 import { logout } from "@/redux/slices/authSlice";
 import {
@@ -34,8 +36,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar
 } from "@/components/ui/sidebar";
 import usePermission from "@/hooks/usePermission";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+
 type SidebarItem = {
   name: string;
   path: string;
@@ -47,6 +54,7 @@ const AppSidebar: React.FC = () => {
   const location = useLocation();
   const dispatch = useAppDispatch();
   const { hasPermission } = usePermission();
+  const { isMobile, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -89,6 +97,7 @@ const AppSidebar: React.FC = () => {
               asChild
               isActive={isActive(item.path)}
               tooltip={item.name}
+              onClick={() => isMobile && setOpenMobile(false)}
             >
               <Link to={item.path}>
                 <item.icon className={cn(
@@ -104,73 +113,114 @@ const AppSidebar: React.FC = () => {
     );
   };
 
-  return (
-    <Sidebar variant="inset">
-      <SidebarRail />
-      <SidebarHeader className="pt-6 px-4">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+  // Mobile menu toggle button that appears in the header
+  const MobileMenuToggle = () => {
+    if (!isMobile) return null;
+    
+    return (
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
             D
           </div>
-          <span className="text-xl font-light tracking-tight">designflow</span>
+          <span className="text-lg font-light tracking-tight">designflow</span>
         </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItems items={mainItems.filter(Boolean) as SidebarItem[]} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setOpenMobile(true)}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+      </div>
+    );
+  };
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItems items={toolItems} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+  return (
+    <>
+      <MobileMenuToggle />
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarRail />
+        <SidebarHeader className="pt-6 px-4">
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+                D
+              </div>
+              <span className="text-xl font-light tracking-tight">designflow</span>
+            </div>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setOpenMobile(false)}
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close Menu</span>
+              </Button>
+            )}
+            {!isMobile && <SidebarTrigger className="hidden md:flex" />}
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Main</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItems items={mainItems.filter(Boolean) as SidebarItem[]} />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Libraries</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItems items={libraryItems} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="py-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings">
-              <Link to="/settings">
-                <Settings
+          <SidebarGroup>
+            <SidebarGroupLabel>Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItems items={toolItems} />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Libraries</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItems items={libraryItems} />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="py-4">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Settings">
+                <Link to="/settings">
+                  <Settings
+                    size={18}
+                    className={cn(
+                      "transition-colors duration-200",
+                      isActive("/settings") ? "text-primary-foreground" : "text-slate-600"
+                    )}
+                  />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
+                <LogOut
                   size={18}
-                  className={cn(
-                    "transition-colors duration-200",
-                    isActive("/settings") ? "text-primary-foreground" : "text-slate-600"
-                  )}
+                  className="text-red-600 transition-colors duration-200"
                 />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
-              <LogOut
-                size={18}
-                className="text-red-600 transition-colors duration-200"
-              />
-              <span>Log Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+                <span>Log Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+    </>
   );
 };
 

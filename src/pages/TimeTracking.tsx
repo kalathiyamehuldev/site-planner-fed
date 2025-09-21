@@ -823,50 +823,50 @@ console.log("timeEntryData",timeEntryData);
         </GlassCard>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.1s]">
-          <GlassCard className="p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.1s]">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                <Clock size={20} className="text-primary" />
+              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
+                <Clock size={16} className="text-primary sm:size-5" />
               </div>
-              <h3 className="text-muted-foreground font-medium text-sm">
+              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
                 Total Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{formatDuration(totalHours)}</p>
-            <div className="mt-2 text-sm">
+            <p className="text-2xl sm:text-3xl font-light">{formatDuration(totalHours)}</p>
+            <div className="mt-2 text-xs sm:text-sm">
               <span className="text-green-600 font-medium">↑ 12%</span> from
               last {selectedTimeRange}
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                <Hourglass size={20} className="text-primary" />
+              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
+                <Hourglass size={16} className="text-primary sm:size-5" />
               </div>
-              <h3 className="text-muted-foreground font-medium text-sm">
+              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
                 Billable Hours
               </h3>
             </div>
-            <p className="text-3xl font-light">{formatDuration(billableHours)}</p>
-            <div className="mt-2 text-sm">
+            <p className="text-2xl sm:text-3xl font-light">{formatDuration(billableHours)}</p>
+            <div className="mt-2 text-xs sm:text-sm">
               <span className="text-green-600 font-medium">↑ 8%</span> from last{" "}
               {selectedTimeRange}
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                <FileText size={20} className="text-primary" />
+              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
+                <FileText size={16} className="text-primary sm:size-5" />
               </div>
-              <h3 className="text-muted-foreground font-medium text-sm">
+              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
                 Tracked Projects
               </h3>
             </div>
-            <p className="text-3xl font-light">3</p>
-            <div className="mt-2 text-sm">
+            <p className="text-2xl sm:text-3xl font-light">3</p>
+            <div className="mt-2 text-xs sm:text-sm">
               <span className="text-green-600 font-medium">1 new</span> this{" "}
               {selectedTimeRange}
             </div>
@@ -972,32 +972,32 @@ console.log("timeEntryData",timeEntryData);
 
             <TabsContent value="entries" className="mt-0">
               <GlassCard>
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-border">
-                  <div className="text-lg font-medium">Recent Time Entries</div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 sm:p-4 gap-3 border-b border-border">
+                  <div className="text-base sm:text-lg font-medium">Recent Time Entries</div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
                     <button
                       onClick={() => setFilter("all")}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
+                        "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm transition-colors",
                         filter === "all"
                           ? "bg-primary/10 text-primary font-medium"
                           : "text-muted-foreground hover:bg-secondary"
                       )}
                     >
-                      <Filter size={14} />
+                      <Filter size={12} className="sm:size-4" />
                       <span>All</span>
                     </button>
                     <button
                       onClick={() => setFilter("billable")}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
+                        "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm transition-colors",
                         filter === "billable"
                           ? "bg-primary/10 text-primary font-medium"
                           : "text-muted-foreground hover:bg-secondary"
                       )}
                     >
-                      <Hourglass size={14} />
+                      <Hourglass size={12} className="sm:size-4" />
                       <span>Billable</span>
                     </button>
                     <button

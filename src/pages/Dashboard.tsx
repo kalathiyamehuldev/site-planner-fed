@@ -225,7 +225,7 @@ const Dashboard = () => {
           className="mb-12 opacity-0 animate-fade-in"
           style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {(isSuperAdmin || hasPermission('projects', 'read')) && (<StatCard
               icon={FileText}
               label="Active Projects"
@@ -335,7 +335,7 @@ const Dashboard = () => {
                     View All <ArrowRight size={16} className="ml-1" />
                   </MotionButton>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {recentProjects.map((project, index) => (
                     <ProjectCard
                       key={project.id}
@@ -386,7 +386,7 @@ const Dashboard = () => {
                   New Project <Plus size={16} className="ml-1" />
                 </MotionButton>
               </div>)}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {allProjects.map((project, index) => (
                   <ProjectCard
                     key={project.id}

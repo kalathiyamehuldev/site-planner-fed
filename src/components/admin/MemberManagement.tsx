@@ -484,19 +484,19 @@ const MemberManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden">
+      <div className="overflow-hidden rounded-lg border">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Role</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Name</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Email</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden md:table-cell">Phone</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Role</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">Projects</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Status</th>
                 {(hasPermission('users','update') || hasPermission('users','delete')) && (
-                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                  <th className="text-right p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Actions</th>
                 )}
               </tr>
             </thead>
@@ -523,21 +523,22 @@ const MemberManagement: React.FC = () => {
                     animationFillMode: "forwards",
                   }}
                 >
-                  <td className="p-4">
-                    <span className="font-medium text-sm">{member.firstName} {member.lastName}</span>
+                  <td className="p-2 sm:p-4">
+                    <span className="font-medium text-xs sm:text-sm">{member.firstName} {member.lastName}</span>
+                    <div className="text-xs text-muted-foreground sm:hidden mt-1">{member.email}</div>
                   </td>
-                  <td className="p-4">
-                    <span className="text-sm">{member.email}</span>
+                  <td className="p-2 sm:p-4 hidden sm:table-cell">
+                    <span className="text-xs sm:text-sm">{member.email}</span>
                   </td>
-                  <td className="p-4">
-                    <span className="text-sm">{member.phone || '-'}</span>
+                  <td className="p-2 sm:p-4 hidden md:table-cell">
+                    <span className="text-xs sm:text-sm">{member.phone || '-'}</span>
                   </td>
-                  <td className="p-4">
-                    <span className="text-sm">{member.role.name}</span>
+                  <td className="p-2 sm:p-4">
+                    <span className="text-xs sm:text-sm">{member.role.name}</span>
                   </td>
 
-                  <td className="p-4">
-                    <div className="text-sm">
+                  <td className="p-2 sm:p-4 hidden lg:table-cell">
+                    <div className="text-xs sm:text-sm">
                       {member.projectMembers && member.projectMembers.length > 0 ? (
                         <div className="space-y-1">
                           {member.projectMembers.map((pm, idx) => (
@@ -549,11 +550,11 @@ const MemberManagement: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">No projects</span>
+                        <span className="text-muted-foreground text-xs">No projects</span>
                       )}
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4 hidden sm:table-cell">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       member.isActive 
                         ? 'bg-green-100 text-green-800' 
@@ -562,16 +563,16 @@ const MemberManagement: React.FC = () => {
                       {member.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="p-2 sm:p-4 text-right">
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
                       {hasPermission('users','update') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(member)}
-                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       )}
                       {hasPermission('users','delete') && (
@@ -579,9 +580,9 @@ const MemberManagement: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(member)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       )}
                     </div>

@@ -82,25 +82,25 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
   // Mobile Card View
   if (isMobile) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn("space-y-3", className)}>
         {tasks.map((task, index) => {
           const transformedTask = transformTaskForTable(task);
           return (
             <GlassCard 
               key={task.id} 
-              className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in"
+              className="p-3 sm:p-4 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in"
               style={{
                 animationDelay: `${index * 0.05}s`,
                 animationFillMode: "forwards",
               }}
               onClick={() => onTaskClick?.(task.id)}
             >
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {/* Title and Description */}
                 <div>
-                  <h3 className="font-medium text-base mb-1 line-clamp-2">{task.title}</h3>
+                  <h3 className="font-medium text-sm sm:text-base mb-1 line-clamp-2">{task.title}</h3>
                   {task.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{task.description}</p>
                   )}
                 </div>
                 
@@ -108,7 +108,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className={cn(
-                      "text-xs px-2.5 py-1 rounded-full font-medium",
+                      "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium",
                       statusColors[transformedTask.status]
                     )}
                   >
@@ -116,7 +116,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   </span>
                   <span
                     className={cn(
-                      "text-xs px-2.5 py-1 rounded-full font-medium",
+                      "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium",
                       priorityColors[transformedTask.priority]
                     )}
                   >

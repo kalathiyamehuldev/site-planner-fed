@@ -293,9 +293,10 @@ const ProjectDetails = () => {
           <div className="space-y-1">
             <Link
               to="/projects"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2 max-lg:hidden"
             >
-              <ArrowLeft size={16} className="mr-1" /> Back to Projects
+              <ArrowLeft size={16} className="mr-1" /> <span className="md:inline hidden">Back to Projects</span>
+              <span className="inline md:hidden">Back</span>
             </Link>
             <div className="flex items-center flex-wrap gap-3">
               <h1 className="text-3xl font-light">{projectDetails.title}</h1>

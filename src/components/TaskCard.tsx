@@ -53,18 +53,18 @@ const TaskCard = ({
     <GlassCard
       variant="default"
       className={cn(
-        "overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer",
+        "overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer h-full",
         className
       )}
       onClick={onClick}
       style={style}
     >
-      <div className="p-6">
-        <div className="flex flex-col gap-2 mb-4">
-          <div className="flex flex-wrap gap-2">
+      <div className="p-4 sm:p-6 flex flex-col h-full">
+        <div className="flex flex-col gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <span
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
+                "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap",
                 statusColors[status]
               )}
             >
@@ -72,24 +72,24 @@ const TaskCard = ({
             </span>
             <span
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
+                "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap",
                 priorityColors[priority]
               )}
             >
               {priority} Priority
             </span>
           </div>
-          <h3 className="text-lg font-medium">{title}</h3>
-          <p className="text-muted-foreground text-sm">{projectName}</p>
+          <h3 className="text-base sm:text-lg font-medium">{title}</h3>
+          <p className="text-muted-foreground text-xs sm:text-sm">{projectName}</p>
         </div>
 
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-1.5">
-            <Calendar size={14} />
+        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 mt-auto">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
             <span>Due {dueDate}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={14} />
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <Clock size={12} className="sm:w-3.5 sm:h-3.5" />
             <span>{estimatedHours} hours</span>
           </div>
         </div>

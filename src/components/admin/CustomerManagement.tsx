@@ -299,8 +299,8 @@ const CustomerManagement: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
                     <Input
@@ -436,17 +436,17 @@ const CustomerManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden">
+      <div className="overflow-hidden rounded-lg border">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                {(hasPermission('users', 'update') || hasPermission('users', 'delete')) && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Name</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Email</th>
+                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Phone</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Projects</th>
+                <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Status</th>
+                {(hasPermission('users', 'update') || hasPermission('users', 'delete')) && <th className="text-right p-2 sm:p-4 font-medium text-xs sm:text-sm  text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -472,13 +472,14 @@ const CustomerManagement: React.FC = () => {
                       animationFillMode: "forwards",
                     }}
                   >
-                    <td className="p-4">
-                      <span className="font-medium text-sm">{`${customer.firstName} ${customer.lastName}`}</span>
+                    <td className="p-2 sm:p-4">
+                      <span className="font-medium text-xs sm:text-sm">{`${customer.firstName} ${customer.lastName}`}</span>
+                      <div className="text-xs text-muted-foreground sm:hidden mt-1">{customer.email}</div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 hidden md:table-cell">
                       <span className="text-sm">{customer.email}</span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 hidden md:table-cell">
                       <span className="text-sm">{customer.phone || '-'}</span>
                     </td>
                     <td className="p-4">
@@ -496,7 +497,7 @@ const CustomerManagement: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 hidden sm:table-cell">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.isActive 
                           ? 'bg-green-100 text-green-800' 

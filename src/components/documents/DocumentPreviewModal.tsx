@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -64,7 +65,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import DeleteDocumentModal from '@/components/DeleteDocumentModal';
+import DeleteDocumentModal from '@/components/documents/DeleteDocumentModal';
 
 // Using Comment type from commentsSlice
 type Comment = CommentType;
@@ -963,10 +964,13 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
   if (!document) return null;
 
+  // Use media query for responsive design
+  const isMobile = useMediaQuery('(max-width: 640px)');
+  
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <DialogContent className={`${isMobile ? 'max-w-[95vw]' : 'max-w-6xl'} h-[90vh] flex flex-col text-sm`}>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div className="flex items-center space-x-3">
             {getFileIcon(document.type)}
             <div>
@@ -974,15 +978,15 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 <Input
                   value={documentName}
                   onChange={(e) => setDocumentName(e.target.value)}
-                  className="text-xl font-semibold"
+                  className="text-lg font-semibold"
                   disabled={isUpdating}
                 />
               ) : (
-                <DialogTitle className="text-xl font-semibold">
+                <DialogTitle className="text-lg font-semibold">
                   {document.name}
                 </DialogTitle>
               )}
-              <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+              <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
                   <span>Uploaded by {documentDetails?.files?.[0]?.uploadedUser ? 
@@ -1047,9 +1051,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
+        <div className="flex lg:flex-row flex-col gap-6 flex-1 min-h-0 overflow-y-auto pb-4">
           {/* Left side - File Preview */}
-          <div className="flex-1 space-y-4 overflow-y-auto min-h-0">
+          <div className="lg:flex-1 space-y-4 min-h-0 w-full">
             {/* Document Details */}
             <Card>
               <CardContent className="p-4">
@@ -1159,7 +1163,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
             {/* File Preview */}
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-4 max-lg:hidden">
                 <h3 className="font-medium mb-3">Preview</h3>
                 {getFilePreview()}
               </CardContent>
@@ -1167,7 +1171,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </div>
 
           {/* Right side - Project Info & Comments */}
-          <div className="w-96 flex flex-col space-y-4 min-h-0">
+          <div className="lg:w-96 w-full flex flex-col space-y-4 min-h-0">
             {/* Project Information */}
             {(document?.projectId || documentDetails?.project) && (
               <Card>
@@ -1263,7 +1267,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     <Separator className="mb-4 flex-shrink-0" />
 
                     {/* Comments List */}
-                    <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+                    <div className="space-y-4">
                       {commentsLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <div className="text-sm text-muted-foreground">Loading comments...</div>

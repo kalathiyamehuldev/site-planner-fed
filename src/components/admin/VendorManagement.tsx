@@ -329,7 +329,7 @@ const VendorManagement: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
         {hasPermission('users', 'create') && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -352,8 +352,8 @@ const VendorManagement: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
                     <Input
@@ -497,14 +497,14 @@ const VendorManagement: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Projects</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Tags</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                {hasPermission('users', 'update') && <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>}
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Name</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Email</th>
+                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Phone</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground  lg:table-cell">Projects</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground md:table-cell">Tags</th>
+                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Status</th>
+                {hasPermission('users', 'update') && <th className="text-right p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -530,14 +530,15 @@ const VendorManagement: React.FC = () => {
                     animationFillMode: "forwards",
                   }}
                 >
-                  <td className="p-4">
-                    <span className="font-medium text-sm">{`${vendor.firstName} ${vendor.lastName}`}</span>
+                  <td className="p-2 sm:p-4">
+                    <span className="font-medium text-xs sm:text-sm">{vendor.firstName} {vendor.lastName}</span>
+                    <div className="text-xs text-muted-foreground sm:hidden mt-1">{vendor.email}</div>
                   </td>
-                  <td className="p-4">
-                    <span className="text-sm">{vendor.email}</span>
+                  <td className="p-2 sm:p-4 hidden sm:table-cell">
+                    <span className="text-xs sm:text-sm">{vendor.email}</span>
                   </td>
-                  <td className="p-4">
-                    <span className="text-sm">{vendor.phone || '-'}</span>
+                  <td className="p-2 sm:p-4 hidden md:table-cell">
+                    <span className="text-xs sm:text-sm">{vendor.phone || '-'}</span>
                   </td>
                   <td className="p-4">
                     <div className="text-sm">
@@ -554,7 +555,7 @@ const VendorManagement: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {vendor.tags?.map((tag) => (
                         <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
@@ -564,7 +565,7 @@ const VendorManagement: React.FC = () => {
                       {!vendor.tags?.length && <span className="text-sm text-muted-foreground">-</span>}
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 hidden sm:table-cell">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       vendor.isActive 
                         ? 'bg-green-100 text-green-800' 

@@ -28,9 +28,17 @@ const NotFound = () => {
         <h1 className="text-7xl font-light mb-4">404</h1>
         <p className="text-xl mb-8">This page could not be found</p>
         <div className="flex flex-col gap-2 items-center">
+          {/* Desktop version with arrow */}
           <Link to="/">
-            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto">
+            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto hidden md:flex">
               <ArrowLeft size={18} className="mr-2" /> Return to Dashboard
+            </MotionButton>
+          </Link>
+          
+          {/* Mobile version without arrow */}
+          <Link to="/">
+            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto flex md:hidden">
+              Return to Dashboard
             </MotionButton>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">

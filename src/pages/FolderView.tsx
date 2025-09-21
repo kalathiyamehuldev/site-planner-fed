@@ -63,9 +63,11 @@ import {
   Calendar,
   Grid3X3,
   List,
-  X
+  X,
+  Filter,
 } from 'lucide-react';
-import DeleteFolderModal from '@/components/DeleteFolderModal';
+import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
+import { FilterDropdown } from '@/components/ui/filter-dropdown';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { useToast } from '@/hooks/use-toast';
 import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialog';
@@ -795,7 +797,7 @@ const FolderView: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-center lg:justify-between animate-fade-in">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-4 mb-2 max-lg:hidden">
               <MotionButton
                 variant="outline"
                 size="sm"
@@ -810,16 +812,16 @@ const FolderView: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-light mb-2 truncate">{currentFolder?.name}</h1>
             <p className="text-muted-foreground text-sm sm:text-base">Manage files and folders in this directory</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
             {hasPermission('folders', 'create') && (
               <MotionButton
                 variant="outline"
                 size="sm"
                 motion="subtle"
-                className="w-full sm:w-auto"
+                className="w-auto sm:w-auto"
                 onClick={handleCreateFolder}
               >
-                <Plus size={16} className="mr-2" /> New Folder
+                <Plus size={16} className="mr-2" /> <span className="sm:inline">New Folder</span>
               </MotionButton>
             )}
             {hasPermission('documents', 'create') && (
@@ -828,9 +830,9 @@ const FolderView: React.FC = () => {
                 size="sm"
                 motion="subtle"
                 onClick={() => setIsUploadDialogOpen(true)}
-                className="w-full sm:w-auto"
+                className="w-auto sm:w-auto"
               >
-                <Upload size={16} className="mr-2" /> Upload Files
+                <Upload size={16} className="mr-2" /> <span className="sm:inline">Upload Files</span>
               </MotionButton>
             )}
           </div>
@@ -864,7 +866,7 @@ const FolderView: React.FC = () => {
             </React.Fragment>
           ))}
         </div>
-        {/* Search */}
+        {/* Search and Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.15s]">
           <div className="flex-1 min-w-[180px] max-w-full relative order-1 lg:order-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
@@ -881,7 +883,7 @@ const FolderView: React.FC = () => {
           <select
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0 max-lg:hidden"
           >
             <option value="All">All Tasks</option>
             {tasks.map(task => (
@@ -895,7 +897,7 @@ const FolderView: React.FC = () => {
           <select
             value={selectedFileType}
             onChange={(e) => setSelectedFileType(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0"
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0 max-lg:hidden"
           >
             {fileTypeCategories.map(type => (
               <option key={type} value={type}>
@@ -903,6 +905,39 @@ const FolderView: React.FC = () => {
               </option>
             ))}
           </select>
+          {/* Unified Filter Dropdown */}
+          <FilterDropdown
+            filters={[
+              {
+                id: 'task',
+                label: 'Tasks',
+                options: [
+                  { value: 'All', label: 'All Tasks' },
+                  ...tasks.map(task => ({ value: task.id, label: task.title }))
+                ]
+              },
+              {
+                id: 'fileType',
+                label: 'File Types',
+                options: fileTypeCategories.map(type => ({ 
+                  value: type, 
+                  label: type === "All" ? "All Types" : type 
+                }))
+              }
+            ]}
+            selectedFilters={{
+              task: selectedTask !== 'All' ? [selectedTask] : [],
+              fileType: selectedFileType !== 'All' ? [selectedFileType] : []
+            }}
+            onFilterChange={(filterId, values) => {
+              if (filterId === 'task') {
+                setSelectedTask(values.length > 0 ? values[0] : 'All');
+              } else if (filterId === 'fileType') {
+                setSelectedFileType(values.length > 0 ? values[0] : 'All');
+              }
+            }}
+            className="flex-shrink-0"
+          />
           
           {/* View Mode Toggle */}
           <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">

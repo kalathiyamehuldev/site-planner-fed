@@ -96,19 +96,19 @@ const ProjectCard = ({
     <GlassCard
       variant="default"
       className={cn(
-        "overflow-hidden group hover:shadow-md transition-all duration-300 border-2 rounded-xl",
+        "overflow-hidden group hover:shadow-md transition-all duration-300 border-2 rounded-xl h-full",
         borderColors[status],
         className
       )}
       style={style}
     >
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
+      <div className="p-4 sm:p-6 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-3 sm:mb-4">
           <div className="space-y-1 flex-1 min-w-0">
             <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <h3 className="text-xl font-medium cursor-pointer w-full overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{title}</h3>
+                    <h3 className="text-lg sm:text-xl font-medium cursor-pointer w-full overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{title}</h3>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="start" className="max-w-xs z-50">
                     <p className="break-words whitespace-normal">{title}</p>
@@ -142,9 +142,9 @@ const ProjectCard = ({
            </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <div className="space-y-3 sm:space-y-4 flex-grow">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
               <Calendar size={14} />
               <span>{dueDate}</span>
             </div>

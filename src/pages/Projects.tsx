@@ -11,6 +11,7 @@ import { selectAllProjects, selectProjectLoading, selectProjectError, fetchProje
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectCard from "@/components/ProjectCard";
 import usePermission from "@/hooks/usePermission";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 
 const Projects = () => {
   const dispatch = useAppDispatch();
@@ -97,7 +98,7 @@ const Projects = () => {
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 max-lg:hidden">
             <button
               onClick={() => setFilter("all")}
               className={cn(
@@ -147,6 +148,29 @@ const Projects = () => {
               <span>On Hold</span>
             </button>
           </div>
+          <FilterDropdown
+            filters={[
+              {
+               id: "status",
+                label: "Status",
+                options: [
+                  {value: "all", label: "All Projects" },
+                  { value: "active", label: "Active" },
+                  { value: "inprogress", label: "In Progress" },
+                  { value: "completed", label: "Completed" },
+                  { value: "onhold", label: "On Hold" },
+                ],
+              },
+            ]}
+            selectedFilters={{
+              status: filter !== "all" ? [filter] : [],
+            }}
+            onFilterChange={(filterId, values) => {
+              if (filterId === "status") {
+                setFilter(values.length > 0 ? values[0] as "all" | "active" | "completed" | "onhold" | "inprogress" : "all");
+              }
+            }}
+          />
         </div>
 
         {/* Loading State */}

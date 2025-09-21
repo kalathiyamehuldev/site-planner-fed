@@ -55,7 +55,7 @@ import {
   Folder as ReduxFolder
 } from "@/redux/slices/foldersSlice";
 import { useToast } from "@/hooks/use-toast";
-import DeleteFolderModal from '@/components/DeleteFolderModal';
+import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 import usePermission from "@/hooks/usePermission";
