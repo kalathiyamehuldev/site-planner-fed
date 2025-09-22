@@ -54,22 +54,48 @@ const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {
           </p>
           
           {role.permissions && role.permissions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {role.permissions.map(permission => (
-                Object.entries(permission.actions)
-                  .filter(([_, hasPermission]) => hasPermission)
-                  .map(([action]) => (
-                    <Badge 
-                      key={`${permission.resource}-${action}`} 
-                      variant="outline"
-                      className="text-xs"
-                    >
-                      {`${action} ${permission.resource}`}
-                    </Badge>
-                  ))
-              ))}
-            </div>
-          )}
+          <div className="mt-2 space-y-4">
+            {role.permissions.map(permission => {
+              // Collect allowed actions
+              const allowedActions = Object.entries(permission.actions)
+                .filter(([_, hasPermission]) => hasPermission)
+                .map(([action]) => action);
+
+              // Skip if no actions
+              if (allowedActions.length === 0) return null;
+
+              // Capitalize resource label
+              const resourceLabel = permission.resource.charAt(0).toUpperCase() + permission.resource.slice(1);
+
+              return (
+                <div className='' key={permission.resource}>
+                  {/* Resource label */}
+                  <div className="font-bold text-sm tracking-wide uppercase mb-2">
+                    {resourceLabel}:
+                  </div>
+
+                  {/* Permission badges */}
+                  <div className="flex flex-wrap gap-2">
+                    {/* Permission badges */}
+                    {allowedActions.map(action => {
+                      const actionLabel =
+                        action.charAt(0).toUpperCase() + action.slice(1);
+                      return (
+                        <Badge
+                          key={`${permission.resource}-${action}`}
+                          variant="outline"
+                          className="text-xs px-2 py-0.5"
+                        >
+                          {actionLabel}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         </div>
       </CardContent>
     </Card>
