@@ -1,15 +1,28 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://87.201.193.142:8000';
+// Environment-specific API configuration
+const getApiBaseUrl = () => {
+    // Check if we're in production (Vercel)
+    if (import.meta.env.PROD) {
+        // In production, use the same domain with /api prefix for proxy
+        return '/api';
+    }
+    // Development environment - use Vite proxy
+    return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000,
+    timeout: 30000, // Increased timeout for network issues
     headers: {
         'Content-Type': 'application/json',
     },
+    // Add withCredentials for CORS
+    withCredentials: false,
 });
 
 // Request interceptor to add auth token
@@ -51,6 +64,13 @@ api.interceptors.response.use(
         
         // Handle network errors
         if (error.request) {
+            console.error('Network Error Details:', {
+                url: error.config?.url,
+                method: error.config?.method,
+                baseURL: error.config?.baseURL,
+                timeout: error.config?.timeout
+            });
+            toast.error('Network error. Please check your connection and try again.');
             return Promise.reject(new Error('Network error. Please check your connection.'));
         }
         
