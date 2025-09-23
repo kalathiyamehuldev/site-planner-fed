@@ -21,9 +21,6 @@ const GlassCard = ({
     high: "bg-white/80 backdrop-blur-lg border-white/30",
   };
 
-  // Responsive adjustments for different screen sizes
-  const responsiveClasses = "sm:p-6 md:p-8 lg:p-10 p-4";
-
   const variantClasses = {
     default: intensityClasses[intensity],
     dark: "bg-foreground/10 backdrop-blur-md border-foreground/10",
@@ -33,7 +30,7 @@ const GlassCard = ({
   return (
     <div
       className={cn(
-        "rounded-2xl border shadow-sm transition-all duration-300 animate-scale-in p-3 md:p-4 lg:p-6",
+        "rounded-2xl border shadow-sm transition-all duration-300 animate-scale-in",
         variantClasses[variant],
         className
       )}
