@@ -1,7 +1,10 @@
+@import './styles/global.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import global branding and typography styles */
 
 @layer base {
   :root {

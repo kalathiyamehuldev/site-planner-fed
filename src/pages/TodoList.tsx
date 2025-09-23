@@ -130,12 +130,12 @@ const TodoList = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-light mb-2">To-Do List</h1>
+            <h2 className="font-light mb-2">To-Do List</h2>
             <p className="text-muted-foreground">
               Keep track of your project tasks
             </p>
             {error && (
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm">
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded-md">
                 {error}
               </div>
             )}
@@ -144,7 +144,7 @@ const TodoList = () => {
           <div className="flex items-center gap-4">
               <div className="relative">
                 <select
-                  className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                  className="rounded-lg border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
                   value={filterProject}
                   onChange={(e) => setFilterProject(e.target.value)}
                 >
@@ -160,7 +160,7 @@ const TodoList = () => {
                   size={16}
                 />
               </div>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showCompleted}
@@ -181,7 +181,7 @@ const TodoList = () => {
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
                 placeholder="Add a new task..."
-                className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="flex-1 rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                 onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
               />
 
@@ -200,7 +200,7 @@ const TodoList = () => {
             <div className="flex flex-wrap gap-3">
               <div className="relative">
                 <select
-                  className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                  className="rounded-lg border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
                 >
@@ -223,7 +223,7 @@ const TodoList = () => {
                   type="date"
                   value={selectedDueDate}
                   onChange={(e) => setSelectedDueDate(e.target.value)}
-                  className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="rounded-lg border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Due date"
                 />
               </div>
@@ -268,7 +268,7 @@ const TodoList = () => {
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       autoFocus
-                      className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="flex-1 rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveEdit();
                         if (e.key === "Escape") cancelEdit();
@@ -310,7 +310,7 @@ const TodoList = () => {
                       <div className="space-y-1">
                         <p
                           className={cn(
-                            "text-sm",
+                            "",
                             todo.completed &&
                               "line-through text-muted-foreground"
                           )}
@@ -318,7 +318,7 @@ const TodoList = () => {
                           {todo.text}
                         </p>
 
-                        <div className="flex flex-wrap gap-2 text-xs">
+                        <div className="flex flex-wrap gap-2">
                           {todo.project && (
                             <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                               {todo.project.name}

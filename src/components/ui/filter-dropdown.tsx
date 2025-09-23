@@ -64,11 +64,23 @@ export function FilterDropdown({
     } else {
       // For desktop, keep the original multi-select behavior
       const currentValues = selectedFilters[filterId] || [];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter((v) => v !== value)
-        : [...currentValues, value];
       
-      onFilterChange(filterId, newValues);
+      // Special handling for "All" option (case insensitive check)
+      if (value.toLowerCase() === "all" || value === "all") {
+        // If "All" is being selected, clear other selections
+        onFilterChange(filterId, [value]);
+      } else {
+        // For other options, remove "All" if it exists and toggle the current value
+        const valuesWithoutAll = currentValues.filter(v => 
+          v.toLowerCase() !== "all" && v !== "all"
+        );
+        
+        const newValues = valuesWithoutAll.includes(value)
+          ? valuesWithoutAll.filter((v) => v !== value)
+          : [...valuesWithoutAll, value];
+        
+        onFilterChange(filterId, newValues);
+      }
     }
   };
 
@@ -86,7 +98,8 @@ export function FilterDropdown({
           variant="outline"
           size="sm"
           className={cn(
-            "flex items-center gap-2 relative w-fit lg:hidden",
+            "flex items-center gap-1.5 h-8 md:h-9 px-2 md:px-3 text-xs md:text-sm border-dashed relative w-fit lg:hidden",
+            activeFilterCount > 0 && "border-primary",
             className
           )}
         >
@@ -95,14 +108,14 @@ export function FilterDropdown({
           {activeFilterCount > 0 && (
             <Badge
               variant="secondary"
-              className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              className="ml-1 h-4 w-4 md:h-5 md:w-5 rounded-full p-0 flex items-center justify-center text-[10px] md:text-xs"
             >
               {activeFilterCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
+      <PopoverContent className="w-[240px] md:w-[280px] p-0" align="start">
         <div className="grid grid-cols-3 border-b">
           <div className="col-span-1 border-r max-h-[300px] overflow-y-auto">
             {filters.map((filter) => {
@@ -113,7 +126,7 @@ export function FilterDropdown({
                 <button
                   key={filter.id}
                   className={cn(
-                    "w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors",
+                    "w-full text-left px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm hover:bg-accent transition-colors",
                     isActive && "bg-accent",
                     hasSelected && "font-medium"
                   )}
@@ -135,13 +148,14 @@ export function FilterDropdown({
                 {filters
                   .find((f) => f.id === activeFilter)
                   ?.options.map((option) => {
-                    const isSelected = selectedFilters[activeFilter]?.includes(option.value);
+                    const isSelected = selectedFilters[activeFilter]?.includes(option.value) || 
+                      (option.value.toLowerCase() === "all" && (!selectedFilters[activeFilter] || selectedFilters[activeFilter].length === 0));
                     
                     return (
                       <div
                         key={option.value}
                         className={cn(
-                          "flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-accent",
+                          "flex items-center gap-1.5 md:gap-2 px-1.5 md:px-2 py-1 md:py-1.5 text-xs md:text-sm rounded-sm cursor-pointer hover:bg-accent",
                           isSelected && "bg-accent/50"
                         )}
                         onClick={() => handleOptionToggle(activeFilter, option.value)}

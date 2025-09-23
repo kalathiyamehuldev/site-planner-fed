@@ -21,7 +21,7 @@ const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProps>(
 
     const variantSpecificClasses = 
       variant === "glass" 
-        ? "bg-white/70 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/80" 
+        ? "bg-white/70 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/80 dark:bg-black/70 dark:border-black/20 dark:hover:bg-black/80" 
         : "";
 
     return (
