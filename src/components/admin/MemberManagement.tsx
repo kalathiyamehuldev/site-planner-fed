@@ -299,7 +299,7 @@ const MemberManagement: React.FC = () => {
           <input
             type="text"
             placeholder="Search members..."
-            className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-lg border border-input bg-background px-10 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -337,7 +337,7 @@ const MemberManagement: React.FC = () => {
                       required
                     />
                     {formErrors.firstName && (
-                      <p className="text-sm text-red-600">{formErrors.firstName}</p>
+                      <p className="text-red-600">{formErrors.firstName}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -349,7 +349,7 @@ const MemberManagement: React.FC = () => {
                       required
                     />
                     {formErrors.lastName && (
-                      <p className="text-sm text-red-600">{formErrors.lastName}</p>
+                      <p className="text-red-600">{formErrors.lastName}</p>
                     )}
                   </div>
                 </div>
@@ -363,8 +363,55 @@ const MemberManagement: React.FC = () => {
                     required
                   />
                   {formErrors.email && (
-                    <p className="text-sm text-red-600">{formErrors.email}</p>
+                    <p className="text-red-600">{formErrors.email}</p>
                   )}
+                </div>
+
+              {/* Associated Projects */}
+                <div className="space-y-2">
+                  <Label>Associated Projects</Label>
+                  {/* Selected Projects Tags */}
+                  {formData.selectedProjects.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {formData.selectedProjects.map((projectId) => {
+                        const project = projects.find(p => p.id === projectId);
+                        return (
+                          <div
+                            key={projectId}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800"
+                          >
+                            {project?.title || 'Unknown Project'}
+                            <button
+                              type="button"
+                              onClick={() => handleProjectRemove(projectId)}
+                              className="ml-1 text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Project Selection Dropdown */}
+                  <Select 
+                    onValueChange={handleProjectSelect}
+                    disabled={projectsLoading}
+                    value=""
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects
+                        .filter(project => !formData.selectedProjects.includes(project.id))
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
@@ -407,7 +454,7 @@ const MemberManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                   {formErrors.role && (
-                    <p className="text-sm text-red-600">{formErrors.role}</p>
+                    <p className="text-red-600">{formErrors.role}</p>
                   )}
                 </div>
                 {!editingMember && (
@@ -421,57 +468,11 @@ const MemberManagement: React.FC = () => {
                       required
                     />
                     {formErrors.password && (
-                      <p className="text-sm text-red-600">{formErrors.password}</p>
+                      <p className="text-red-600">{formErrors.password}</p>
                     )}
                   </div>
                 )}
               </div>
-              {/* Associated Projects */}
-                <div className="space-y-2">
-                  <Label>Associated Projects</Label>
-                  {/* Selected Projects Tags */}
-                  {formData.selectedProjects.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.selectedProjects.map((projectId) => {
-                        const project = projects.find(p => p.id === projectId);
-                        return (
-                          <div
-                            key={projectId}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm"
-                          >
-                            {project?.title || 'Unknown Project'}
-                            <button
-                              type="button"
-                              onClick={() => handleProjectRemove(projectId)}
-                              className="ml-1 text-blue-600 hover:text-blue-800"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {/* Project Selection Dropdown */}
-                  <Select 
-                    onValueChange={handleProjectSelect}
-                    disabled={projectsLoading}
-                    value=""
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={projectsLoading ? "Loading projects..." : "Add project"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects
-                        .filter(project => !formData.selectedProjects.includes(project.id))
-                        .map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.title}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               <DialogFooter>
                 <Button type="submit" disabled={loading || !isFormValid()}>
                   {loading ? 'Saving...' : editingMember ? 'Update' : 'Create'}
@@ -489,14 +490,14 @@ const MemberManagement: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Name</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Email</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden md:table-cell">Phone</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Role</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">Projects</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Status</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground">Name</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden sm:table-cell">Email</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden md:table-cell">Phone</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground">Role</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden lg:table-cell">Projects</th>
+                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden sm:table-cell">Status</th>
                 {(hasPermission('users','update') || hasPermission('users','delete')) && (
-                  <th className="text-right p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Actions</th>
+                  <th className="text-right p-2 sm:p-4 font-medium sm:text-muted-foreground">Actions</th>
                 )}
               </tr>
             </thead>
@@ -524,38 +525,38 @@ const MemberManagement: React.FC = () => {
                   }}
                 >
                   <td className="p-2 sm:p-4">
-                    <span className="font-medium text-xs sm:text-sm">{member.firstName} {member.lastName}</span>
-                    <div className="text-xs text-muted-foreground sm:hidden mt-1">{member.email}</div>
+                    <span className="font-medium">{member.firstName} {member.lastName}</span>
+                    <div className=" text-muted-foreground sm:hidden mt-1">{member.email}</div>
                   </td>
                   <td className="p-2 sm:p-4 hidden sm:table-cell">
-                    <span className="text-xs sm:text-sm">{member.email}</span>
+                    <span className="">{member.email}</span>
                   </td>
                   <td className="p-2 sm:p-4 hidden md:table-cell">
-                    <span className="text-xs sm:text-sm">{member.phone || '-'}</span>
+                    <span className="">{member.phone || '-'}</span>
                   </td>
                   <td className="p-2 sm:p-4">
-                    <span className="text-xs sm:text-sm">{member.role.name}</span>
+                    <span className="">{member.role.name}</span>
                   </td>
 
                   <td className="p-2 sm:p-4 hidden lg:table-cell">
-                    <div className="text-xs sm:text-sm">
+                    <div className="">
                       {member.projectMembers && member.projectMembers.length > 0 ? (
                         <div className="space-y-1">
                           {member.projectMembers.map((pm, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              <span className=" bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                 {pm.project.name}
                               </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">No projects</span>
+                        <span className="text-muted-foreground">No projects</span>
                       )}
                     </div>
                   </td>
                   <td className="p-2 sm:p-4 hidden sm:table-cell">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
+                    <span className={`px-2 py-1 rounded-full ${
                       member.isActive 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
