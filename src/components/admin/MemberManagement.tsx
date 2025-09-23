@@ -49,7 +49,7 @@ interface MemberFormData {
   address: string;
   roleId: string;
   password: string;
-  selectedProjects: string[];
+  projectIds: string[];
 }
 
 interface FormErrors {
@@ -84,7 +84,7 @@ const MemberManagement: React.FC = () => {
     address: '',
     roleId: '',
     password: '',
-    selectedProjects: [],
+    projectIds: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
@@ -165,7 +165,7 @@ const MemberManagement: React.FC = () => {
     try {
       if (editingMember) {
         // Update member (exclude password from update)
-        const { password, selectedProjects, ...updateData } = formData;
+        const { password, projectIds, ...updateData } = formData;
         const updatePayload: UpdateMemberData = {};
         
         // Only include changed fields
@@ -175,7 +175,7 @@ const MemberManagement: React.FC = () => {
         if (updateData.phone !== editingMember.phone) updatePayload.phone = updateData.phone;
         if (updateData.address !== editingMember.address) updatePayload.address = updateData.address;
         if (updateData.roleId !== editingMember.role.id) updatePayload.roleId = updateData.roleId;
-        updatePayload.projectIds = selectedProjects;
+        updatePayload.projectIds = projectIds;
         const result = await dispatch(updateMember({ 
           id: editingMember.id, 
           data: updatePayload 
@@ -189,11 +189,12 @@ const MemberManagement: React.FC = () => {
         // Create member
         const createPayload = {
           ...formData,
-           projectIds: formData.selectedProjects,
+           projectIds: formData.projectIds,
         };
         
         const result = await dispatch(createMember(createPayload)).unwrap();
-        
+        // Refresh vendors data to update the UI
+        dispatch(fetchMembers());
         toast({
           title: 'Success',
           description: result.message || 'Member created successfully',
@@ -217,17 +218,17 @@ const MemberManagement: React.FC = () => {
       address: '',
       roleId: '',
       password: '',
-      selectedProjects: [],
+      projectIds: [],
     });
     setFormErrors({});
     setEditingMember(null);
   };
   /// Handle project selection
   const handleProjectSelect = (projectId: string) => {
-    if (!formData.selectedProjects.includes(projectId)) {
+    if (!formData.projectIds.includes(projectId)) {
       setFormData(prev => ({
         ...prev,
-        selectedProjects: [...prev.selectedProjects, projectId]
+        projectIds: [...prev.projectIds, projectId]
       }));
     }
   };
@@ -236,7 +237,7 @@ const MemberManagement: React.FC = () => {
   const handleProjectRemove = (projectId: string) => {
     setFormData(prev => ({
       ...prev,
-      selectedProjects: prev.selectedProjects.filter(id => id !== projectId)
+      projectIds: prev.projectIds.filter(id => id !== projectId)
     }));
   };
 
@@ -253,7 +254,7 @@ const MemberManagement: React.FC = () => {
       address: member.address || '',
       roleId: member.role.id,
       password: '', // Don't populate password for editing
-      selectedProjects: projectIds,
+      projectIds: projectIds,
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -371,9 +372,9 @@ const MemberManagement: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Associated Projects</Label>
                   {/* Selected Projects Tags */}
-                  {formData.selectedProjects.length > 0 && (
+                  {formData.projectIds.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.selectedProjects.map((projectId) => {
+                      {formData.projectIds.map((projectId) => {
                         const project = projects.find(p => p.id === projectId);
                         return (
                           <div
@@ -404,7 +405,7 @@ const MemberManagement: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {projects
-                        .filter(project => !formData.selectedProjects.includes(project.id))
+                        .filter(project => !formData.projectIds.includes(project.id))
                         .map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.title}
@@ -539,21 +540,17 @@ const MemberManagement: React.FC = () => {
                   </td>
 
                   <td className="p-2 sm:p-4 hidden lg:table-cell">
-                    <div className="">
-                      {member.projectMembers && member.projectMembers.length > 0 ? (
-                        <div className="space-y-1">
-                          {member.projectMembers.map((pm, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <span className=" bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                {pm.project.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No projects</span>
-                      )}
-                    </div>
+                    {member.projectMembers && member.projectMembers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {member.projectMembers.map((pm, idx) => (
+                          <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {pm.project.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">No projects</span>
+                    )}
                   </td>
                   <td className="p-2 sm:p-4 hidden sm:table-cell">
                     <span className={`px-2 py-1 rounded-full ${
@@ -595,17 +592,17 @@ const MemberManagement: React.FC = () => {
           </table>
         </div>
       </div>
+      {/* Delete Member Modal */}
+      <DeleteMemberModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        member={deletingMember}
+        onConfirm={handleConfirmDelete}
+        loading={isDeleting}
+      />
     </div>
-  );
     
-    {/* Delete Member Modal */}
-    <DeleteMemberModal
-      open={showDeleteModal}
-      onOpenChange={setShowDeleteModal}
-      member={deletingMember}
-      onConfirm={handleConfirmDelete}
-      loading={isDeleting}
-    />
+  );
   
 };
 
