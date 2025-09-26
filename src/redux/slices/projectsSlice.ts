@@ -312,6 +312,11 @@ interface ProjectsState {
   selectedProject: Project | null;
   loading: boolean;
   error: string | null;
+  projectMembers: {
+    [projectId: string]: ProjectMember[];
+  };
+  projectMembersLoading: boolean;
+  projectMembersError: string | null;
 }
 
 const initialState: ProjectsState = {
@@ -319,6 +324,9 @@ const initialState: ProjectsState = {
   selectedProject: null,
   loading: false,
   error: null,
+  projectMembers: {},
+  projectMembersLoading: false,
+  projectMembersError: null,
 };
 
 export const projectsSlice = createSlice({
@@ -420,6 +428,56 @@ export const projectsSlice = createSlice({
       .addCase(deleteProjectAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Get project members
+      .addCase(getProjectMembers.pending, (state) => {
+        state.projectMembersLoading = true;
+        state.projectMembersError = null;
+      })
+      .addCase(getProjectMembers.fulfilled, (state, action) => {
+        state.projectMembersLoading = false;
+        state.projectMembers[action.payload.projectId] = action.payload.members;
+        state.projectMembersError = null;
+      })
+      .addCase(getProjectMembers.rejected, (state, action) => {
+        state.projectMembersLoading = false;
+        state.projectMembersError = action.payload as string;
+      })
+      // Add member to project
+      .addCase(addMemberToProject.pending, (state) => {
+        state.projectMembersLoading = true;
+        state.projectMembersError = null;
+      })
+      .addCase(addMemberToProject.fulfilled, (state, action) => {
+        state.projectMembersLoading = false;
+        const projectId = action.meta.arg.projectId;
+        if (state.projectMembers[projectId]) {
+          state.projectMembers[projectId].push(action.payload);
+        }
+        state.projectMembersError = null;
+      })
+      .addCase(addMemberToProject.rejected, (state, action) => {
+        state.projectMembersLoading = false;
+        state.projectMembersError = action.payload as string;
+      })
+      // Remove member from project
+      .addCase(removeMemberFromProject.pending, (state) => {
+        state.projectMembersLoading = true;
+        state.projectMembersError = null;
+      })
+      .addCase(removeMemberFromProject.fulfilled, (state, action) => {
+        state.projectMembersLoading = false;
+        const { projectId, userId } = action.payload;
+        if (state.projectMembers[projectId]) {
+          state.projectMembers[projectId] = state.projectMembers[projectId].filter(
+            member => member.user.id !== userId
+          );
+        }
+        state.projectMembersError = null;
+      })
+      .addCase(removeMemberFromProject.rejected, (state, action) => {
+        state.projectMembersLoading = false;
+        state.projectMembersError = action.payload as string;
       });
   }
 });
@@ -437,6 +495,12 @@ export const selectProjectById = (id: string) => (state: RootState) =>
   state.projects.projects.find(project => project.id === id);
 export const selectProjectLoading = (state: RootState) => state.projects.loading;
 export const selectProjectError = (state: RootState) => state.projects.error;
+
+// Project members selectors
+export const selectProjectMembers = (projectId: string) => (state: RootState) => 
+  state.projects.projectMembers[projectId] || [];
+export const selectProjectMembersLoading = (state: RootState) => state.projects.projectMembersLoading;
+export const selectProjectMembersError = (state: RootState) => state.projects.projectMembersError;
 
 
 

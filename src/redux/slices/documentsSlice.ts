@@ -18,6 +18,12 @@ interface CreateDocumentResponse {
   message?: string;
 }
 
+// Access type enum
+export enum AccessType {
+  EVERYONE = 'EVERYONE',
+  SELECTED_USERS = 'SELECTED_USERS'
+}
+
 // API Document interface (matching backend DTOs)
 export interface ApiDocument {
   id: string;
@@ -31,6 +37,17 @@ export interface ApiDocument {
   companyId: string;
   createdAt: string;
   updatedAt: string;
+  accessType?: AccessType;
+  userAccess?: {
+    id: string;
+    userId: string;
+    documentId: string;
+    user?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }[];
   project?: {
     id: string;
     name: string;
@@ -78,6 +95,17 @@ export interface Document {
   createdAt: string;
   updatedAt: string;
   fileId?: string; // ID of the latest file for download
+  accessType?: AccessType;
+  userAccess?: {
+    id: string;
+    userId: string;
+    documentId: string;
+    user?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }[];
 }
 
 // Create/Update Document Data interfaces
@@ -90,6 +118,8 @@ export interface CreateDocumentData {
   taskId?: string;
   folderId?: string;
   file?: File;
+  accessType?: AccessType;
+  userIds?: string[];
 }
 
 export interface UpdateDocumentData extends Partial<CreateDocumentData> {}
@@ -150,6 +180,8 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
     createdAt: apiDoc.createdAt,
     updatedAt: apiDoc.updatedAt,
     fileId: latestFile?.id, // Extract file ID for download
+    accessType: apiDoc.accessType,
+    userAccess: apiDoc.userAccess
   };
 };
 
@@ -257,8 +289,9 @@ export const createDocument = createAsyncThunk(
         if (documentData.projectId) formData.append('projectId', documentData.projectId);
         if (documentData.taskId) formData.append('taskId', documentData.taskId);
         if (documentData.folderId) formData.append('folderId', documentData.folderId);
-        formData.append('file', documentData.file);
-        
+        if (documentData.accessType) formData.append('accessType', documentData.accessType);
+        if (documentData.userIds) {documentData.userIds.forEach(id => formData.append('userIds', id));}
+        formData.append('file', documentData.file);       
         response = await api.post(`/documents?companyId=${companyId}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -565,7 +598,7 @@ export const downloadDocument = createAsyncThunk(
     try {
       // Use direct fetch call to avoid JSON parsing interceptor
       const token = localStorage.getItem('token');
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       
       const response = await fetch(`${API_BASE_URL}/documents/${fileId}/download`, {
         method: 'GET',

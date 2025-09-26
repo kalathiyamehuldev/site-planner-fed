@@ -7,7 +7,8 @@ import {
   updateDocument,
   selectAllDocuments,
   Document,
-  downloadDocument
+  downloadDocument,
+  AccessType
 } from '@/redux/slices/documentsSlice';
 import { fetchProjects, selectAllProjects } from '@/redux/slices/projectsSlice';
 import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
@@ -225,7 +226,11 @@ const FolderView: React.FC = () => {
     try {
       await dispatch(updateDocument({
         id: renameDocumentModal.document.id,
-        documentData: { name: newDocumentName.trim() }
+        documentData: { 
+          name: newDocumentName.trim(),
+          accessType: renameDocumentModal.document.accessType,
+          userIds: renameDocumentModal.document.userAccess?.map(user => user.userId) || []
+        }
       })).unwrap();
       
       toast({
@@ -1110,8 +1115,21 @@ const FolderView: React.FC = () => {
                               </div>
                               <div className="flex items-center gap-1">
                                 <File size={12} />
-                                <span className="uppercase font-medium">{doc.files[0].fileType}</span>
+                                <span className="uppercase font-medium">{doc?.files?.[0]?.fileType || 'N/A'}</span>
                               </div>
+                              {doc.accessType && (
+                                <div className="flex items-center gap-1">
+                                  {doc.accessType === 'SELECTED_USERS' ? (
+                                    <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                      Restricted
+                                    </span>
+                                  ) : (
+                                    <span className="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                      Everyone
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

@@ -9,7 +9,7 @@ const getApiBaseUrl = () => {
         return '/api';
     }
     // Development environment - use Vite proxy
-    return '/api';
+    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 };
 
 const API_BASE_URL = getApiBaseUrl();

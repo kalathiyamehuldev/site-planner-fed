@@ -11,6 +11,7 @@ import {
   uploadDocumentVersion,
   selectDocumentConflict,
   clearConflict,
+  AccessType,
 } from '@/redux/slices/documentsSlice';
 import {
   selectSelectedProject,
@@ -38,6 +39,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload } from 'lucide-react';
 import usePermission from '@/hooks/usePermission';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
+import { UserSelectionComponent } from './UserSelectionComponent';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ConflictData {
   conflict: boolean;
@@ -70,6 +73,8 @@ interface FormData {
   file: File | null;
   folderId?: string;
   notes?: string;
+  accessType: AccessType;
+  userIds: string[];
 }
 
 interface FormErrors {
@@ -78,6 +83,7 @@ interface FormErrors {
   taskId?: string;
   file?: string;
   notes?: string;
+  userIds?: string;
 }
 
 export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
@@ -112,6 +118,8 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       file: null,
       folderId: folderId,
       notes: '',
+      accessType: AccessType.EVERYONE,
+      userIds: [],
     });
 
     const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -190,6 +198,8 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
           taskId: 'none',
           file: null,
           folderId: folderId,
+          accessType: AccessType.EVERYONE,
+          userIds: []
         });
         setFormErrors({});
         // Only clear conflict state if there's no conflict resolution in progress
@@ -241,6 +251,10 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       if (!formData.file) {
         errors.file = 'Please select a file to upload';
       }
+      
+      if (formData.accessType === 'SELECTED_USERS' && formData.userIds.length === 0) {
+        errors.userIds = 'Please select at least one user';
+      }
 
       setFormErrors(errors);
       return Object.keys(errors).length === 0;
@@ -263,6 +277,8 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
         taskId: taskId === 'none' ? undefined : taskId,
         folderId: folderId || undefined,
         file,
+        accessType: formData.accessType,
+        userIds: formData.accessType === 'SELECTED_USERS' ? formData.userIds : undefined,
       };
 
       console.log('Creating document with data:', documentData);
@@ -716,6 +732,52 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+                
+                {mode === 'upload' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Access Control</Label>
+                      <RadioGroup
+                        value={formData.accessType}
+                        onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
+                          setFormData(prev => ({ ...prev, accessType: value }));
+                          if (value === AccessType.EVERYONE) {
+                            setFormData(prev => ({ ...prev, userIds: [] }));
+                            clearFieldError('userIds');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="EVERYONE" id="everyone" />
+                          <Label htmlFor="everyone">Everyone (All users with document permissions)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="SELECTED_USERS" id="selected-users" />
+                          <Label htmlFor="selected-users">Selected Users Only</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    {formData.accessType === 'SELECTED_USERS' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="users">Select Users</Label>
+                        <UserSelectionComponent
+                          selectedUserIds={formData.userIds}
+                          onChange={(userIds) => {
+                            setFormData(prev => ({ ...prev, userIds }));
+                            if (userIds.length > 0) {
+                              clearFieldError('userIds');
+                            }
+                          }}
+                          projectId={projectId}
+                        />
+                        {formErrors.userIds && (
+                          <p className="text-sm text-red-500">{formErrors.userIds}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {mode === 'version' && (

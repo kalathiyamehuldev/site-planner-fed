@@ -32,7 +32,9 @@ import {
   getProjectMembers,
   addMemberToProject,
   removeMemberFromProject,
-  ProjectMember,
+  selectProjectMembers,
+  selectProjectMembersLoading,
+  selectProjectMembersError,
 } from "@/redux/slices/projectsSlice";
 import { fetchMembers, Member } from "@/redux/slices/adminSlice";
 import usePermission from "@/hooks/usePermission";
@@ -52,37 +54,18 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-  const [memberLoading, setMemberLoading] = useState(false);
-  const [memberError, setMemberError] = useState<string | null>(null);
 
   // Redux selectors
+  const projectMembers = useSelector(selectProjectMembers(projectId));
+  const memberLoading = useSelector(selectProjectMembersLoading);
+  const memberError = useSelector(selectProjectMembersError);
   const {
     members: { items: companyMembers, loading: membersLoading },
   } = useSelector((state: RootState) => state.admin);
 
   // Fetch project members and company members on component mount
   useEffect(() => {
-    const fetchProjectMembers = async () => {
-      if (projectId) {
-        setMemberLoading(true);
-        setMemberError(null);
-        try {
-          const result = await dispatch(getProjectMembers(projectId));
-          if (getProjectMembers.fulfilled.match(result)) {
-            setProjectMembers(result.payload.members);
-          } else {
-            setMemberError(result.payload as string || 'Failed to fetch project members');
-          }
-        } catch (error) {
-          setMemberError('Failed to fetch project members');
-        } finally {
-          setMemberLoading(false);
-        }
-      }
-    };
-
-    fetchProjectMembers();
+    dispatch(getProjectMembers(projectId));
     dispatch(fetchMembers());
   }, [dispatch, projectId]);
 
@@ -113,10 +96,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         });
 
         // Refresh project members
-        const refreshResult = await dispatch(getProjectMembers(projectId));
-        if (getProjectMembers.fulfilled.match(refreshResult)) {
-          setProjectMembers(refreshResult.payload.members);
-        }
+        dispatch(getProjectMembers(projectId));
 
         setIsAddDialogOpen(false);
         setSelectedUserId("");
@@ -154,10 +134,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         });
 
         // Refresh project members
-        const refreshResult = await dispatch(getProjectMembers(projectId));
-        if (getProjectMembers.fulfilled.match(refreshResult)) {
-          setProjectMembers(refreshResult.payload.members);
-        }
+        dispatch(getProjectMembers(projectId));
       } else {
         toast({
           title: "Error",
@@ -195,8 +172,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
               <DialogHeader>
                 <DialogTitle>Add Member to Project</DialogTitle>
                 <DialogDescription>
-                  Select a team member to add to this project and assign their
-                  role.
+                  Select a team member to add to this project.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -222,19 +198,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              {/* <div>
-                <label className="text-sm font-medium">Role</label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="VIEWER">Viewer</SelectItem>
-                    <SelectItem value="EDITOR">Editor</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div> */}
+              {/* Role selection is handled automatically based on the member's existing role */}
             </div>
             <DialogFooter>
               <Button
