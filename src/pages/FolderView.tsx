@@ -69,10 +69,10 @@ import {
 } from 'lucide-react';
 import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
-import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { useToast } from '@/hooks/use-toast';
 import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialog';
 import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
+import DocumentSidebar from '@/components/documents/DocumentSidebar';
 import usePermission from '@/hooks/usePermission';
 
 // Add CSS animations
@@ -232,7 +232,6 @@ const FolderView: React.FC = () => {
           userIds: renameDocumentModal.document.userAccess?.map(user => user.userId) || []
         }
       })).unwrap();
-      
       toast({
         title: "Success",
         description: "Document renamed successfully.",
@@ -1531,40 +1530,52 @@ const FolderView: React.FC = () => {
           </Dialog>
         )}
 
-        {/* Document Preview Modal */}
-        {selectedDocument && (
-          <DocumentPreviewModal
-            document={selectedDocument}
-            isOpen={showDocumentPreview}
-            onClose={() => {
-              setShowDocumentPreview(false);
-              setSelectedDocument(null);
-            }}
-            onDelete={(documentId) => {
-              // Refresh documents after deletion
-              if (folderId) {
-                dispatch(fetchDocumentsByFolder(folderId));
-              }
-              
-              // Refresh folder tree to update document count and structure
-              const projectId = getProjectId();
-              if (projectId) {
-                dispatch(fetchFolderTree(projectId));
-              }
-            }}
-            onRefresh={() => {
-              // Refresh documents and folder tree
-              if (folderId) {
-                dispatch(fetchDocumentsByFolder(folderId));
-              }
-              
-              const projectId = getProjectId();
-              if (projectId) {
-                dispatch(fetchFolderTree(projectId));
-              }
-            }}
-          />
-        )}
+        {/* Document Sidebar */}
+        <DocumentSidebar
+          document={selectedDocument}
+          isOpen={showDocumentPreview}
+          onClose={() => {
+            setShowDocumentPreview(false);
+            setSelectedDocument(null);
+          }}
+          onDelete={(documentId) => {
+            // Close sidebar immediately after deletion
+            setShowDocumentPreview(false);
+            setSelectedDocument(null);
+            
+            // Refresh documents after deletion
+            if (folderId) {
+              dispatch(fetchDocumentsByFolder(folderId));
+            }
+            
+            // Refresh folder tree to update document count and structure
+            const projectId = getProjectId();
+            if (projectId) {
+              dispatch(fetchFolderTree(projectId));
+            }
+          }}
+          onEdit={(document) => {
+            handleEditDocument(document);
+          }}
+          onMove={(document) => {
+            // Future implementation for move functionality
+            toast({
+              title: "Coming Soon",
+              description: "Move functionality will be available soon.",
+            });
+          }}
+          onRefresh={() => {
+            // Refresh documents and folder tree
+            if (folderId) {
+              dispatch(fetchDocumentsByFolder(folderId));
+            }
+            
+            const projectId = getProjectId();
+            if (projectId) {
+              dispatch(fetchFolderTree(projectId));
+            }
+          }}
+        />
 
         {/* Upload Version Dialog */}
         {versionUploadModal.isOpen && versionUploadModal.document && (

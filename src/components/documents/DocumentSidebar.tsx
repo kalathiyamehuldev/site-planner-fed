@@ -1,0 +1,1361 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { 
+  Document, 
+  fetchDocumentDetails, 
+  updateDocument, 
+  deleteDocument, 
+  downloadDocument, 
+  fetchFilePreview, 
+  selectFilePreview, 
+  selectPreviewLoading,
+  selectDocumentDetails,
+  selectDocumentDetailsLoading,
+  AccessType,
+  uploadDocumentVersion
+} from '@/redux/slices/documentsSlice';
+import { getProjectMembers } from '@/redux/slices/projectsSlice';
+import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import usePermission from '@/hooks/usePermission';
+import { 
+  fetchDocumentComments, 
+  createComment, 
+  updateComment as updateCommentAction, 
+  deleteComment as deleteCommentAction,
+  fetchProjectMembers as fetchCommentProjectMembers,
+  selectAllComments,
+  selectCommentsLoading,
+  selectCommentsError,
+  selectProjectMembers as selectCommentProjectMembers,
+  selectMembersLoading,
+  clearComments,
+  Comment as CommentType
+} from '@/redux/slices/commentsSlice';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import  DeleteDocumentModal  from '@/components/documents/DeleteDocumentModal';
+import {
+  MoreVertical,
+  Edit3,
+  Trash2,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  Send,
+  Image as ImageIcon,
+  FileText,
+  Download,
+  User,
+  Calendar,
+  Building,
+  X,
+  Reply,
+  AtSign,
+  Eye,
+  ArrowLeft,
+  Move,
+  Plus,
+  MessageSquare
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
+import UserSelectionComponent from '@/components/documents/UserSelectionComponent';
+
+// Using Comment type from commentsSlice
+type Comment = CommentType;
+
+interface DocumentSidebarProps {
+  document: Document | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onEdit?: (document: Document) => void;
+  onDelete?: (documentId: string) => void;
+  onCopy?: (document: Document) => void;
+  onRefresh?: () => void;
+  onMove?: (document: Document) => void;
+}
+
+const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
+  document,
+  isOpen,
+  onClose,
+  onEdit,
+  onDelete,
+  onCopy,
+  onRefresh,
+  onMove
+}) => {
+  
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+  const projectTasks = useAppSelector(selectProjectTasks);
+  const documentsState = useAppSelector(state => state.documents);
+  const filePreview = useAppSelector(selectFilePreview);
+  const previewLoading = useAppSelector(selectPreviewLoading);
+  const documentDetails = useAppSelector(selectDocumentDetails);
+  const documentDetailsLoading = useAppSelector(selectDocumentDetailsLoading);
+  
+  // Initialize data when sidebar opens
+  useEffect(() => {
+    if (isOpen && document && document.id) {
+      // Set immediate UI state from the provided document prop
+      setDocumentName(document.name || '');
+      setDescription(document.description || '');
+      setSelectedTaskId(document.taskId || '');
+      setAccessType(document.accessType || AccessType.EVERYONE);
+      setSelectedUserIds(document.userAccess?.map(u => u.userId) || []);
+
+      // Clear previous comments
+      dispatch(clearComments());
+
+      // Fetch comments for this document
+      fetchCommentsForDocument(document.id);
+
+      // Fetch full document details for authoritative state
+      dispatch(fetchDocumentDetails(document.id));
+    }
+  }, [isOpen, document?.id, dispatch]);
+  // Comments selectors
+  const comments = useAppSelector(selectAllComments);
+  const commentsLoading = useAppSelector(selectCommentsLoading);
+  const commentsError = useAppSelector(selectCommentsError);
+  const commentProjectMembers = useAppSelector(selectCommentProjectMembers);
+  const membersLoading = useAppSelector(selectMembersLoading);
+  
+  // State management
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [description, setDescription] = useState('');
+  const [documentName, setDocumentName] = useState('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [newComment, setNewComment] = useState('');
+  const [mentionedUsers, setMentionedUsers] = useState<Array<{id: string, name: string}>>([]);
+  const [isCommentsCollapsed, setIsCommentsCollapsed] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [isVersionUploadOpen, setIsVersionUploadOpen] = useState(false);
+
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replyMentionedUser, setReplyMentionedUser] = useState<string>('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState<string | null>(null);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [currentTextarea, setCurrentTextarea] = useState<'new' | 'edit' | 'reply' | null>(null);
+  const [collapsedReplies, setCollapsedReplies] = useState<Set<string>>(new Set());
+  const [accessType, setAccessType] = useState<AccessType>(AccessType.EVERYONE);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  
+  // Permission check
+  const { hasPermission } = usePermission();
+  const resource = 'documents';
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch comments when document changes
+  const fetchCommentsForDocument = async (documentId: string) => {
+    try {
+      await dispatch(fetchDocumentComments({ documentId }));
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load comments',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Update local state when documentDetails from Redux changes
+
+  useEffect(() => {
+    if (documentDetails) {
+      setDescription(documentDetails.description || '');
+      setSelectedTaskId(documentDetails.taskId || '');
+      setAccessType(documentDetails.accessType);
+      setSelectedUserIds(documentDetails.userAccess?.map(access => access.userId) || []);
+    }
+  }, [documentDetails]);
+
+  // Update local state when document prop changes (for name updates after rename)
+  useEffect(() => {
+    if (document) {
+      setDocumentName(document.name || '');
+    }
+  }, [document?.name]);
+
+  // Legacy function removed; Redux state is authoritative for document details
+
+  const handleSaveDescription = async () => {
+    if (!document) return;
+    
+    setIsUpdating(true);
+    try {
+      await dispatch(updateDocument({
+        id: document.id,
+        documentData: { description: description }
+      })).unwrap();
+      
+      setIsEditingDescription(false);
+      dispatch(fetchDocumentDetails(document?.id));
+      toast({
+        title: 'Success',
+        description: 'Description updated successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update description',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSaveAccessibility = async () => {
+    if (!document) return;
+    
+    setIsUpdating(true);
+    try {
+      await dispatch(updateDocument({
+        id: document.id,
+        documentData: { 
+          accessType: accessType,
+          userIds: accessType === AccessType.SELECTED_USERS ? selectedUserIds : []
+        }
+      })).unwrap();
+      dispatch(fetchDocumentDetails(document?.id));
+      toast({
+        title: 'Success',
+        description: 'Access settings updated successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update access settings',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDownloadDocument = async () => {
+    if (!document?.id) {
+      toast({
+        title: "Error",
+        description: "No file available for download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await dispatch(downloadDocument(document.id));
+      
+      if (downloadDocument.fulfilled.match(result)) {
+        toast({
+          title: 'Success',
+          description: 'Document downloaded successfully',
+        });
+      } else {
+        throw new Error(result.payload as string || 'Download failed');
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to download document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteDocument = () => {
+    if (!document) return;
+    setShowDeleteModal(true);
+  };
+  
+  // Handle task association update
+  const handleSaveTaskAssociation = async () => {
+    if (!document) return;
+    
+    setIsUpdating(true);
+    
+    try {
+      const resultAction = await dispatch(
+        updateDocument({
+          id: document.id,
+          documentData: {
+            taskId: selectedTaskId || null
+          }
+        })
+      );
+      dispatch(fetchDocumentDetails(document?.id));
+      if (resultAction) {
+        toast({
+          title: 'Success',
+          description: 'Task association updated successfully',
+        });
+        
+        // Update document details with new task association
+        if (documentDetails) {
+          // Since we're using Redux state, we need to refetch document details
+          // to get the updated task association
+          dispatch(fetchDocumentDetails(document.id));
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update task association',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while updating task association',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const confirmDeleteDocument = async () => {
+    if (!document) return;
+    
+    setIsUpdating(true);
+    try {
+      await dispatch(deleteDocument(document.id)).unwrap();
+      
+      toast({
+        title: 'Success',
+        description: 'Document deleted successfully',
+      });
+      
+      // Close sidebar first to prevent any further API calls on deleted document
+      onClose();
+      
+      // Notify parent component about deletion
+      if (onDelete) {
+        onDelete(document.id);
+      }
+      
+      // Trigger refresh after a small delay to ensure state is updated
+      if (onRefresh) {
+        setTimeout(() => {
+          onRefresh();
+        }, 100);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete document',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !document) return;
+    
+    setIsAddingComment(true);
+    try {
+      const mentionedUserIds = mentionedUsers.map(user => user.id);
+      
+      await dispatch(createComment({
+        content: newComment,
+        commentType: 'GENERAL',
+        documentId: document.id,
+        mentionedUserIds
+      }));
+      
+      // Refresh comments after creating new comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setNewComment('');
+      setMentionedUsers([]);
+      
+      toast({
+        title: 'Success',
+        description: 'Comment added successfully',
+      });
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingComment(false);
+    }
+  };
+
+  const handleUpdateComment = async (commentId: string, newContent: string) => {
+    if (!document) return;
+    
+    try {
+      await dispatch(updateCommentAction({
+        id: commentId,
+        commentData: { content: newContent }
+      }));
+      
+      // Refresh comments after updating comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      toast({
+        title: 'Success',
+        description: 'Comment updated successfully',
+      });
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update comment',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!document) return;
+    
+    setIsDeletingComment(commentId);
+    try {
+      await dispatch(deleteCommentAction(commentId));
+      
+      // Refresh comments after deleting comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      toast({
+        title: 'Success',
+        description: 'Comment deleted successfully',
+      });
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingComment(null);
+    }
+  };
+
+  const handleStartEdit = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent('');
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editingContent.trim() || !document) return;
+    
+    setIsUpdatingComment(true);
+    try {
+      await dispatch(updateCommentAction({
+        id: commentId,
+        commentData: { content: editingContent.trim() }
+      }));
+      
+      // Refresh comments after editing comment
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setEditingCommentId(null);
+      setEditingContent('');
+      
+      toast({
+        title: 'Success',
+        description: 'Comment updated successfully',
+      });
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  const handleStartReply = (commentId: string) => {
+    setReplyingToCommentId(commentId);
+    setReplyContent('');
+    setReplyMentionedUser('');
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToCommentId(null);
+    setReplyContent('');
+    setReplyMentionedUser('');
+  };
+
+  const handleSubmitReply = async (parentId: string) => {
+    if (!replyContent.trim() || !document) return;
+    
+    setIsSubmittingReply(true);
+    try {
+      const mentionedUserIds = replyMentionedUser ? [replyMentionedUser] : [];
+      
+      await dispatch(createComment({
+        content: replyContent.trim(),
+        commentType: 'GENERAL',
+        documentId: document.id,
+        parentId,
+        mentionedUserIds
+      }));
+      
+      // Refresh comments after reply
+      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      
+      setReplyingToCommentId(null);
+      setReplyContent('');
+      setReplyMentionedUser('');
+      
+      toast({
+        title: 'Success',
+        description: 'Reply added successfully',
+      });
+    } catch (error) {
+      console.error('Failed to add reply:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add reply',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
+  // Helper function to extract mentioned users from text
+  const extractMentionedUsers = (text: string) => {
+    const mentionRegex = /@([^\s]+\s+[^\s]+)/g;
+    const mentions: Array<{id: string, name: string}> = [];
+    const seenUserIds = new Set<string>();
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionName = match[1];
+      const user = commentProjectMembers.find(member => 
+        `${member.firstName} ${member.lastName}` === mentionName
+      );
+      
+      if (user && !seenUserIds.has(user.id)) {
+        mentions.push({ id: user.id, name: mentionName });
+        seenUserIds.add(user.id);
+      }
+    }
+    
+    return mentions;
+  };
+
+  // Helper functions for mention functionality
+  const handleTextareaChange = (value: string, type: 'new' | 'edit' | 'reply') => {
+    const lastAtIndex = value.lastIndexOf('@');
+    const lastSpaceIndex = value.lastIndexOf(' ');
+    
+    if (lastAtIndex > lastSpaceIndex && lastAtIndex !== -1) {
+      const query = value.substring(lastAtIndex + 1);
+      setMentionQuery(query);
+      setShowMentionDropdown(true);
+      setCurrentTextarea(type);
+    } else {
+      setShowMentionDropdown(false);
+      setMentionQuery('');
+      setCurrentTextarea(null);
+    }
+    
+    // Update the appropriate state
+    if (type === 'new') {
+      setNewComment(value);
+      // Extract mentioned users for new comments
+      const extractedUsers = extractMentionedUsers(value);
+      setMentionedUsers(extractedUsers);
+    } else if (type === 'edit') {
+      setEditingContent(value);
+    } else if (type === 'reply') {
+      setReplyContent(value);
+    }
+  };
+
+  const handleMentionSelect = (member: any) => {
+    const mentionText = `@${member.firstName} ${member.lastName}`;
+    
+    if (currentTextarea === 'new') {
+      const lastAtIndex = newComment.lastIndexOf('@');
+      const newValue = newComment.substring(0, lastAtIndex) + mentionText + ' ';
+      setNewComment(newValue);
+      // Extract mentioned users from the updated text
+      const extractedUsers = extractMentionedUsers(newValue);
+      setMentionedUsers(extractedUsers);
+    } else if (currentTextarea === 'edit') {
+      const lastAtIndex = editingContent.lastIndexOf('@');
+      const newValue = editingContent.substring(0, lastAtIndex) + mentionText + ' ';
+      setEditingContent(newValue);
+    } else if (currentTextarea === 'reply') {
+      const lastAtIndex = replyContent.lastIndexOf('@');
+      const newValue = replyContent.substring(0, lastAtIndex) + mentionText + ' ';
+      setReplyContent(newValue);
+      setReplyMentionedUser(member.id);
+    }
+    
+    setShowMentionDropdown(false);
+    setMentionQuery('');
+    setCurrentTextarea(null);
+  };
+
+  const filteredMembers = commentProjectMembers.filter(member => 
+    `${member.firstName} ${member.lastName}`.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
+
+  const toggleReplyCollapse = (commentId: string) => {
+    const newCollapsed = new Set(collapsedReplies);
+    if (newCollapsed.has(commentId)) {
+      newCollapsed.delete(commentId);
+    } else {
+      newCollapsed.add(commentId);
+    }
+    setCollapsedReplies(newCollapsed);
+  };
+  
+  const getUserInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const isEditing = editingCommentId === comment.id;
+    const isReplying = replyingToCommentId === comment.id;
+    const maxDepth = 3; // Limit nesting depth
+    
+    return (
+      <div key={comment.id} className={`space-y-2 ${depth > 0 ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
+        <div className="flex items-start space-x-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-xs">
+              {getUserInitials(comment.fromUser.firstName, comment.fromUser.lastName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="font-medium text-sm">
+                {comment.fromUser.firstName} {comment.fromUser.lastName}
+              </span>
+              <span className="text-xs text-gray-500">
+                {format(new Date(comment.createdAt), 'MMM dd, HH:mm')}
+              </span>
+              {depth > 0 && (
+                <Badge variant="outline" className="text-xs px-1 py-0">
+                  Reply
+                </Badge>
+              )}
+            </div>
+            
+            {/* Comment Content */}
+            {isEditing ? (
+              <div className="space-y-2 relative">
+                <Textarea
+                  value={editingContent}
+                  onChange={(e) => handleTextareaChange(e.target.value, 'edit')}
+                  className="min-h-[60px] text-sm"
+                  placeholder="Edit your comment... (use @ to mention)"
+                />
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveEdit(comment.id)}
+                    disabled={isUpdatingComment || !editingContent.trim()}
+                  >
+                    {isUpdatingComment ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={isUpdatingComment}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-700 break-words">
+                {comment.content}
+              </p>
+            )}
+            
+            {/* Mentioned Users */}
+            {comment.mentionedUsers && comment.mentionedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {comment.mentionedUsers.map((user) => (
+                  <Badge key={user.id} variant="secondary" className="text-xs">
+                    @{user.firstName} {user.lastName}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            {!isEditing && (
+              <div className="flex items-center space-x-2 mt-2">
+                {depth < maxDepth && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                    onClick={() => handleStartReply(comment.id)}
+                  >
+                    <Reply className="h-3 w-3 mr-1" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => handleStartEdit(comment)}
+                >
+                  <Edit3 className="h-3 w-3 mr-1" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-600 focus:text-red-600"
+                      disabled={isDeletingComment === comment.id}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeletingComment === comment.id ? 'Deleting...' : 'Delete'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+            
+            {/* Reply Form */}
+            {isReplying && (
+              <div className="mt-3 space-y-2 p-3 bg-gray-50 rounded-lg relative">
+                <Textarea
+                  value={replyContent}
+                  onChange={(e) => handleTextareaChange(e.target.value, 'reply')}
+                  placeholder="Write a reply... (use @ to mention)"
+                  className="min-h-[60px] text-sm"
+                />
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSubmitReply(comment.id)}
+                    disabled={isSubmittingReply || !replyContent.trim()}
+                  >
+                    {isSubmittingReply ? 'Replying...' : 'Reply'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelReply}
+                    disabled={isSubmittingReply}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Render nested replies */}
+        {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
+          <div className="mt-2">
+            <div className="flex items-center space-x-2 mb-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                onClick={() => toggleReplyCollapse(comment.id)}
+              >
+                {collapsedReplies.has(comment.id) ? (
+                  <><ChevronDown className="h-3 w-3 mr-1" />Show {comment.replies.length} replies</>
+                ) : (
+                  <><ChevronUp className="h-3 w-3 mr-1" />Hide replies</>
+                )}
+              </Button>
+            </div>
+            {!collapsedReplies.has(comment.id) && (
+              <div>
+                {comment.replies.map((reply) => renderComment(reply, depth + 1))}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    );
+  };
+  const getFileIcon = (fileType: string) => {
+    if (fileType?.includes('image')) return <ImageIcon className="h-4 w-4" />;
+    return <FileText className="h-4 w-4" />;
+  };
+
+  const getFilePreview = () => {
+    // Show loading state while fetching preview
+    if (previewLoading) {
+      return (
+        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+            <p className="text-gray-500">Loading preview...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Use preview URL from API if available
+    if (filePreview) {
+      const fileType = document?.type?.toLowerCase() || '';
+      
+      if (fileType.includes('pdf')) {
+        return (
+          <iframe 
+            src={filePreview.previewUrl} 
+            className="w-full h-[70vh] rounded-lg border border-gray-200"
+            title="PDF Preview"
+          />
+        );
+      } else if (fileType.includes('image') || fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg')) {
+        return (
+          <div className="flex items-center justify-center bg-gray-100 rounded-lg">
+            <img 
+              src={filePreview.previewUrl} 
+              alt={document?.name || 'Document preview'} 
+              className="max-w-full max-h-[70vh] object-contain rounded-lg"
+            />
+          </div>
+        );
+      } else {
+        // For other file types, show a generic preview with download option
+        return (
+          <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg p-4">
+            <div className="text-center">
+              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-700 font-medium mb-2">{document?.name}</p>
+              <p className="text-gray-500 mb-4">Preview not available for this file type</p>
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadDocument}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download to view
+              </Button>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // No preview available
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
+        <div className="text-center">
+          <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">No preview available</p>
+        </div>
+      </div>
+    );
+  };
+
+  const handleVersionUploadSuccess = () => {
+    setIsVersionUploadOpen(false);
+    if (document?.id) {
+      // Fetch the latest document details after version upload
+      dispatch(fetchDocumentDetails(document.id));
+      
+      // Force refresh the file preview to show the latest version
+      if (documentDetails?.files && documentDetails.files.length > 0) {
+        // Get the latest file (should be the first one in the array after refresh)
+        const latestFileId = documentDetails.files[0]?.id;
+        if (latestFileId) {
+          dispatch(fetchFilePreview(latestFileId));
+        }
+      }
+    }
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  // If sidebar is not open, don't render anything
+  if (!isOpen || !document) {
+    return null;
+  }
+
+  return (
+    <div className={cn(
+      "fixed inset-y-0 right-0 z-50 bg-white shadow-lg transform transition-transform duration-300 ease-in-out overflow-hidden",
+      isOpen ? "translate-x-0" : "translate-x-full",
+      showPreview ? "w-full md:w-full" : "w-full md:w-1/3 lg:w-1/4"
+    )}>
+      {/* Version Upload Dialog */}
+      <UploadVersionDialog
+        open={isVersionUploadOpen}
+        onOpenChange={(open) => setIsVersionUploadOpen(open)}
+        document={document}
+        onVersionUploaded={handleVersionUploadSuccess}
+      />
+      
+      {/* Delete Document Modal */}
+       <DeleteDocumentModal
+         open={showDeleteModal}
+         onOpenChange={setShowDeleteModal}
+         document={document}
+         onConfirm={confirmDeleteDocument}
+         loading={isUpdating}
+       />
+
+      {showPreview ? (
+        <div className="h-full flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowPreview(false)}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to details
+            </Button>
+            <h2 className="text-lg font-medium">{document.name}</h2>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {getFilePreview()}
+          </div>
+        </div>
+      ) : (
+        <div className="h-full flex flex-col">
+          {/* Header with close button */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-medium">Document Details</h2>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Version control */}
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Version {document.version || 1}</span>
+                {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.length > 1 && (
+                  <Badge variant="outline" className="text-xs">
+                    {documentDetails.files.length} versions
+                  </Badge>
+                )}
+              </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowVersionHistory(!showVersionHistory)}
+                  className="flex items-center gap-1 text-sm"
+                >
+                  History
+                  {showVersionHistory ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {/* Version history dropdown */}
+              {showVersionHistory && (
+                <div className="mt-2 border rounded-md p-2 bg-gray-50">
+                  <div className="max-h-40 overflow-y-auto">
+                    {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.map((file: any, index: number) => (
+                      <div 
+                        key={file.id} 
+                        className="flex items-center justify-between py-2 px-1 hover:bg-gray-100 rounded-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">v{file.version}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(file.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => dispatch(fetchFilePreview(file.id))}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2 flex items-center justify-center gap-1"
+                    onClick={() => setIsVersionUploadOpen(true)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add a new version
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail */}
+            <div className="p-4 border-b">
+              <div className="relative group cursor-pointer" onClick={() => setShowPreview(true)}>
+                <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
+                  {document.url && document.type?.toLowerCase().includes('image') ? (
+                    <img 
+                      src={document.url} 
+                      alt={document.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <FileText className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
+                  <Eye className="text-white opacity-0 group-hover:opacity-100 h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            {/* Document metadata */}
+            <div className="p-4 border-b">
+              <h4 className="font-medium mb-2">{document.name}</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  <span>{document.type}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>{document.size}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>{format(new Date(document.createdAt), 'MMM d, yyyy')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleDownloadDocument}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="text-xs">Download</span>
+                </Button>
+                {/* <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onMove && onMove(document)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Move className="h-4 w-4" />
+                  <span className="text-xs">Move</span>
+                </Button> */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onEdit && onEdit(document)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  <span className="text-xs">Edit</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleDeleteDocument}
+                  className="flex flex-col items-center gap-1 text-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="text-xs">Delete</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">Descriptive note</h4>
+                {!isEditingDescription ? (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setIsEditingDescription(true)}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsEditingDescription(false)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleSaveDescription}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <div className="animate-spin h-3 w-3 border-2 border-gray-500 rounded-full border-t-transparent" />
+                      ) : (
+                        <span className="text-xs">Save</span>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {isEditingDescription ? (
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add a description..."
+                  className="w-full"
+                  rows={3}
+                />
+              ) : (
+                <p className="text-sm text-gray-600">
+                  {description || "No description provided"}
+                </p>
+              )}
+            </div>
+
+            {/* Accessibility */}
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">Accessibility</h4>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSaveAccessibility}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <div className="animate-spin h-3 w-3 border-2 border-gray-500 rounded-full border-t-transparent" />
+                  ) : (
+                    <span className="text-xs">Save</span>
+                  )}
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <RadioGroup
+                  value={accessType}
+                  onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
+                    setAccessType(value);
+                    if (value === AccessType.EVERYONE) {
+                      setSelectedUserIds([]);
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="EVERYONE" id="everyone" />
+                    <Label htmlFor="everyone" className="text-sm">Everyone (All users with document permissions)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="SELECTED_USERS" id="selected-users" />
+                    <Label htmlFor="selected-users" className="text-sm">Selected Users Only</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              {accessType === AccessType.SELECTED_USERS && (
+                <div className="mt-2 space-y-3">
+                  {/* User selection component */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Select Users:</Label>
+                    <UserSelectionComponent
+                      selectedUserIds={selectedUserIds}
+                      onChange={setSelectedUserIds}
+                      projectId={documentDetails?.projectId || document?.projectId || ''}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Task association */}
+            {document.taskId && (
+              <div className="p-4 border-b">
+                <h4 className="font-medium mb-2">Associated Task</h4>
+                <div className="bg-gray-50 p-2 rounded-md">
+                  <p className="text-sm">
+                    {projectTasks.find(task => task.id === document.taskId)?.title || 'Unknown Task'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Comments section */}
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="p-4 flex-1 flex flex-col min-h-0">
+                {/* Comments Header */}
+                <div 
+                  className="flex items-center justify-between mb-4 cursor-pointer"
+                  onClick={() => setIsCommentsCollapsed(!isCommentsCollapsed)}
+                >
+                  <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Comments ({commentsLoading ? '...' : comments.length})</h4>
+                  {commentsLoading && (
+                    <div className="text-sm text-muted-foreground">Loading comments...</div>
+                  )}
+                  {commentsError && (
+                    <div className="text-sm text-red-500">Failed to load comments</div>
+                  )}
+                </div>
+                  {isCommentsCollapsed ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
+                </div>
+
+                {!isCommentsCollapsed && (
+                  <div className="flex flex-col flex-1 min-h-0">
+                    {/* Add Comment */}
+                    <div className="space-y-3 mb-4 flex-shrink-0">                      
+                      <div className="relative">
+                        <Textarea
+                          ref={textareaRef}
+                          value={newComment}
+                          onChange={(e) => handleTextareaChange(e.target.value, 'new')}
+                          placeholder="Add a comment... (use @ to mention)"
+                          className="min-h-[80px]"
+                        />
+                        {showMentionDropdown && currentTextarea === 'new' && (
+                          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {filteredMembers.length > 0 ? (
+                              filteredMembers.map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => handleMentionSelect(member)}
+                                >
+                                  <Avatar className="h-6 w-6 mr-2">
+                                    <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{member.firstName} {member.lastName}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        {/* <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" disabled>
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Add Image
+                          </Button>
+                        </div> */}
+                        <Button size="sm" onClick={handleAddComment} disabled={isAddingComment}>
+                          <Send className="h-4 w-4 mr-2" />
+                          Comment
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Separator className="mb-4 flex-shrink-0" />
+
+                    {/* Comments List */}
+                    <div className="space-y-4">
+                      {commentsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-sm text-muted-foreground">Loading comments...</div>
+                        </div>
+                      ) : comments.length === 0 ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {comments.filter(comment => !comment.parentId).map((comment) => renderComment(comment))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DocumentSidebar;

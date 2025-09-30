@@ -253,6 +253,7 @@ export const fetchDocumentDetails = createAsyncThunk(
   async (id: string, { rejectWithValue }) => {
     try {
       const response = await api.get(`/documents/${id}`);
+      console.log("3");
       
       if (response.data.status === 'error') {
         return rejectWithValue(response.data.error || response.data.message || 'Failed to fetch document details');
@@ -675,6 +676,8 @@ interface DocumentsState {
   documents: Document[];
   projectDocuments: Document[];
   selectedDocument: Document | null;
+  documentDetails: ApiDocument | null;
+  documentDetailsLoading: boolean;
   loading: boolean;
   projectDocumentsLoading: boolean;
   error: string | null;
@@ -701,6 +704,8 @@ const initialState: DocumentsState = {
   documents: [],
   projectDocuments: [],
   selectedDocument: null,
+  documentDetails: null,
+  documentDetailsLoading: false,
   loading: false,
   projectDocumentsLoading: false,
   error: null,
@@ -941,6 +946,20 @@ export const documentsSlice = createSlice({
         state.previewLoading = false;
         state.error = action.payload as string;
         state.filePreview = null;
+      })
+      // Fetch Document Details
+      .addCase(fetchDocumentDetails.pending, (state) => {
+        state.documentDetailsLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentDetails.fulfilled, (state, action) => {
+        state.documentDetailsLoading = false;
+        state.documentDetails = action.payload;
+      })
+      .addCase(fetchDocumentDetails.rejected, (state, action) => {
+        state.documentDetailsLoading = false;
+        state.error = action.payload as string;
+        state.documentDetails = null;
       });
   }
 });
@@ -970,5 +989,7 @@ export const selectSharedDocuments = (state: RootState) =>
 export const selectDocumentConflict = (state: RootState) => state.documents.conflict;
 export const selectFilePreview = (state: RootState) => state.documents.filePreview;
 export const selectPreviewLoading = (state: RootState) => state.documents.previewLoading;
+export const selectDocumentDetails = (state: RootState) => state.documents.documentDetails;
+export const selectDocumentDetailsLoading = (state: RootState) => state.documents.documentDetailsLoading;
 
 export default documentsSlice.reducer;
