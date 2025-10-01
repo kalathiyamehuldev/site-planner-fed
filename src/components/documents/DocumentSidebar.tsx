@@ -7,10 +7,13 @@ import {
   deleteDocument, 
   downloadDocument, 
   fetchFilePreview, 
+  fetchDocumentVersions,
   selectFilePreview, 
   selectPreviewLoading,
   selectDocumentDetails,
   selectDocumentDetailsLoading,
+  selectDocumentVersions,
+  selectVersionsLoading,
   AccessType,
   uploadDocumentVersion
 } from '@/redux/slices/documentsSlice';
@@ -82,6 +85,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
 import UserSelectionComponent from '@/components/documents/UserSelectionComponent';
+import { formatFileSize, formatFileType } from '@/utils/helper';
 
 // Using Comment type from commentsSlice
 type Comment = CommentType;
@@ -116,6 +120,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const previewLoading = useAppSelector(selectPreviewLoading);
   const documentDetails = useAppSelector(selectDocumentDetails);
   const documentDetailsLoading = useAppSelector(selectDocumentDetailsLoading);
+  const documentVersions = useAppSelector(selectDocumentVersions);
+  const versionsLoading = useAppSelector(selectVersionsLoading);
   
   // Initialize data when sidebar opens
   useEffect(() => {
@@ -197,6 +203,26 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     }
   };
 
+  // Helper: get the latest file id for preview
+  const getLatestPreviewFileId = (): string | null => {
+    const files = (documentVersions && documentVersions.length > 0)
+      ? documentVersions
+      : (documentDetails as any)?.files;
+    if (files && Array.isArray(files) && files.length > 0) {
+      // Prefer highest version; fallback to most recent createdAt
+      const sorted = [...files].sort((a: any, b: any) => {
+        if (typeof a.version === 'number' && typeof b.version === 'number') {
+          return b.version - a.version;
+        }
+        const aTime = new Date(a.createdAt).getTime();
+        const bTime = new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      });
+      return sorted[0]?.id ?? null;
+    }
+    return null;
+  };
+
   // Update local state when documentDetails from Redux changes
 
   useEffect(() => {
@@ -273,7 +299,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   };
 
   const handleDownloadDocument = async () => {
-    if (!document?.id) {
+    if (!documentDetails?.id) {
       toast({
         title: "Error",
         description: "No file available for download",
@@ -283,7 +309,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     }
 
     try {
-      const result = await dispatch(downloadDocument(document.id));
+      const result = await dispatch(downloadDocument(documentDetails.id));
       
       if (downloadDocument.fulfilled.match(result)) {
         toast({
@@ -847,6 +873,22 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     return <FileText className="h-4 w-4" />;
   };
 
+  // Helper: get latest version info from versions list or details files
+  const getLatestVersion = () => {
+    const list = (documentVersions && documentVersions.length > 0)
+      ? documentVersions
+      : ((documentDetails && Array.isArray(documentDetails.files)) ? documentDetails.files : []);
+    if (!list || list.length === 0) return null;
+    const sorted = [...list].sort((a: any, b: any) => {
+      const verDiff = (b?.version ?? 0) - (a?.version ?? 0);
+      if (verDiff !== 0) return verDiff;
+      const aTime = new Date(a?.createdAt).getTime();
+      const bTime = new Date(b?.createdAt).getTime();
+      return bTime - aTime;
+    });
+    return sorted[0];
+  };
+
   const getFilePreview = () => {
     // Show loading state while fetching preview
     if (previewLoading) {
@@ -862,7 +904,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
     // Use preview URL from API if available
     if (filePreview) {
-      const fileType = document?.type?.toLowerCase() || '';
+      const fileType = (filePreview.fileType || document?.files[0].fileType || '').toLowerCase();
       
       if (fileType.includes('pdf')) {
         return (
@@ -920,11 +962,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     if (document?.id) {
       // Fetch the latest document details after version upload
       dispatch(fetchDocumentDetails(document.id));
+      // Also refresh versions list immediately
+      dispatch(fetchDocumentVersions(document.id));
       
       // Force refresh the file preview to show the latest version
       if (documentDetails?.files && documentDetails.files.length > 0) {
         // Get the latest file (should be the first one in the array after refresh)
-        const latestFileId = documentDetails.files[0]?.id;
+        const latestFileId = documentDetails?.files[0]?.id;
         if (latestFileId) {
           dispatch(fetchFilePreview(latestFileId));
         }
@@ -997,7 +1041,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Version {document.version || 1}</span>
+                <span className="text-sm font-medium">Version {getLatestVersion()?.version || document.version || 1}</span>
                 {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.length > 1 && (
                   <Badge variant="outline" className="text-xs">
                     {documentDetails.files.length} versions
@@ -1007,7 +1051,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setShowVersionHistory(!showVersionHistory)}
+                  onClick={() => {
+                    const willOpen = !showVersionHistory;
+                    setShowVersionHistory(willOpen);
+                    if (willOpen && document?.id) {
+                      dispatch(fetchDocumentVersions(document.id));
+                    }
+                  }}
                   className="flex items-center gap-1 text-sm"
                 >
                   History
@@ -1023,7 +1073,20 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               {showVersionHistory && (
                 <div className="mt-2 border rounded-md p-2 bg-gray-50">
                   <div className="max-h-40 overflow-y-auto">
-                    {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.map((file: any, index: number) => (
+                    {(() => {
+                      const list = (documentVersions && documentVersions.length > 0)
+                        ? documentVersions
+                        : (documentDetails && documentDetails.files && Array.isArray(documentDetails.files)
+                          ? documentDetails.files
+                          : []);
+                      const sorted = [...list].sort((a: any, b: any) => {
+                        const verDiff = (b?.version ?? 0) - (a?.version ?? 0);
+                        if (verDiff !== 0) return verDiff;
+                        const aTime = new Date(a?.createdAt).getTime();
+                        const bTime = new Date(b?.createdAt).getTime();
+                        return bTime - aTime;
+                      });
+                      return sorted.map((file: any) => (
                       <div 
                         key={file.id} 
                         className="flex items-center justify-between py-2 px-1 hover:bg-gray-100 rounded-sm"
@@ -1037,12 +1100,16 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => dispatch(fetchFilePreview(file.id))}
+                          onClick={() => {
+                            dispatch(fetchFilePreview(file.id));
+                            setShowPreview(true);
+                          }}
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
                       </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                   <Button 
                     variant="outline" 
@@ -1057,11 +1124,17 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               )}
             </div>
 
-            {/* Thumbnail */}
-            <div className="p-4 border-b">
-              <div className="relative group cursor-pointer" onClick={() => setShowPreview(true)}>
+          {/* Thumbnail */}
+          <div className="p-4 border-b">
+              <div className="relative group cursor-pointer" onClick={() => {
+                setShowPreview(true);
+                const latestFileId = getLatestPreviewFileId();
+                if (latestFileId) {
+                  dispatch(fetchFilePreview(latestFileId));
+                }
+              }}>
                 <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
-                  {document.url && document.type?.toLowerCase().includes('image') ? (
+                  {document.url && document.files[0].fileType?.toLowerCase().includes('image') ? (
                     <img 
                       src={document.url} 
                       alt={document.name} 
@@ -1081,19 +1154,38 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
             {/* Document metadata */}
             <div className="p-4 border-b">
-              <h4 className="font-medium mb-2">{document.name}</h4>
+              <h4 className="font-medium mb-2">{documentDetails?.name || document.name}</h4>
               <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <FileText className="h-3 w-3" />
-                  <span>{document.type}</span>
+                  <span>{formatFileType(getLatestVersion()?.fileType || documentDetails?.files[0].fileType) || document.type}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>{document.size}</span>
+                  <span>{formatFileSize(getLatestVersion()?.fileSize || documentDetails?.files[0].fileSize) || document.size}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(document.createdAt), 'MMM d, yyyy')}</span>
+                  <span>
+                  {(() => {
+                    const latest = getLatestVersion();
+                    const date = latest?.createdAt || documentDetails?.files?.[0]?.createdAt || document?.date;
+                    try {
+                      return date ? format(new Date(date), 'MMM d, yyyy') : '—';
+                    } catch {
+                      return '—';
+                    }
+                  })()}
+                  </span>
                 </div>
+                {(() => {
+                  const latest = getLatestVersion();
+                  return (latest && latest.uploadedUser);
+                })() && (
+                  <div className="flex items-center gap-1 col-span-2">
+                    <User className="h-3 w-3" />
+                    <span>Uploaded by {getLatestVersion()?.uploadedUser?.firstName} {getLatestVersion()?.uploadedUser?.lastName}</span>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -67,6 +67,7 @@ export interface ApiDocument {
     fileType: string;
     fileSize: number;
     version: number;
+    createdAt: Date;
   }[];
 }
 
@@ -95,6 +96,14 @@ export interface Document {
   createdAt: string;
   updatedAt: string;
   fileId?: string; // ID of the latest file for download
+  files: {
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: number;
+    version: number;
+    createdAt: Date;
+  }[];
   accessType?: AccessType;
   userAccess?: {
     id: string;
@@ -155,7 +164,7 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
   return {
     id: apiDoc.id,
     name: fileName,
-    type: fileExtension,
+    type: latestFile ? latestFile.fileType?.toUpperCase() : 'FILE',
     size: latestFile ? `${Math.round(latestFile.fileSize / 1024)} KB` : '0 KB',
     date: new Date(apiDoc.createdAt).toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -181,7 +190,8 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
     updatedAt: apiDoc.updatedAt,
     fileId: latestFile?.id, // Extract file ID for download
     accessType: apiDoc.accessType,
-    userAccess: apiDoc.userAccess
+    userAccess: apiDoc.userAccess,
+    files: apiDoc.files || []
   };
 };
 
@@ -672,6 +682,26 @@ export const fetchFilePreview = createAsyncThunk(
   }
 );
 
+// Fetch document versions list
+export const fetchDocumentVersions = createAsyncThunk(
+  'documents/fetchDocumentVersions',
+  async (documentId: string, { rejectWithValue }) => {
+    try {
+      const response: ApiResponse = await api.get(`/documents/${documentId}/versions`);
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch document versions');
+      }
+      return response.data; // expecting { status, data: Version[], message }
+    } catch (error: any) {
+      if (error.response?.data) {
+        const apiError = error.response.data as ApiResponse;
+        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch document versions');
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+);
+
 interface DocumentsState {
   documents: Document[];
   projectDocuments: Document[];
@@ -698,6 +728,8 @@ interface DocumentsState {
     documentName: string;
   } | null;
   previewLoading: boolean;
+  documentVersions?: any[];
+  versionsLoading?: boolean;
 }
 
 const initialState: DocumentsState = {
@@ -715,6 +747,8 @@ const initialState: DocumentsState = {
   conflict: null,
   filePreview: null,
   previewLoading: false,
+  documentVersions: [],
+  versionsLoading: false,
 };
 
 export const documentsSlice = createSlice({
@@ -940,12 +974,39 @@ export const documentsSlice = createSlice({
       })
       .addCase(fetchFilePreview.fulfilled, (state, action) => {
         state.previewLoading = false;
-        state.filePreview = action.payload.data;
+        state.filePreview = action.payload;
       })
       .addCase(fetchFilePreview.rejected, (state, action) => {
         state.previewLoading = false;
         state.error = action.payload as string;
         state.filePreview = null;
+      })
+      // Fetch Document Versions
+      .addCase(fetchDocumentVersions.pending, (state) => {
+        state.versionsLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDocumentVersions.fulfilled, (state, action) => {
+        state.versionsLoading = false;
+        const payload: any = action.payload;
+        const versions: any[] = Array.isArray(payload)
+          ? payload
+          : (payload?.data || []);
+        // Sort versions by version desc; fallback to createdAt desc
+        state.documentVersions = versions
+          .slice()
+          .sort((a, b) => {
+            const verDiff = (b?.version ?? 0) - (a?.version ?? 0);
+            if (verDiff !== 0) return verDiff;
+            const aTime = new Date(a?.createdAt).getTime();
+            const bTime = new Date(b?.createdAt).getTime();
+            return bTime - aTime;
+          });
+      })
+      .addCase(fetchDocumentVersions.rejected, (state, action) => {
+        state.versionsLoading = false;
+        state.error = action.payload as string;
+        state.documentVersions = [];
       })
       // Fetch Document Details
       .addCase(fetchDocumentDetails.pending, (state) => {
@@ -991,5 +1052,7 @@ export const selectFilePreview = (state: RootState) => state.documents.filePrevi
 export const selectPreviewLoading = (state: RootState) => state.documents.previewLoading;
 export const selectDocumentDetails = (state: RootState) => state.documents.documentDetails;
 export const selectDocumentDetailsLoading = (state: RootState) => state.documents.documentDetailsLoading;
+export const selectDocumentVersions = (state: RootState) => state.documents.documentVersions || [];
+export const selectVersionsLoading = (state: RootState) => state.documents.versionsLoading || false;
 
 export default documentsSlice.reducer;

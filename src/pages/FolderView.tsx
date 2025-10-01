@@ -74,6 +74,7 @@ import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialo
 import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
 import DocumentSidebar from '@/components/documents/DocumentSidebar';
 import usePermission from '@/hooks/usePermission';
+import { formatFileType } from '@/utils/helper';
 
 // Add CSS animations
 const styles = `
@@ -100,15 +101,6 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleSheet);
 }
 
-// Utility function for formatting file size
-const formatFileSize = (bytes: number | string): string => {
-  const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
-  if (size === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(size) / Math.log(k));
-  return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 // Utility function for formatting date
 const formatDate = (dateString: string): string => {
@@ -120,29 +112,7 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-// Utility function for formatting file type
-const formatFileType = (type: string): string => {
-  if (!type) return 'Unknown';
-  
-  const typeMap: { [key: string]: string } = {
-    'pdf': 'PDF Document',
-    'docx': 'Word Document',
-    'doc': 'Word Document',
-    'xlsx': 'Excel Spreadsheet',
-    'xls': 'Excel Spreadsheet',
-    'pptx': 'PowerPoint Presentation',
-    'ppt': 'PowerPoint Presentation',
-    'jpg': 'JPEG Image',
-    'jpeg': 'JPEG Image',
-    'png': 'PNG Image',
-    'gif': 'GIF Image',
-    'zip': 'ZIP Archive',
-    'rar': 'RAR Archive',
-    'txt': 'Text File'
-  };
-  
-  return typeMap[type.toLowerCase()] || type.toUpperCase() + ' File';
-};
+
 
 // File type categories for filtering
 const fileTypeCategories = [
