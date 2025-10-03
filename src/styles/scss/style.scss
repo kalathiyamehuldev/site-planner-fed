@@ -1,0 +1,24 @@
+@import './partials/variables';
+@import './partials/font';
+@import './partials/color';
+
+// Example usage (kept minimal to avoid duplication with CSS utilities)
+// .example-button {
+//   @include font-primary;
+//   @include bg-color($brand-primary);
+//   @include text-color($neutral-100);
+//   border-radius: $radius-md;
+//   padding: $spacing-2 $spacing-4;
+// }
+
+.test {
+    border-color: #FFC670;
+    background-color: #FFC670;
+}
+
+.button-primary {
+  background-color: $brand-primary;
+  color: white;
+  border: none;
+}
+

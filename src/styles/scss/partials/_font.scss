@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+// Font mixins and utilities
+@mixin font-primary {
+  font-family: var(--font-primary);
+}
+
+@mixin font-secondary {
+  font-family: var(--font-secondary);
+}
+
+.font-light{
+    font-family: $pfont;
+    font-weight: 300;
+}
+.font-normal{
+    font-family: $pfont;
+    font-weight: 400;
+}
+.font-medium{
+    font-family: $pfont;
+    font-weight: 500;
+}
+.font-semibold{
+    font-family: $pfont;
+    font-weight: 600;
+}
+.font-bold{
+    font-family: $pfont;
+    font-weight: 700;
+}
+.font-extrabold{
+    font-family: $pfont;
+    font-weight: 800;
+}
+
+.sfont-400{
+    font-family: $sfont;
+    font-weight: 400;
+}
