@@ -347,12 +347,12 @@ const ProjectDetails = () => {
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="invoices">Invoices</TabsTrigger>
+            {/* <TabsTrigger value="invoices">Invoices</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Project Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.1s]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">

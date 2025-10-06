@@ -1591,7 +1591,7 @@ console.log("timeEntryData",timeEntryData);
       {/* Edit Time Entry Modal */}
       {hasPermission('time_tracking', 'update') && (
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="w-5/6 sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Edit Time Entry</DialogTitle>
             </DialogHeader>
@@ -1735,7 +1735,7 @@ console.log("timeEntryData",timeEntryData);
       {/* Timer Start Modal */}
       {hasPermission('time_tracking', 'create') && (
         <Dialog open={isTimerModalOpen} onOpenChange={setIsTimerModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Start Timer</DialogTitle>
           </DialogHeader>
@@ -1840,7 +1840,7 @@ console.log("timeEntryData",timeEntryData);
       
       {/* Stop Timer Confirmation Dialog */}
       <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Timer Stopped</DialogTitle>
           </DialogHeader>
@@ -1895,7 +1895,7 @@ console.log("timeEntryData",timeEntryData);
       
       {/* Stop Timer Confirmation Dialog */}
       <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Stop Timer</DialogTitle>
           </DialogHeader>
@@ -1940,7 +1940,7 @@ console.log("timeEntryData",timeEntryData);
       {/* New Time Entry Modal */}
       {hasPermission('time_tracking', 'create') && (
         <Dialog open={isNewTimeEntryModalOpen} onOpenChange={setIsNewTimeEntryModalOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-5/6 sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
           </DialogHeader>

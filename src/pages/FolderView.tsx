@@ -75,6 +75,7 @@ import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog'
 import DocumentSidebar from '@/components/documents/DocumentSidebar';
 import usePermission from '@/hooks/usePermission';
 import { formatFileType } from '@/utils/helper';
+import { createPortal } from 'react-dom';
 
 // Add CSS animations
 const styles = `
@@ -841,120 +842,147 @@ const FolderView: React.FC = () => {
           ))}
         </div>
         {/* Search and Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.15s]">
-          <div className="flex-1 min-w-[180px] max-w-full relative order-1 lg:order-none">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+        <div className="space-y-3 animate-fade-in animation-delay-[0.15s]">
+          {/* Search Row */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
             <input
               type="text"
               placeholder="Search in this folder..."
-              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[200px]"
+              className="w-full rounded-lg border border-input bg-background px-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          {/* Task Filter */}
-          <select
-            value={selectedTask}
-            onChange={(e) => setSelectedTask(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0 max-lg:hidden"
-          >
-            <option value="All">All Tasks</option>
-            {tasks.map(task => (
-              <option key={task.id} value={task.id}>
-                {task.title}
-              </option>
-            ))}
-          </select>
-          
-          {/* File Type Filter */}
-          <select
-            value={selectedFileType}
-            onChange={(e) => setSelectedFileType(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0 max-lg:hidden"
-          >
-            {fileTypeCategories.map(type => (
-              <option key={type} value={type}>
-                {type === "All" ? "All Types" : type}
-              </option>
-            ))}
-          </select>
-          {/* Unified Filter Dropdown */}
-          <FilterDropdown
-            filters={[
-              {
-                id: 'task',
-                label: 'Tasks',
-                options: [
-                  { value: 'All', label: 'All Tasks' },
-                  ...tasks.map(task => ({ value: task.id, label: task.title }))
-                ]
-              },
-              {
-                id: 'fileType',
-                label: 'File Types',
-                options: fileTypeCategories.map(type => ({ 
-                  value: type, 
-                  label: type === "All" ? "All Types" : type 
-                }))
-              }
-            ]}
-            selectedFilters={{
-              task: selectedTask !== 'All' ? [selectedTask] : [],
-              fileType: selectedFileType !== 'All' ? [selectedFileType] : []
-            }}
-            onFilterChange={(filterId, values) => {
-              if (filterId === 'task') {
-                setSelectedTask(values.length > 0 ? values[0] : 'All');
-              } else if (filterId === 'fileType') {
-                setSelectedFileType(values.length > 0 ? values[0] : 'All');
-              }
-            }}
-            className="flex-shrink-0"
-          />
-          
-          {/* View Mode Toggle */}
-          <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                viewMode === "grid" 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-background hover:bg-muted"
+
+          {/* Controls Row */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Unified Filter Dropdown - Mobile Only */}
+              <FilterDropdown
+                filters={[
+                  {
+                    id: 'task',
+                    label: 'Tasks',
+                    options: [
+                      { value: 'All', label: 'All Tasks' },
+                      ...tasks.map(task => ({ value: task.id, label: task.title }))
+                    ]
+                  },
+                  {
+                    id: 'fileType',
+                    label: 'File Types',
+                    options: fileTypeCategories.map(type => ({ 
+                      value: type, 
+                      label: type === "All" ? "All Types" : type 
+                    }))
+                  }
+                ]}
+                selectedFilters={{
+                  task: selectedTask !== 'All' ? [selectedTask] : [],
+                  fileType: selectedFileType !== 'All' ? [selectedFileType] : []
+                }}
+                onFilterChange={(filterId, values) => {
+                  if (filterId === 'task') {
+                    setSelectedTask(values.length > 0 ? values[0] : 'All');
+                  } else if (filterId === 'fileType') {
+                    setSelectedFileType(values.length > 0 ? values[0] : 'All');
+                  }
+                }}
+                className="flex-shrink-0 lg:hidden"
+              />
+
+              {/* Individual Filters - Desktop/Tablet Only */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Task Filter */}
+                <select
+                  value={selectedTask}
+                  onChange={(e) => setSelectedTask(e.target.value)}
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[120px] flex-shrink-0"
+                >
+                  <option value="All">All Tasks</option>
+                  {tasks.map(task => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* File Type Filter */}
+                <select
+                  value={selectedFileType}
+                  onChange={(e) => setSelectedFileType(e.target.value)}
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] flex-shrink-0"
+                >
+                  {fileTypeCategories.map(type => (
+                    <option key={type} value={type}>
+                      {type === "All" ? "All Types" : type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
+                <MotionButton
+                  variant="outline"
+                  size="sm"
+                  motion="subtle"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedTask("All");
+                    setSelectedFileType("All");
+                  }}
+                  className="whitespace-nowrap"
+                >
+                  <X size={16} className="mr-1" /> Clear
+                </MotionButton>
               )}
-            >
-              <Grid3X3 size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                viewMode === "list" 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-background hover:bg-muted"
-              )}
-            >
-              <List size={16} />
-            </button>
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  viewMode === "grid" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background hover:bg-muted"
+                )}
+              >
+                <Grid3X3 size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  viewMode === "list" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background hover:bg-muted"
+                )}
+              >
+                <List size={16} />
+              </button>
+            </div>
+            
+            {/* Clear Filters Button */}
+            {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
+              <MotionButton
+                variant="outline"
+                size="sm"
+                motion="subtle"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedTask("All");
+                  setSelectedFileType("All");
+                }}
+                className="whitespace-nowrap"
+              >
+                <X size={16} className="mr-1" /> Clear
+              </MotionButton>
+            )}
           </div>
-          
-          {/* Clear Filters Button */}
-          {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
-            <MotionButton
-              variant="outline"
-              size="sm"
-              motion="subtle"
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedTask("All");
-                setSelectedFileType("All");
-              }}
-              className="whitespace-nowrap"
-            >
-              <X size={16} className="mr-1" /> Clear
-            </MotionButton>
-          )}
         </div>
         {/* Content Area */}
         {viewMode === 'grid' ? (
@@ -1205,7 +1233,7 @@ const FolderView: React.FC = () => {
                       <div className="col-span-2">Task</div>
                       <div className="col-span-2">Type</div>
                       <div className="col-span-2">Modified</div>
-                      {(hasPermission('folders', 'update') || hasPermission('folders', 'delete')) && <div className="col-span-1">Actions</div>}
+                      <div className="col-span-1">Actions</div>
                     </div>
                     
                     {/* Folders */}
@@ -1249,7 +1277,7 @@ const FolderView: React.FC = () => {
                             <DropdownMenuTrigger asChild>
                               <button
                                 onClick={(e) => e.stopPropagation()}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                                className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
                               >
                                 <MoreHorizontal size={16} />
                               </button>
@@ -1319,52 +1347,65 @@ const FolderView: React.FC = () => {
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
                           {formatDate(document.createdAt)}
                         </div>
-                        <div className="col-span-1 flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownloadDocument(document);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                            title="Download"
-                          >
-                            <Download size={14} />
-                          </button>
-                          {hasPermission('documents', 'update') && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditDocument(document);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                              title="Edit"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                          )}
-                          {hasPermission('documents', 'create') && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCreateVersion(document);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                              title="Create Version"
-                            >
-                              <Upload size={14} />
-                            </button>
-                          )}
-                          {hasPermission('documents', 'delete') && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteDocumentFile(document.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
-                              title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>)}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadDocument(document);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download
+                              </DropdownMenuItem>
+                              {hasPermission('documents', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDocument(document);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Rename
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission('documents', 'create') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCreateVersion(document);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  Create Version
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission('documents', 'delete') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDocumentFile(document.id);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
@@ -1376,10 +1417,10 @@ const FolderView: React.FC = () => {
         )}
         
         {/* Create Folder Modal */}
-        {showCreateFolderModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <h2 className="text-lg font-semibold mb-4">Create New Folder</h2>
+        {showCreateFolderModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-black rounded-lg p-6 w-full max-w-md mx-4">
+              <h2 className="mt-0 text-lg font-semibold mb-4">Create New Folder</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Folder Name</label>
@@ -1414,7 +1455,8 @@ const FolderView: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Upload Dialog */}
@@ -1459,7 +1501,7 @@ const FolderView: React.FC = () => {
         {/* Rename Document Modal */}
         {renameDocumentModal.isOpen && renameDocumentModal.document && (
           <Dialog open={renameDocumentModal.isOpen} onOpenChange={(open) => setRenameDocumentModal({ isOpen: open, document: null })}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="w-5/6 md:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Rename Document</DialogTitle>
               </DialogHeader>

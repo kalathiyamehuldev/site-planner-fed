@@ -342,7 +342,7 @@ const VendorManagement: React.FC = () => {
               Add Vendor
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="w-5/6 sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>
                 {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}

@@ -138,7 +138,7 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-5/6 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             Create a version of {document?.name || 'Document'}

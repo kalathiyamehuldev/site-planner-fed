@@ -197,7 +197,7 @@ const Dashboard = () => {
         <DashboardHeader />
         
         {/* Dashboard Title */}
-        <div className="mb-6 pt-10 md:pt-0 sm:hidden">
+        <div className="mb-6 sm:hidden">
           <h1 className="font-semibold leading-[100%] text-gray-900">
             Dashboard
           </h1>
@@ -205,7 +205,7 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <section className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
             {(isSuperAdmin || hasPermission('projects', 'read')) && (<StatCard
               icon={solar.Tools.Layers}
               label="Active Projects"

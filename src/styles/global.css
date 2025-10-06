@@ -77,8 +77,8 @@ body {
   font-family: var(--font-primary);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
-  color: #F5F7FA;
-  background-color: var(--neutral-200);
+  background-color: #F5F7FA;
+  color: #1A2624;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -96,7 +96,6 @@ h6 {
   font-style: normal !important;
   /* Reset UA logical margins robustly */
   margin-block-start: 0 !important;
-  margin-block-end: 16px !important;
   margin-inline-start: 0 !important;
   margin-inline-end: 0 !important;
   color: rgb(17 24 39 / 1) !important; /* similar to text-gray-900 */
@@ -112,7 +111,6 @@ h6 { font-weight: 600 !important; font-size: 9px !important; letter-spacing: 0 !
 
 p {
   font-family: 'Manrope', sans-serif !important;
-  margin-block-end: var(--spacing-4) !important;
   font-weight: 400 !important;
   font-size: 11px !important;
   line-height: 15px !important;
@@ -200,7 +198,6 @@ button {
 button,
 .button {
   display: inline-block;
-  padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-md);
   font-weight: var(--font-medium);
   text-align: center;

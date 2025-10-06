@@ -636,14 +636,14 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       return (
         <>
           <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>
+            <DialogContent className="w-5/6 md:max-w-[500px]">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-left">
                   {mode === 'replace' ? `Replace Document${documentName ? ` "${documentName}"` : ''}` :
                    mode === 'version' ? `Create New Version${documentName ? ` for "${documentName}"` : ''}` :
                    `Upload Document${folderName ? ` to ${folderName}` : ''}`}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-left">
                   {mode === 'replace' ? 'Replace the existing document with a new file.' :
                    mode === 'version' ? 'Upload a new version of the existing document.' :
                    folderName
@@ -850,10 +850,10 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       console.error('UploadDocumentDialog render error:', error);
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Error</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="w-5/6 md:max-w-[500px]">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-left">Error</DialogTitle>
+              <DialogDescription className="text-left">
                 An error occurred while loading the upload dialog. Please try again.
               </DialogDescription>
             </DialogHeader>

@@ -44,7 +44,7 @@ const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-5/6 sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />

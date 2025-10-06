@@ -317,7 +317,7 @@ const MemberManagement: React.FC = () => {
               Add Member
             </Button>
           </DialogTrigger>
-          <DialogContent>
+           <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingMember ? 'Edit Member' : 'Add New Member'}

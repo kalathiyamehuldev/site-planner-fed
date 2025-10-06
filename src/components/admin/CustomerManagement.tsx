@@ -289,7 +289,7 @@ const CustomerManagement: React.FC = () => {
               </Button>
             )}
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-5/6 sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editingCustomer ? 'Edit Customer' : 'Add New Customer'}

@@ -168,7 +168,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                 Add Member
               </Button>
             </DialogTrigger>
-            <DialogContent>
+              <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Member to Project</DialogTitle>
                 <DialogDescription>
@@ -177,7 +177,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Select Member</label>
+                  <label className="text-sm font-medium pb-2">Select Member</label>
                 <Select
                   value={selectedUserId}
                   onValueChange={(value) => {

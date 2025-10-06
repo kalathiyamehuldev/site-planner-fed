@@ -220,141 +220,144 @@ const AddressBook = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-light mb-2">Address Book</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-light mb-1">Address Book</h1>
+            <p className="text-sm text-muted-foreground">
               Manage clients, vendors, and other contacts
             </p>
           </div>
           <MotionButton
             variant="default"
             motion="subtle"
+            size="sm"
             onClick={handleAddContact}
             className={!hasPermission(resource, 'create') ? 'hidden' : ''}
           >
-            <Plus size={18} className="mr-2" /> Add Contact
+            <Plus size={16} className="mr-2" /> Add Contact
           </MotionButton>
         </div>
 
         {/* Filters and Search */}
-        <div className="flex md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
-          <div className="flex-1 relative">
+        <div className="space-y-3 animate-fade-in animation-delay-[0.1s]">
+          {/* Search Row */}
+          <div className="relative">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-              size={18}
+              size={16}
             />
             <input
               type="text"
               placeholder="Search contacts..."
-              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-input bg-background px-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Unified Filter Dropdown */}
-          <FilterDropdown
-            filters={[
-              {
-                id: 'type',
-                label: 'Contact Type',
-                options: contactTypes.map(type => ({ value: type, label: type }))
-              },
-              {
-                id: 'project',
-                label: 'Projects',
-                options: [
-                  { value: 'All', label: 'All Projects' },
-                  ...projects.map(project => ({ value: project.id, label: project.title }))
-                ]
-              },
-              {
-                id: 'tags',
-                label: 'Tags',
-                options: allTags.map(tag => ({ value: tag.name, label: tag.name }))
-              }
-            ]}
-            selectedFilters={{
-              type: selectedType !== 'All' ? [selectedType] : [],
-              project: selectedProject !== 'All' ? [selectedProject] : [],
-              tags: selectedTags
-            }}
-            onFilterChange={(filterId, values) => {
-              if (filterId === 'type') {
-                setSelectedType(values.length > 0 ? values[0] : 'All');
-              } else if (filterId === 'project') {
-                setSelectedProject(values.length > 0 ? values[0] : 'All');
-              } else if (filterId === 'tags') {
-                setSelectedTags(values);
-              }
-            }}
-            className="flex-shrink-0"
-          />
+          {/* Controls Row */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Unified Filter Dropdown - Mobile Only */}
+              <FilterDropdown
+                filters={[
+                  {
+                    id: 'type',
+                    label: 'Contact Type',
+                    options: contactTypes.map(type => ({ value: type, label: type }))
+                  },
+                  {
+                    id: 'project',
+                    label: 'Projects',
+                    options: [
+                      { value: 'All', label: 'All Projects' },
+                      ...projects.map(project => ({ value: project.id, label: project.title }))
+                    ]
+                  },
+                  {
+                    id: 'tags',
+                    label: 'Tags',
+                    options: allTags.map(tag => ({ value: tag.name, label: tag.name }))
+                  }
+                ]}
+                selectedFilters={{
+                  type: selectedType !== 'All' ? [selectedType] : [],
+                  project: selectedProject !== 'All' ? [selectedProject] : [],
+                  tags: selectedTags
+                }}
+                onFilterChange={(filterId, values) => {
+                  if (filterId === 'type') {
+                    setSelectedType(values.length > 0 ? values[0] : 'All');
+                  } else if (filterId === 'project') {
+                    setSelectedProject(values.length > 0 ? values[0] : 'All');
+                  } else if (filterId === 'tags') {
+                    setSelectedTags(values);
+                  }
+                }}
+                className="flex-shrink-0 lg:hidden"
+              />
 
-          {/* Favorites Toggle */}
-          <button
-            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap",
-              showFavoritesOnly
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:bg-secondary"
-            )}
-          >
-            <Heart size={16} />
-            <span className="max-lg:hidden">Favorites</span>
-          </button>
+              {/* Individual Filters - Desktop/Tablet Only */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Contact Type Dropdown */}
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[120px] flex-shrink-0"
+                >
+                  {contactTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
 
-          <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0 max-lg:hidden">
-            {/* Contact Type Dropdown */}
-            <div className="relative">
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="flex items-center gap-1.5 px-3 py-2 pr-8 rounded-lg text-sm border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[120px]"
-              >
-                {contactTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+                {/* Project Dropdown */}
+                <select
+                  value={selectedProject}
+                  onChange={(e) => setSelectedProject(e.target.value)}
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[140px] flex-shrink-0"
+                >
+                  <option value="All">All Projects</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Tag Filter Toggle */}
+                <button
+                  onClick={() => setShowTagFilter(!showTagFilter)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap",
+                    selectedTags.length > 0
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                  <Filter size={16} />
+                  <span>Tags {selectedTags.length > 0 && `(${selectedTags.length})`}</span>
+                </button>
+              </div>
             </div>
 
-            {/* Project Dropdown */}
-            <div className="relative">
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className="flex items-center gap-1.5 px-3 py-2 pr-8 rounded-lg text-sm border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer min-w-[140px]"
-              >
-                <option value="All">All Projects</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
-            </div>
+            {/* Favorites Toggle */}
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap flex-shrink-0",
+                showFavoritesOnly
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              <Heart size={14} />
+              <span className="hidden sm:inline">Favorites</span>
+            </button>
           </div>
-          {/* Tag Filter Toggle */}
-          <button
-            onClick={() => setShowTagFilter(!showTagFilter)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap",
-              selectedTags.length > 0
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:bg-secondary"
-            )}
-          >
-            <Filter size={16} />
-            <span>Tags {selectedTags.length > 0 && `(${selectedTags.length})`}</span>
-          </button>
         </div>
       </div>
 
@@ -400,17 +403,17 @@ const AddressBook = () => {
       )}
 
       {/* Contact List and Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in animation-delay-[0.2s]">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 animate-fade-in animation-delay-[0.2s]">
         {/* Contact List */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-2">
           <GlassCard className="h-full">
-            <div className="p-4 border-b border-border">
-              <h2 className="text-lg font-medium">
+            <div className="p-3 border-b border-border">
+              <h2 className="text-base font-medium">
                 Contacts ({filteredContacts.length})
               </h2>
             </div>
 
-            <div className="divide-y divide-border max-h-[calc(100vh-280px)] overflow-y-auto">
+            <div className="divide-y divide-border max-h-[calc(100vh-320px)] overflow-y-auto">
               {filteredContacts.length === 0 ? (
                 <div className="p-8 text-center">
                   <Users
@@ -429,7 +432,7 @@ const AddressBook = () => {
                   <div
                     key={contact.id}
                     className={cn(
-                      "p-4 hover:bg-secondary/40 cursor-pointer transition-colors",
+                      "p-3 hover:bg-secondary/40 cursor-pointer transition-colors",
                       selectedContact?.id === contact.id && "bg-secondary/50"
                     )}
                     onClick={() => {
@@ -445,12 +448,12 @@ const AddressBook = () => {
                         <img
                           src={contact.image}
                           alt={contact.name}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
                         <div
                           className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium",
+                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
                             getContactColor(contact.id)
                           )}
                         >
@@ -460,17 +463,17 @@ const AddressBook = () => {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium truncate">
+                          <h3 className="font-medium truncate text-sm">
                             {contact.name}
                           </h3>
                           {contact.isFavorite && (
                             <Star
-                              className="h-4 w-4 text-amber-500 flex-shrink-0"
+                              className="h-3 w-3 text-amber-500 flex-shrink-0"
                               fill="currentColor"
                             />
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {contact.company}
                         </p>
                         {(contact.tags && contact.tags.length > 0) || (contact.vendorTags && contact.vendorTags.length > 0) ? (
@@ -510,21 +513,21 @@ const AddressBook = () => {
         </div>
 
         {/* Contact Details */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           {selectedContact ? (
             <GlassCard className="h-full">
               <div key={selectedContact.id}>
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h2 className="text-lg font-medium">Contact Details</h2>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between p-3 border-b border-border">
+                  <h2 className="text-base font-medium">Contact Details</h2>
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => toggleFavorite(selectedContact.id)}
                       className={cn(
-                        "p-1.5 rounded-md text-foreground hover:bg-secondary transition-colors"
+                        "p-1 rounded-md text-foreground hover:bg-secondary transition-colors"
                       )}
                     >
                       <Heart
-                        size={18}
+                        size={16}
                         className={
                           selectedContact.isFavorite
                             ? "text-amber-500 fill-amber-500"
@@ -539,7 +542,7 @@ const AddressBook = () => {
                       onClick={() => handleEditContact(selectedContact)}
                       className={!hasPermission(resource, 'update') ? 'hidden' : ''}
                     >
-                      <Edit size={16} className="mr-1" /> Edit
+                      <Edit size={14} className="mr-1" /> Edit
                     </MotionButton>
                     <MotionButton
                       variant="ghost"
@@ -548,25 +551,25 @@ const AddressBook = () => {
                       onClick={() => handleDeleteContact(selectedContact)}
                       className={!hasPermission(resource, 'delete') ? 'hidden' : ''}
                     >
-                      <Trash2 size={16} className="mr-1" /> Delete
+                      <Trash2 size={14} className="mr-1" /> Delete
                     </MotionButton>
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-4">
                   {/* Header Section with Profile */}
-                  <div className="flex flex-col lg:flex-row gap-8 mb-8">
-                    <div className="flex flex-col items-center lg:items-start">
+                  <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div className="flex flex-col items-center sm:items-start">
                       {selectedContact.image ? (
                         <img
                           src={selectedContact.image}
                           alt={selectedContact.name}
-                          className="w-28 h-28 rounded-xl object-cover mb-4 shadow-md"
+                          className="w-20 h-20 rounded-lg object-cover mb-3 shadow-sm"
                         />
                       ) : (
                         <div
                           className={cn(
-                            "w-28 h-28 rounded-xl flex items-center justify-center text-2xl font-semibold mb-4 shadow-md",
+                            "w-20 h-20 rounded-lg flex items-center justify-center text-lg font-semibold mb-3 shadow-sm",
                             getContactColor(selectedContact.id)
                           )}
                         >
@@ -575,13 +578,13 @@ const AddressBook = () => {
                       )}
                       <span
                         className={cn(
-                          "text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wide",
+                          "text-xs px-2 py-1 rounded-full font-medium uppercase tracking-wide",
                           selectedContact.type === "Client" &&
-                          "bg-blue-100 text-blue-700 border border-blue-200",
+                          "bg-blue-100 text-blue-700",
                           selectedContact.type === "Vendor" &&
-                          "bg-green-100 text-green-700 border border-green-200",
+                          "bg-green-100 text-green-700",
                           selectedContact.type === "Architect" &&
-                          "bg-amber-100 text-amber-700 border border-amber-200"
+                          "bg-amber-100 text-amber-700"
                         )}
                       >
                         {selectedContact.type}
@@ -589,28 +592,28 @@ const AddressBook = () => {
                     </div>
 
                     <div className="flex-1">
-                      <h1 className="text-3xl font-bold mb-2 text-foreground">
+                      <h1 className="text-xl sm:text-2xl font-bold mb-1 text-foreground">
                         {selectedContact.name}
                       </h1>
-                      <p className="text-lg text-muted-foreground mb-6">
+                      <p className="text-sm text-muted-foreground mb-4">
                         {selectedContact.company || "Independent"}
                       </p>
 
                       {/* Quick Contact Actions */}
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <a
                           href={`mailto:${selectedContact.email}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-xs font-medium"
                         >
-                          <Mail className="w-4 h-4" />
-                          Send Email
+                          <Mail className="w-3 h-3" />
+                          Email
                         </a>
                         {selectedContact.phone && (
                           <a
                             href={`tel:${selectedContact.phone}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors text-xs font-medium"
                           >
-                            <Phone className="w-4 h-4" />
+                            <Phone className="w-3 h-3" />
                             Call
                           </a>
                         )}
@@ -619,70 +622,70 @@ const AddressBook = () => {
                   </div>
 
                   {/* Contact Information Cards */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold mb-4 flex items-center">
-                        <User className="w-5 h-5 mr-2 text-primary" />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center">
+                        <User className="w-4 h-4 mr-2 text-primary" />
                         Contact Information
                       </h3>
 
-                      <div className="bg-card border rounded-lg p-4 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <Mail className="w-5 h-5 text-muted-foreground mt-1" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      <div className="bg-card border rounded-lg p-3 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <Mail className="w-4 h-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               Email Address
                             </p>
                             <a
                               href={`mailto:${selectedContact.email}`}
-                              className="text-primary hover:underline font-medium break-all"
+                              className="text-primary hover:underline font-medium break-all text-sm"
                             >
                               {selectedContact.email}
                             </a>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                          <Phone className="w-5 h-5 text-muted-foreground mt-1" />
+                        <div className="flex items-start gap-2">
+                          <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               Phone Number
                             </p>
                             <a
                               href={`tel:${selectedContact.phone}`}
-                              className="hover:text-primary font-medium"
+                              className="hover:text-primary font-medium text-sm"
                             >
                               {selectedContact.phone || "Not provided"}
                             </a>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                          <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               Address
                             </p>
-                            <p className="font-medium">{selectedContact.address || "Not provided"}</p>
+                            <p className="font-medium text-sm">{selectedContact.address || "Not provided"}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Tags Section */}
                       {(selectedContact.tags && selectedContact.tags.length > 0) || (selectedContact.vendorTags && selectedContact.vendorTags.length > 0) ? (
-                        <div className="mt-4">
-                          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                        <div className="mt-3">
+                          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                             Tags
                           </h3>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="space-y-2">
                             {/* Contact tags */}
                             {selectedContact.tags && selectedContact.tags.length > 0 && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Contact:</span>
                                 {selectedContact.tags.map((tag) => (
                                   <span
                                     key={typeof tag === 'object' ? tag.id : tag}
-                                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                    className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full"
                                   >
                                     {typeof tag === 'object' ? tag.name : tag}
                                   </span>
@@ -691,12 +694,12 @@ const AddressBook = () => {
                             )}
                             {/* Vendor tags */}
                             {selectedContact.vendorTags && selectedContact.vendorTags.length > 0 && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-1">
                                 <span className="text-xs text-muted-foreground">Vendor:</span>
                                 {selectedContact.vendorTags.map((tag) => (
                                   <span
                                     key={`vendor-${typeof tag === 'object' ? tag.id : tag}`}
-                                    className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                                    className="px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full"
                                   >
                                     {typeof tag === 'object' ? tag.name : tag}
                                   </span>
@@ -709,28 +712,28 @@ const AddressBook = () => {
                     </div>
 
                     {selectedContact.type === 'Vendor' && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center">
-                          <FileText className="w-5 h-5 mr-2 text-primary" />
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold mb-3 flex items-center">
+                          <FileText className="w-4 h-4 mr-2 text-primary" />
                           Related Projects
                         </h3>
 
-                        <div className="bg-card border rounded-lg p-4">
+                        <div className="bg-card border rounded-lg p-3">
                           {(() => {
                             const contactProjects = getContactProjects(selectedContact);
                             return contactProjects.length > 0 ? (
-                              <div className="space-y-3">
+                              <div className="space-y-2">
                                 {contactProjects.map((project) => (
-                                  <div key={project.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                                  <div key={project.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
                                     <a
                                       href="#"
-                                      className="hover:text-primary font-medium flex-1 truncate"
+                                      className="hover:text-primary font-medium flex-1 truncate text-sm"
                                       title={project.title}
                                     >
                                       {project.title}
                                     </a>
                                     <span className={cn(
-                                      "text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap flex-shrink-0",
+                                      "text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0",
                                       getProjectStatusStyle(project.status)
                                     )}>
                                       {project.status}
@@ -739,7 +742,7 @@ const AddressBook = () => {
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-muted-foreground text-center py-4">No projects associated</p>
+                              <p className="text-muted-foreground text-center py-3 text-sm">No projects associated</p>
                             );
                           })()}
                         </div>
@@ -773,16 +776,16 @@ const AddressBook = () => {
               </div>
             </GlassCard>
           ) : (
-            <GlassCard className="h-full flex items-center justify-center p-8 text-center">
+            <GlassCard className="h-full flex items-center justify-center p-6 text-center">
               <div>
                 <User
-                  className="mx-auto mb-4 text-muted-foreground"
-                  size={48}
+                  className="mx-auto mb-3 text-muted-foreground"
+                  size={32}
                 />
-                <h3 className="text-xl font-medium mb-2">
+                <h3 className="text-lg font-medium mb-2">
                   No Contact Selected
                 </h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                <p className="text-muted-foreground mb-4 max-w-sm mx-auto text-sm">
                   Select a contact from the list to view their details, or add
                   a new contact to your address book.
                 </p>
@@ -790,9 +793,10 @@ const AddressBook = () => {
                   <MotionButton
                     variant="default"
                     motion="subtle"
+                    size="sm"
                     onClick={handleAddContact}
                   >
-                    <Plus size={18} className="mr-2" /> Add New Contact
+                    <Plus size={16} className="mr-2" /> Add New Contact
                   </MotionButton>
                 )}
               </div>
@@ -801,7 +805,7 @@ const AddressBook = () => {
         </div>
       </div>
 
-      {/* Modals */ }
+      {/* Modals */}
       <ContactModal
         open={isContactModalOpen}
         onOpenChange={setIsContactModalOpen}

@@ -58,6 +58,12 @@ import { useToast } from "@/hooks/use-toast";
 import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
 import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import usePermission from "@/hooks/usePermission";
 
 // File type categories for filtering
@@ -1030,7 +1036,7 @@ const Documents = () => {
                               e.stopPropagation();
                               openContextMenu(e, folder.id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                            className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
                           >
                             <MoreHorizontal size={16} />
                           </button>
@@ -1073,31 +1079,53 @@ const Documents = () => {
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
                           {formatDate(document.createdAt)}
                         </div>
-                        <div className="col-span-1 flex items-center gap-1">
-                          <button
-                            onClick={() => handleDownloadDocument(document)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                            title="Download"
-                          >
-                            <Download size={14} />
-                          </button>
-                          {hasPermission('documents', 'update') && (
-                            <button
-                              onClick={() => handleEditDocument(document)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-                              title="Edit"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                          )}
-                          {hasPermission('documents', 'delete') && (
-                            <button
-                              onClick={() => handleDeleteDocument(document)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 size={14} />
-                          </button>)}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadDocument(document);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download
+                              </DropdownMenuItem>
+                              {hasPermission('documents', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDocument(document);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission('documents', 'delete') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDocument(document);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}

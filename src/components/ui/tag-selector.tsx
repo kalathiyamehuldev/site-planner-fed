@@ -183,7 +183,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
       </div>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
+         <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Tag</DialogTitle>
             <DialogDescription>

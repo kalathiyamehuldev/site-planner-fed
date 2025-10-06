@@ -35,15 +35,15 @@ const DeleteDocumentModal: React.FC<DeleteDocumentModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-5/6 md:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             Delete Document
           </DialogTitle>
-          <DialogDescription>
+          {/* <DialogDescription>
             You are about to delete the document <strong>"{document.name}"</strong>.
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
 
         <div className="py-4">

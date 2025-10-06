@@ -66,7 +66,7 @@ const DeleteContactDialog: React.FC<DeleteContactDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-5/6 sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
