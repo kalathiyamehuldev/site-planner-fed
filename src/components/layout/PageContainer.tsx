@@ -1,31 +1,30 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import Navbar from "./Navbar";
 
 interface PageContainerProps {
   children: React.ReactNode;
   className?: string;
   fullWidth?: boolean;
   padding?: boolean;
-  reducedTopPadding?: boolean;
+  showHeader?: boolean;
 }
 
-const PageContainer = ({ 
-  children, 
-  className, 
+const PageContainer = ({
+  children,
+  className,
   fullWidth = false,
   padding = true,
-  reducedTopPadding = false
+  showHeader = false
 }: PageContainerProps) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background w-full">
+    <div className="min-h-screen flex flex-col bg-[#F5F7FA] w-full overflow-x-hidden">
       <main
         className={cn(
-          "flex-1 bg-background w-full",
-          padding && reducedTopPadding ? "pt-12 pb-12 px-3 sm:px-4 md:px-6 lg:px-8" : 
-          padding ? "pt-16 pb-12 px-3 sm:px-4 md:px-6 lg:px-8" : "",
-          !fullWidth && "max-w-7xl mx-auto",
+          "flex-1 w-full min-w-0",
+          // Add top padding on mobile to account for the mobile header from AppSidebar
+          padding ? "pt-20 md:pt-0 p-3 sm:p-4 md:p-6 lg:p-8" : "pt-20 md:pt-0",
+          !fullWidth && "max-w-none",
           className
         )}
       >

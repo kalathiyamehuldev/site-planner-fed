@@ -63,7 +63,7 @@ const TASK_STATUSES = [
   { value: "TODO", label: "To Do" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "DONE", label: "Done" },
-  { value: "CANCELLED", label: "Cancelled" },
+  // { value: "CANCELLED", label: "Cancelled" },
 ];
 
 const TASK_PRIORITIES = [
@@ -231,8 +231,8 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           status: formData.status as
             | "TODO"
             | "IN_PROGRESS"
-            | "DONE"
-            | "CANCELLED",
+            | "DONE",
+            // | "CANCELLED",
           priority: formData.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
           dueDate: formData.dueDate || undefined,
           estimatedHours: formData.estimatedHours
@@ -265,8 +265,8 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           status: formData.status as
             | "TODO"
             | "IN_PROGRESS"
-            | "DONE"
-            | "CANCELLED",
+            | "DONE",
+            // | "CANCELLED",
           priority: formData.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
           dueDate: formData.dueDate || undefined,
           estimatedHours: formData.estimatedHours

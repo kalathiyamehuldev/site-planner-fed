@@ -1,10 +1,8 @@
-@import './styles/global.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Import global branding and typography styles */
+/* Import global branding and typography styles after Tailwind layers to avoid overrides */
 
 @layer base {
   :root {
@@ -65,33 +63,7 @@
     @apply bg-background min-h-screen;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-light tracking-tight;
-  }
-
-  h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl;
-  }
-
-  h2 {
-    @apply text-3xl md:text-4xl;
-  }
-
-  h3 {
-    @apply text-2xl md:text-3xl;
-  }
-
-  h4 {
-    @apply text-xl md:text-2xl;
-  }
-
-  a {
-    @apply transition-colors duration-200;
-  }
-
-  button {
-    @apply transition-all duration-200;
-  }
+  /* Heading typography is defined in global.css to avoid conflicts. */
 }
 
 /* Glass morphism effects */
@@ -154,3 +126,5 @@
 .mask-radial-gradient {
   mask-image: radial-gradient(circle at center, black, transparent 70%);
 }
+
+/* global.css is imported via main.tsx to ensure proper order and cascade. */

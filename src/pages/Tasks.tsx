@@ -161,7 +161,7 @@ const Tasks = () => {
     try {
       const result = await dispatch(updateTaskStatusAsync({ 
         id: taskId, 
-        status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
+        status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE'
       }));
       
       if (updateTaskStatusAsync.fulfilled.match(result)) {

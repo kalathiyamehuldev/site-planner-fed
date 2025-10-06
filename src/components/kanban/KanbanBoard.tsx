@@ -81,13 +81,13 @@ const KanbanBoard = ({
       headerColor: "text-gray-700",
       count: 0
     },
-    {
-      id: "CANCELLED",
-      title: "Cancelled",
-      color: "bg-white border-gray-200",
-      headerColor: "text-gray-700",
-      count: 0
-    }
+    // {
+    //   id: "CANCELLED",
+    //   title: "Cancelled",
+    //   color: "bg-white border-gray-200",
+    //   headerColor: "text-gray-700",
+    //   count: 0
+    // }
   ];
 
   // Group tasks by status
@@ -117,7 +117,7 @@ const KanbanBoard = ({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
         {columns.map((column) => {
           const columnTasks = tasksByStatus[column.id] || [];
           

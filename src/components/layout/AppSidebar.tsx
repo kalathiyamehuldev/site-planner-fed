@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppDispatch } from "@/redux/hooks";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, User } from "lucide-react";
 import { logout } from "@/redux/slices/authSlice";
 import {
   Sidebar,
@@ -33,6 +33,7 @@ type SidebarItem = {
 const MobileHeader: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
   const isMobile = useIsMobile();
   if (!isMobile) return null;
+  
   return (
     <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-4 py-3">
       <Link to="/" className="flex items-center gap-2">
@@ -56,6 +57,20 @@ const AppSidebar: React.FC = () => {
   const { hasPermission } = usePermission();
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const isCollapsed = !isMobile && state === "collapsed";
+
+  // User data (in real app, this would come from Redux/context)
+  const userData = {
+    name: "Alex Polo",
+    role: "Project Manager"
+  };
+
+  // Generate avatar initials
+  const getInitials = (name: string) => {
+    const words = name.trim().split(' ');
+    return words.length >= 2 
+      ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+      : name.substring(0, 2).toUpperCase();
+  };
 
   const mainItems: SidebarItem[] = [
     { name: "Dashboard", path: "/", icon: solar.Settings.Widget5 },
@@ -183,7 +198,7 @@ const AppSidebar: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden h-8 w-8"
+                className="md:hidden"
                 onClick={() => setOpenMobile(false)}
                 aria-label="Close menu"
               >
@@ -196,7 +211,7 @@ const AppSidebar: React.FC = () => {
         <SidebarContent className={`flex-1 flex flex-col gap-4 ${!isCollapsed ? "px-4" : "mx-auto"}`}>
           <SidebarGroup className="p-0">
             <SidebarGroupContent>
-              <SidebarMenu className="flex flex-col gap-2">
+              <SidebarMenu className="flex flex-col md:gap-2">
                 <SidebarMenuItems items={mainItems} />
               </SidebarMenu>
             </SidebarGroupContent>
@@ -207,7 +222,7 @@ const AppSidebar: React.FC = () => {
 
           <SidebarGroup className="p-0">
             <SidebarGroupContent>
-              <SidebarMenu className="flex flex-col gap-2">
+              <SidebarMenu className="flex flex-col md:gap-2">
                 <SidebarMenuItems items={toolItems} />
               </SidebarMenu>
             </SidebarGroupContent>
@@ -218,7 +233,7 @@ const AppSidebar: React.FC = () => {
 
           <SidebarGroup className="p-0">
             <SidebarGroupContent>
-              <SidebarMenu className="flex flex-col gap-2">
+              <SidebarMenu className="flex flex-col md:gap-2">
                 <SidebarMenuItems items={libraryItems} />
               </SidebarMenu>
             </SidebarGroupContent>
@@ -226,30 +241,62 @@ const AppSidebar: React.FC = () => {
         </SidebarContent>
 
         <SidebarFooter className="px-4">
-          <SidebarMenu className="flex flex-col gap-2">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Settings"
-                className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
+          {isMobile ? (
+            // Mobile: User Profile Section + Logout
+            <div className="flex flex-col md:gap-3">
+              {/* Logout Button */}
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="Log Out"
+                    onClick={handleLogout}
+                    className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
+                  >
+                    <LogOut className="h-5 w-5 shrink-0" />
+                    <span className="text-sm font-normal">Log Out</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              {/* User Profile Section */}
+              <Link 
+                to="/profile" 
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={() => setOpenMobile(false)}
               >
-                <Link to="/settings" className="flex items-center gap-2 w-full">
-                  <solar.Settings.SettingsMinimalistic className="h-5 w-5 shrink-0" />
-                  <span className="text-sm font-normal">Settings</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="Log Out"
-                onClick={handleLogout}
-                className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
-              >
-                <LogOut className="h-5 w-5 shrink-0" />
-                <span className="text-sm font-normal">Log Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+                {/* Avatar */}
+                <div className="w-10 h-10 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-medium text-gray-700 flex-shrink-0">
+                  {getInitials(userData.name)}
+                </div>
+                
+                {/* User Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {userData.name}
+                  </div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {userData.role}
+                  </div>
+                </div>
+              </Link>
+              
+            </div>
+          ) : (
+            // Desktop: Only Settings (no logout)
+            <SidebarMenu className="flex flex-col gap-2">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Settings"
+                  className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
+                >
+                  <Link to="/settings" className="flex items-center gap-2 w-full">
+                    <solar.Settings.SettingsMinimalistic className="h-5 w-5 shrink-0" />
+                    <span className="text-sm font-normal">Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
         </SidebarFooter>
       </Sidebar>
     </>

@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
-import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2 } from "lucide-react";
+import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,6 +12,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import usePermission from "@/hooks/usePermission";
 
 interface TaskTableProps {
@@ -27,6 +33,77 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
   const isMobile = useIsMobile();
   const { hasPermission } = usePermission();
   const resource = 'tasks';
+
+  // Generate avatar initials and color
+  const getAvatarData = (name: string) => {
+    if (!name || name === 'N/A') {
+      return {
+        initials: '?',
+        color: '#6B7280',
+        bgColor: '#F3F4F6'
+      };
+    }
+
+    const words = name.trim().split(' ');
+    const initials = words.length >= 2 
+      ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+      : name.substring(0, 2).toUpperCase();
+    
+    // Color palette from design system
+    const colors = [
+      '#1B78F9', '#00C2FF', '#3DD598', '#FFB547', '#FF6B6B',
+      '#A970FF', '#FF82D2', '#29C499', '#E89F3D', '#2F95D8'
+    ];
+    
+    // Generate consistent color based on name
+    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    
+    return {
+      initials,
+      color: colors[colorIndex],
+      bgColor: `${colors[colorIndex]}1A` // 10% opacity
+    };
+  };
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      "Not Started": {
+        bg: "bg-gray-200",
+        text: "text-[#1a2624]",
+        label: "Not Started"
+      },
+      "In Progress": {
+        bg: "bg-[#e0f3ff]",
+        text: "text-[#6c96b0]",
+        label: "In Progress"
+      },
+      "On Hold": {
+        bg: "bg-[#fef3e2]",
+        text: "text-[#f59e0b]",
+        label: "On Hold"
+      },
+      "Completed": {
+        bg: "bg-[#eaf6ec]",
+        text: "text-[#27ae60]",
+        label: "Completed"
+      },
+      // "Cancelled": {
+      //   bg: "bg-[#fee2e2]",
+      //   text: "text-[#ef4444]",
+      //   label: "Cancelled"
+      // }
+    };
+
+    const config = statusConfig[status] || statusConfig["Not Started"];
+    
+    return (
+      <div className={cn("px-2 py-0.5 rounded-sm inline-flex", config.bg)}>
+        <div className={cn("text-center text-xs font-normal font-['Manrope'] leading-none", config.text)}>
+          {config.label}
+        </div>
+      </div>
+    );
+  };
+
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
     "In Progress": "bg-blue-100 text-blue-600",
@@ -45,24 +122,24 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       'TODO': 'Not Started' as const,
       'IN_PROGRESS': 'In Progress' as const,
       'DONE': 'Completed' as const,
-      'CANCELLED': 'On Hold' as const,
+      // 'CANCELLED': 'On Hold' as const,
     };
-    
+
     const priorityMap = {
       'LOW': 'Low' as const,
       'MEDIUM': 'Medium' as const,
       'HIGH': 'High' as const,
       'URGENT': 'High' as const,
     };
-    
+
     return {
       ...task,
       status: statusMap[task.status] || 'Not Started',
       priority: priorityMap[task.priority] || 'Medium',
       projectName: task.project?.name || 'Unknown Project',
       assignedTo: task.assignee || (task.member?.firstName && task.member?.lastName ? `${task.member.firstName} ${task.member.lastName}` : 'N/A'),
-      dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { 
-        month: 'short', 
+      dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       }) : 'No due date',
@@ -85,82 +162,88 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       <div className={cn("space-y-3", className)}>
         {tasks.map((task, index) => {
           const transformedTask = transformTaskForTable(task);
+          const avatarData = getAvatarData(transformedTask.assignedTo);
           return (
-            <GlassCard 
-              key={task.id} 
-              className="p-3 sm:p-4 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in"
+            <GlassCard
+              key={task.id}
+              variant="clean"
+              className="p-5 cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 animate-fade-in border border-gray-100 hover:border-gray-200"
               style={{
                 animationDelay: `${index * 0.05}s`,
                 animationFillMode: "forwards",
               }}
               onClick={() => onTaskClick?.(task.id)}
             >
-              <div className="space-y-2 sm:space-y-3">
-                {/* Title and Description */}
-                <div>
-                  <h3 className="font-medium text-sm sm:text-base mb-1 line-clamp-2">{task.title}</h3>
-                  {task.description && (
-                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{task.description}</p>
-                  )}
-                </div>
-                
-                {/* Status and Priority Row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={cn(
-                      "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium",
-                      statusColors[transformedTask.status]
+              <div className="space-y-3">
+                {/* Header: Title and Status */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-gray-800 text-base font-semibold font-['Poppins'] mb-1 line-clamp-2">{task.title}</h3>
+                    {showProject && (
+                      <p className="text-gray-500 text-xs font-normal font-['Poppins']">{transformedTask.projectName}</p>
                     )}
-                  >
-                    {transformedTask.status}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium",
-                      priorityColors[transformedTask.priority]
-                    )}
-                  >
-                    {transformedTask.priority}
-                  </span>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {getStatusBadge(transformedTask.status)}
+                  </div>
                 </div>
-                
-                {/* Project (if shown) */}
-                {showProject && (
+
+                {/* Info Grid: Date and Hours */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">Project:</span>
-                    <span className="text-sm truncate">{transformedTask.projectName}</span>
+                    <Calendar size={16} className="text-gray-500 flex-shrink-0" />
+                    <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.dueDate}</span>
                   </div>
-                )}
-                
-                {/* Details Row */}
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <User size={14} className="text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{transformedTask.assignedTo}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={14} className="text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{transformedTask.dueDate}</span>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-gray-500 flex-shrink-0" />
+                    <span className="text-gray-700 text-sm font-medium font-['Poppins']">{task.estimatedHours || 0}h</span>
                   </div>
                 </div>
-                
-                {/* Hours and Actions Row */}
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={14} className="text-muted-foreground" />
-                    <span className="text-sm">{task.estimatedHours || 0}h</span>
+
+                {/* Assignee and Priority Row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                      style={{ 
+                        backgroundColor: avatarData.bgColor,
+                        color: avatarData.color 
+                      }}
+                    >
+                      {avatarData.initials}
+                    </div>
+                    <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.assignedTo}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    {hasPermission(resource, 'read') && (<Link
+                  {/* Priority */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      transformedTask.priority === 'High' ? 'bg-[#dc3545]' :
+                      transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
+                    )} />
+                    <span className="text-gray-600 text-xs font-medium font-['Poppins']">
+                      {transformedTask.priority}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-100" />
+
+                {/* Footer: View More and Actions */}
+                <div className="flex items-center justify-between">
+                  {hasPermission(resource, 'read') && (
+                    <Link
                       to={`/tasks/${task.id}`}
-                      className="inline-flex items-center gap-1 text-primary font-medium text-sm px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors"
+                      className="flex items-center gap-1 text-[#0e489a] text-[10px] font-medium font-['General_Sans'] uppercase hover:gap-2 transition-all duration-200"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Eye size={14} />
-                      View
+                      VIEW MORE
+                      <ArrowRight size={12} />
                     </Link>
-                    )}
+                  )}
+                  <div className="flex items-center gap-2">
                     {hasPermission(resource, 'update') && onEditTask && (
                       <Button
                         variant="ghost"
@@ -169,7 +252,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                           e.stopPropagation();
                           onEditTask(task);
                         }}
-                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
                       >
                         <Edit size={14} />
                       </Button>
@@ -182,7 +265,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                           e.stopPropagation();
                           onDeleteTask(task.id);
                         }}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
                       >
                         <Trash2 size={14} />
                       </Button>
@@ -199,97 +282,91 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
 
   // Desktop Table View
   return (
-    <GlassCard className={cn("overflow-hidden", className)}>
+    <div className={cn("w-full bg-white rounded-md overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
+          <thead className="h-12">
+            <tr className="border-b border-[#1a2624]/10">
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
                 Task
               </th>
               {showProject && (
-                <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-full sm:w-1/4 md:w-1/6 lg:w-1/8 hidden sm:table-cell">
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/8 hidden sm:table-cell">
                   Project
                 </th>
               )}
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-16 sm:w-20 md:w-24">
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24">
                 Status
               </th>
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-16 sm:w-20 md:w-24 hidden md:table-cell">
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24 hidden md:table-cell">
                 Priority
               </th>
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-28 md:w-32 hidden lg:table-cell">
-                Assigned To
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-28 md:w-32 hidden lg:table-cell">
+                Assigned to
               </th>
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-24 md:w-28 hidden lg:table-cell">
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden lg:table-cell">
                 Due Date
               </th>
-              <th className="text-left p-3 md:p-4 font-medium text-muted-foreground w-12 sm:w-16 md:w-20 hidden xl:table-cell">
+              <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-12 sm:w-16 md:w-20 hidden xl:table-cell">
                 Hours
               </th>
-              <th className="text-right p-3 md:p-4 font-medium text-muted-foreground w-20 sm:w-28 md:w-32">
-                Actions
+              <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                {/* Actions column - empty header */}
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {tasks.map((task, index) => {
               const transformedTask = transformTaskForTable(task);
               return (
                 <tr
                   key={task.id}
-                  className="border-b last:border-0 hover:bg-secondary/30 transition-colors cursor-pointer animate-fade-in"
+                  className="h-16 border-b border-[#1a2624]/10 last:border-0 hover:bg-gray-50/50 transition-colors cursor-pointer animate-fade-in"
                   style={{
                     animationDelay: `${index * 0.05}s`,
                     animationFillMode: "forwards",
                   }}
                   onClick={() => onTaskClick?.(task.id)}
                 >
-                  <td className="p-3 md:p-4 max-w-xs">
-                    <div className="flex flex-col">
+                  <td className="px-3 max-w-xs">
+                    <div className="flex flex-col gap-0.5">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span 
-                              className="font-medium cursor-pointer text-sm md:text-base"
+                            <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal cursor-pointer"
                               style={{
                                 display: '-webkit-box',
-                                WebkitLineClamp: 2,
+                                WebkitLineClamp: 1,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                lineHeight: '1.4em',
-                                maxHeight: '2.8em'
                               }}
                             >
                               {task.title}
-                            </span>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent side="top" align="start" className="max-w-xs">
-                             <p>{task.title}</p>
-                           </TooltipContent>
+                            <p>{task.title}</p>
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {task.description && (
+                      {(task.description || transformedTask.projectName) && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span 
-                                className="text-xs md:text-sm text-muted-foreground cursor-pointer mt-1 hidden sm:block"
+                              <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none cursor-pointer hidden sm:block"
                                 style={{
                                   display: '-webkit-box',
                                   WebkitLineClamp: 1,
                                   WebkitBoxOrient: 'vertical',
                                   overflow: 'hidden',
-                                  lineHeight: '1.3em',
-                                  maxHeight: '1.3em'
                                 }}
                               >
-                                {task.description}
-                              </span>
+                                {showProject ? transformedTask.projectName : task.description}
+                              </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" align="start" className="max-w-xs">
-                               <p>{task.description}</p>
-                             </TooltipContent>
+                              <p>{showProject ? transformedTask.projectName : task.description}</p>
+                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
@@ -310,110 +387,126 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                     </div>
                   </td>
                   {showProject && (
-                    <td className="p-3 md:p-4 max-w-xs hidden sm:table-cell">
+                    <td className="px-3 max-w-xs hidden sm:table-cell">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span 
-                              className="text-xs md:text-sm cursor-pointer"
+                            <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight cursor-pointer"
                               style={{
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                lineHeight: '1.3em',
-                                maxHeight: '2.6em'
                               }}
                             >
                               {transformedTask.projectName}
-                            </span>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent side="top" align="start" className="max-w-xs">
-                             <p>{transformedTask.projectName}</p>
-                           </TooltipContent>
+                            <p>{transformedTask.projectName}</p>
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </td>
                   )}
-                  <td className="p-3 md:p-4">
-                    <span
-                      className={cn(
-                        "text-xs px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-medium whitespace-nowrap",
-                        statusColors[transformedTask.status]
-                      )}
-                    >
-                      {transformedTask.status}
-                    </span>
+                  <td className="px-3">
+                    {getStatusBadge(transformedTask.status)}
                   </td>
-                  <td className="p-3 md:p-4 hidden md:table-cell">
-                    <span
-                      className={cn(
-                        "text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap",
-                        priorityColors[transformedTask.priority]
-                      )}
-                    >
-                      {transformedTask.priority}
-                    </span>
-                  </td>
-                  <td className="p-3 md:p-4 hidden lg:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <User size={14} className="text-muted-foreground" />
-                      <span className="text-sm truncate">{transformedTask.assignedTo}</span>
+                  <td className="px-3 hidden md:table-cell">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 relative overflow-hidden">
+                        <div className={cn(
+                          "w-2 h-2 left-[7.79px] top-[7.79px] absolute rounded-full",
+                          transformedTask.priority === 'High' ? 'bg-[#dc3545]' :
+                            transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
+                        )} />
+                      </div>
+                      <div className="text-[#1a2624] text-sm font-normal font-['Manrope'] leading-tight">
+                        {transformedTask.priority}
+                      </div>
                     </div>
                   </td>
-                  <td className="p-3 md:p-4 hidden lg:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} className="text-muted-foreground" />
-                      <span className="text-sm truncate">{transformedTask.dueDate}</span>
+                  <td className="px-3 hidden lg:table-cell">
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const avatarData = getAvatarData(transformedTask.assignedTo);
+                        return (
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                            style={{ 
+                              backgroundColor: avatarData.bgColor,
+                              color: avatarData.color 
+                            }}
+                          >
+                            {avatarData.initials}
+                          </div>
+                        );
+                      })()}
+                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                        {transformedTask.assignedTo}
+                      </div>
                     </div>
                   </td>
-                  <td className="p-3 md:p-4 hidden xl:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <Clock size={14} className="text-muted-foreground" />
-                      <span className="text-sm">{task.estimatedHours || 0}h</span>
+                  <td className="px-3 hidden lg:table-cell">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 relative overflow-hidden">
+                        <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
+                      </div>
+                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                        {transformedTask.dueDate}
+                      </div>
                     </div>
                   </td>
-                  <td className="p-3 md:p-4 text-right">
-                    <div className="flex items-center justify-end gap-1 md:gap-2">
-                      {hasPermission(resource, 'read') && (<Link 
-                        to={`/tasks/${task.id}`}
-                        className="inline-flex items-center gap-1 text-primary font-medium text-xs md:text-sm hover:gap-2 transition-all duration-200 px-2 py-1 rounded hover:bg-primary/10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Eye size={12} className="md:hidden" />
-                        <Eye size={14} className="hidden md:block" />
-                        <span className="hidden sm:inline">View</span>
-                        <ArrowRight size={12} className="transition-transform hover:translate-x-1 md:hidden" />
-                        <ArrowRight size={14} className="transition-transform hover:translate-x-1 hidden md:block" />
-                      </Link>)}
-                      {hasPermission(resource, 'update') && onEditTask && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditTask(task);
-                          }}
-                          className="h-7 w-7 md:h-8 md:w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Edit size={12} className="md:hidden" />
-                          <Edit size={14} className="hidden md:block" />
-                        </Button>
-                      )}
-                      {hasPermission(resource, 'delete') && onDeleteTask && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteTask(task.id);
-                          }}
-                          className="h-7 w-7 md:h-8 md:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 size={12} className="md:hidden" />
-                          <Trash2 size={14} className="hidden md:block" />
-                        </Button>
-                      )}
+                  <td className="px-3 hidden xl:table-cell">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 relative overflow-hidden">
+                        <Clock size={14} className="text-muted-foreground" />
+                      </div>
+                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                        {task.estimatedHours || 0} hours
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3">
+                    <div className="flex items-center justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-6 h-6 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                          >
+                            <MoreHorizontal size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                          {hasPermission(resource, 'update') && onEditTask && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditTask(task);
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Edit size={14} />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission(resource, 'delete') && onDeleteTask && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteTask(task.id);
+                              }}
+                              className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>
@@ -422,7 +515,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
           </tbody>
         </table>
       </div>
-    </GlassCard>
+    </div>
   );
 };
 

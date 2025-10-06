@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import DashboardHeader from "@/components/layout/DashboardHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
 import { MotionButton } from "@/components/ui/motion-button";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 import ProjectCard from "@/components/ProjectCard";
 import TaskTable from "@/components/TaskTable";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
-import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight } from "lucide-react";
+import { LayoutGrid, FileText, CheckSquare, Clock, Plus, ArrowRight, ChevronRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
 import usePermission from "@/hooks/usePermission";
+import solar from "@solar-icons/react";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -136,52 +138,53 @@ const Dashboard = () => {
     value,
     trend,
     className,
-    bgColor = "bg-blue-50",
-    iconColor = "text-blue-600",
+    iconBgColor = "#00c2ff",
   }: {
     icon: React.ElementType;
     label: string;
     value: string;
     trend?: { value: string; positive: boolean };
     className?: string;
-    bgColor?: string;
-    iconColor?: string;
+    iconBgColor?: string;
   }) => (
     <GlassCard
+      variant="clean"
       className={cn(
-        "flex flex-col h-full animate-scale-in",
-        bgColor,
+        "p-2.5 sm:p-3 bg-white rounded-lg flex items-start gap-2 overflow-hidden w-full min-w-0",
         className
       )}
     >
-      <div className="p-6 flex flex-col h-full">
-        <div
-          className={cn(
-            "rounded-full w-10 h-10 flex items-center justify-center mb-4",
-            bgColor === "bg-blue-50"
-              ? "bg-blue-100"
-              : bgColor === "bg-green-50"
-              ? "bg-green-100"
-              : bgColor === "bg-purple-50"
-              ? "bg-purple-100"
-              : "bg-orange-100"
-          )}
-        >
-          <Icon size={20} className={iconColor} />
+      <div 
+        className="p-1 sm:p-1.5 rounded-md flex items-center gap-2 flex-shrink-0"
+        style={{ backgroundColor: `${iconBgColor}1A` }}
+      >
+        <div className="w-5 h-5 sm:w-6 sm:h-6 relative rounded-[5px] overflow-hidden flex items-center justify-center">
+          <Icon size={16} className="sm:w-5 sm:h-5" style={{ color: iconBgColor }} />
         </div>
-        <h3 className="text-muted-foreground font-medium text-sm mb-1">
-          {label}
-        </h3>
-        <p className="text-2xl font-light mb-1">{value}</p>
+      </div>
+      <div className="flex-1 flex flex-col justify-center items-start gap-1 sm:gap-2 min-w-0">
+        <div className="w-full flex flex-col justify-start items-start">
+          <div className="w-full text-left text-gray-600 text-xs font-normal truncate">
+            {label}
+          </div>
+          <div className="w-full text-left text-gray-800 text-2xl sm:text-3xl font-semibold truncate">
+            {value}
+          </div>
+        </div>
         {trend && (
-          <p
-            className={cn(
-              "text-xs font-medium mt-auto",
-              trend.positive ? "text-green-600" : "text-red-600"
-            )}
-          >
-            {trend.positive ? "↑" : "↓"} {trend.value} from last month
-          </p>
+          <div className="w-full text-left">
+            <span 
+              className={cn(
+                "text-[9px] sm:text-[10px] font-semibold",
+                trend.positive ? "text-[#00b683]" : "text-[#b60003]"
+              )}
+            >
+              {trend.positive ? "+" : ""}{trend.value}
+            </span>
+            <span className="text-gray-600 text-[9px] sm:text-[10px] font-normal">
+              {" "}from last month
+            </span>
+          </div>
         )}
       </div>
     </GlassCard>
@@ -189,238 +192,107 @@ const Dashboard = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
-        <section className="relative mb-12">
-          <div
-            className="py-12 opacity-0 animate-fade-in"
-            style={{ animationDelay: "0.1s", animationFillMode: "forwards" }}
-          >
-            <h1 className="text-3xl md:text-4xl font-light mb-4">
-              Welcome to{" "}
-              <span className="font-normal text-primary">DesignFlow</span>
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-3xl mb-8">
-              Manage your interior design projects with elegance and efficiency.
-              Track tasks, organize documents, and collaborate with your team
-              seamlessly.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              {hasPermission('projects', 'create') && (<MotionButton
-                onClick={() => navigate("/projects")}
-                variant="default"
-                size="lg"
-                motion="subtle"
-              >
-                Create New Project <Plus size={18} className="ml-2" />
-              </MotionButton>
-              )}
-              <MotionButton variant="outline" size="lg" motion="subtle">
-                Tour Dashboard
-              </MotionButton>
-            </div>
-          </div>
-        </section>
+      <div className="space-y-4 sm:space-y-6 w-full min-w-0">
+        {/* Dashboard Header - Hidden on mobile, shown on desktop */}
+        <DashboardHeader />
+        
+        {/* Dashboard Title */}
+        <div className="mb-6 pt-10 md:pt-0 sm:hidden">
+          <h1 className="font-semibold leading-[100%] text-gray-900">
+            Dashboard
+          </h1>
+        </div>
 
-        <section
-          className="mb-12 opacity-0 animate-fade-in"
-          style={{ animationDelay: "0.2s", animationFillMode: "forwards" }}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Stats Cards */}
+        <section className="mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
             {(isSuperAdmin || hasPermission('projects', 'read')) && (<StatCard
-              icon={FileText}
+              icon={solar.Tools.Layers}
               label="Active Projects"
               value={allProjects
                 .filter((p) => p.status === "In Progress")
                 .length.toString()}
-              trend={{ value: "20%", positive: true }}
+              trend={{ value: "84.2%", positive: true }}
               className="animation-delay-[0.1s]"
-              bgColor="bg-blue-50"
-              iconColor="text-blue-600"
+              iconBgColor="#00c2ff"
             />)}
             {(isSuperAdmin || hasPermission('tasks', 'read')) && (
             <StatCard
-              icon={CheckSquare}
+              icon={solar.Time.Hourglass}
               label="Pending Tasks"
               value={allTasks.length.toString()}
-              trend={{ value: "5%", positive: false }}
+              trend={{ value: "3%", positive: false }}
               className="animation-delay-[0.2s]"
-              bgColor="bg-green-50"
-              iconColor="text-green-600"
+              iconBgColor="#ffb547"
             />)}
             {(isSuperAdmin || hasPermission('time_tracking', 'read')) && (
             <StatCard
-              icon={Clock}
-              label="Tracked Hours"
-              value="187"
-              trend={{ value: "12%", positive: true }}
+              icon={solar.Time.ClockCircle}
+              label="Tasked Hours"
+              value="183"
+              trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.3s]"
-              bgColor="bg-purple-50"
-              iconColor="text-purple-600"
+              iconBgColor="#ff6b6b"
             />)}
             {(isSuperAdmin || hasPermission('projects', 'read')) && (
             <StatCard
-              icon={LayoutGrid}
-              label="Completed Projects"
+              icon={solar.Ui.CheckCircle}
+              label="Completed Project"
               value={allProjects
                 .filter((p) => p.status === "Completed")
                 .length.toString()}
-              trend={{ value: "30%", positive: true }}
+              trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.4s]"
-              bgColor="bg-orange-50"
-              iconColor="text-orange-600"
+              iconBgColor="#29c499"
             />)}
           </div>
         </section>
 
-        <section
-          className="mb-4 opacity-0 animate-fade-in"
-          style={{ animationDelay: "0.3s", animationFillMode: "forwards" }}
-        >
-          <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
-            <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
-                  activeTab === "overview"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                )}
+        {/* Recent Projects Section */}
+        {hasPermission('projects', 'read') && (
+          <section className="mb-6 sm:mb-8 w-full min-w-0">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Recent Projects</h2>
+              <button 
+                onClick={() => navigate("/projects")}
+                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0 ml-2"
               >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab("projects")}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
-                  activeTab === "projects"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                )}
-              >
-                Recent Projects
-              </button>
-              <button
-                onClick={() => setActiveTab("tasks")}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
-                  activeTab === "tasks"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                )}
-              >
-                Upcoming Tasks
+                <ChevronRight size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
-          </div>
-        </section>
-
-        <section
-          className="opacity-0 animate-fade-in"
-          style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}
-        >
-          {activeTab === "overview" && (
-            <div className="space-y-8">
-                {hasPermission('projects', 'read') && (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-medium">Recent Projects</h2>
-                  <MotionButton
-                    variant="ghost"
-                    size="sm"
-                    motion="subtle"
-                    className="text-primary"
-                    onClick={() => setActiveTab("projects")}
-                  >
-                    View All <ArrowRight size={16} className="ml-1" />
-                  </MotionButton>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {recentProjects.map((project, index) => (
-                    <ProjectCard
-                      key={project.id}
-                      {...project}
-                      className="animate-fade-in"
-                      style={{
-                        animationDelay: `${index * 0.1}s`,
-                        animationFillMode: "forwards",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-                )}
-
-              {hasPermission('tasks', 'read') && (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-medium">Upcoming Tasks</h2>
-                  <MotionButton
-                    variant="ghost"
-                    size="sm"
-                    motion="subtle"
-                    className="text-primary"
-                    onClick={() => setActiveTab("tasks")}
-                  >
-                    View All <ArrowRight size={16} className="ml-1" />
-                  </MotionButton>
-                </div>
-                <TaskTable
-                  tasks={upcomingTasks}
-                  onEditTask={handleEditTask}
-                  onDeleteTask={handleDeleteTask}
-                  className="animate-fade-in"
-                  showProject={true}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+              {recentProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  {...project}
                 />
-              </div>
-            )}
+              ))}
             </div>
-          )}
+          </section>
+        )}
 
-          {activeTab === "projects" && (
-            <div>
-              {hasPermission('projects', 'create') && (
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-medium">All Projects</h2>
-                <MotionButton variant="default" size="sm" motion="subtle">
-                  New Project <Plus size={16} className="ml-1" />
-                </MotionButton>
-              </div>)}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                {allProjects.map((project, index) => (
-                  <ProjectCard
-                    key={project.id}
-                    {...project}
-                    className="animate-fade-in"
-                    style={{
-                      animationDelay: `${index * 0.1}s`,
-                      animationFillMode: "forwards",
-                    }}
-                  />
-                ))}
-              </div>
+        {/* Upcoming Tasks Section */}
+        {hasPermission('tasks', 'read') && (
+          <section className="w-full min-w-0">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Upcoming tasks</h2>
+              <button 
+                onClick={() => navigate("/tasks")}
+                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0 ml-2"
+              >
+                <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+              </button>
             </div>
-          )}
-
-          {activeTab === "tasks" && (
-            <div>
-              {hasPermission('tasks', 'create') && (
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-medium">All Tasks</h2>
-                <MotionButton variant="default" size="sm" motion="subtle">
-                  New Task <Plus size={16} className="ml-1" />
-                </MotionButton>
-              </div>)}
+            <div className="w-full min-w-0">
               <TaskTable
-                tasks={allTasks}
+                tasks={upcomingTasks}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
-                className="animate-fade-in"
                 showProject={true}
               />
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
 
       {/* Edit Task Dialog */}

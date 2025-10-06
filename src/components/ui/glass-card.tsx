@@ -3,7 +3,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "dark" | "gradient";
+  variant?: "default" | "dark" | "gradient" | "clean";
   intensity?: "low" | "medium" | "high";
   children: React.ReactNode;
 }
@@ -25,12 +25,15 @@ const GlassCard = ({
     default: intensityClasses[intensity],
     dark: "bg-foreground/10 backdrop-blur-md border-foreground/10",
     gradient: "bg-gradient-to-br from-white/80 to-secondary/50 backdrop-blur-md border-white/20",
+    clean: "bg-white border-0 shadow-none",
   };
 
   return (
     <div
       className={cn(
-        "rounded-2xl border shadow-sm transition-all duration-300 animate-scale-in",
+        "rounded-md transition-all duration-300",
+        variant === "clean" ? "bg-white" : "border shadow-sm animate-scale-in",
+        variant === "clean" ? "" : "rounded-2xl",
         variantClasses[variant],
         className
       )}

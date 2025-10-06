@@ -3,23 +3,17 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
-import { FileText, Calendar, Users, Clock, ArrowRight, Trash2 } from "lucide-react";
+import { Calendar, Users, ArrowRight } from "lucide-react";
 import { useAppDispatch } from "@/redux/hooks";
 import { deleteProjectAsync } from "@/redux/slices/projectsSlice";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import usePermission from "@/hooks/usePermission";
 
 interface ProjectCardProps {
   id: string;
   title: string;
   client: string;
-  status: "Active" | "Not Started" | "In Progress" | "On Hold" | "Completed";
+  status: "Active" | "Not Started" | "In Progress" | "On Hold" | "Completed" | "Hold";
   dueDate: string;
   team: string[];
   progress: number;
@@ -44,142 +38,137 @@ const ProjectCard = ({
   const { toast } = useToast();
   const { hasPermission, isSuperAdmin } = usePermission();
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Generate avatar initials and color
+  const getAvatarData = (name: string) => {
+    const words = name.trim().split(' ');
+    const initials = words.length >= 2 
+      ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+      : name.substring(0, 2).toUpperCase();
     
-    if (!hasPermission('projects', 'delete')) {
-      toast({
-        title: "Error",
-        description: "You do not have permission to delete this project",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Color palette from design system
+    const colors = [
+      '#1B78F9', '#00C2FF', '#3DD598', '#FFB547', '#FF6B6B',
+      '#A970FF', '#FF82D2', '#29C499', '#E89F3D', '#2F95D8'
+    ];
     
-    if (!window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await dispatch(deleteProjectAsync(id)).unwrap();
-      toast({
-        title: "Success",
-        description: "Project deleted successfully",
-      });
-      onDelete?.(id);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete project. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  const statusColors = {
-    "Not Started": "bg-gray-100 text-gray-600",
-    "Active": "bg-emerald-100 text-emerald-600",
-    "In Progress": "bg-blue-100 text-blue-600",
-    "On Hold": "bg-amber-100 text-amber-600",
-    Completed: "bg-green-100 text-green-600",
+    // Generate consistent color based on name
+    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    
+    return {
+      initials,
+      color: colors[colorIndex],
+      bgColor: `${colors[colorIndex]}1A` // 10% opacity
+    };
   };
 
-  const borderColors = {
-    "Not Started": "border-gray-400",
-    "Active": "border-emerald-500",
-    "In Progress": "border-blue-500",
-    "On Hold": "border-amber-500",
-    Completed: "border-green-500",
+  const avatarData = getAvatarData(title);
+
+  // Status colors matching Figma design
+  const statusConfig = {
+    "Active": { bg: "#27AE60", text: "white" },
+    "Hold": { bg: "#F1C40F", text: "white" },
+    "On Hold": { bg: "#F1C40F", text: "white" },
+    "In Progress": { bg: "#1B78F9", text: "white" },
+    "Completed": { bg: "#27AE60", text: "white" },
+    "Not Started": { bg: "#95A5A6", text: "white" },
   };
+
+  const currentStatus = status === "On Hold" ? "Hold" : status;
+  const statusStyle = statusConfig[currentStatus] || statusConfig["Not Started"];
 
   return (
     <GlassCard
-      variant="default"
-      className={cn(
-        "overflow-hidden group hover:shadow-md transition-all duration-300 border-2 rounded-xl h-full",
-        borderColors[status],
-        className
-      )}
+      variant="clean"
+      className={cn("p-3 flex flex-col gap-3", className)}
       style={style}
     >
-      <div className="p-4 sm:p-6 flex flex-col h-full">
-        <div className="flex justify-between items-start mb-3 sm:mb-4">
-          <div className="space-y-1 flex-1 min-w-0">
-            <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <h3 className="text-lg sm:text-xl font-medium cursor-pointer w-full overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{title}</h3>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="start" className="max-w-xs z-50">
-                    <p className="break-words whitespace-normal">{title}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            <p className="text-muted-foreground text-sm">{client}</p>
-          </div>
-          <div className="relative overflow-hidden w-32 h-8">
-             <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 group-hover:-translate-x-10">
-               <span
-                 className={cn(
-                   "text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap",
-                   statusColors[status]
-                 )}
-               >
-                 {status}
-               </span>
-             </div>
-             <div className="absolute right-0 top-0 h-full flex items-center transition-transform duration-300 translate-x-full group-hover:translate-x-0">
-               {(isSuperAdmin || hasPermission('projects', 'delete')) && (
-                 <button
-                   onClick={handleDelete}
-                   className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                   title="Delete project"
-                 >
-                   <Trash2 size={14} />
-                 </button>
-               )}
-             </div>
-           </div>
-        </div>
-
-        <div className="space-y-3 sm:space-y-4 flex-grow">
-          <div className="flex flex-wrap gap-2 sm:gap-4">
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-              <Calendar size={14} />
-              <span>{dueDate}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Users size={14} />
-              <span>{team.length} team members</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {(isSuperAdmin || hasPermission('projects', 'read')) && (
-          <Link
-            to={`/projects/${id}`}
-            className="mt-6 flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all duration-200"
+      {/* Header with Avatar and Title */}
+      <div className="flex items-center gap-2">
+        <div 
+          className="w-8 h-8 relative rounded-sm overflow-hidden flex items-center justify-center"
+          style={{ backgroundColor: avatarData.bgColor }}
+        >
+          <div 
+            className="text-sm font-semibold font-['Poppins']"
+            style={{ color: avatarData.color }}
           >
-            View Details
-            <ArrowRight
-              size={16}
-              className="transition-transform group-hover:translate-x-1"
-            />
-          </Link>
-        )}
+            {avatarData.initials}
+          </div>
+        </div>
+        <div className="flex-1 text-gray-800 text-base font-semibold font-['Poppins'] truncate">
+          {title}
+        </div>
+      </div>
+
+      {/* Date and Team Info */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 flex items-center gap-1.5">
+          <div className="w-4 h-4 relative rounded-[5px] overflow-hidden">
+            <Calendar size={14} className="text-gray-500" />
+          </div>
+          <div className="text-gray-500 text-xs font-normal font-['Poppins']">
+            {dueDate}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 relative overflow-hidden">
+            <Users size={14} className="text-gray-500" />
+          </div>
+          <div className="text-gray-500 text-xs font-normal font-['Poppins']">
+            {team.length} team members
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex flex-col gap-1.5">
+        <div className="w-full h-1.5 relative bg-gray-100 rounded-2xl overflow-hidden">
+          <div 
+            className="h-1.5 absolute left-0 top-0 bg-[#1b78f9] rounded-2xl transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex items-start gap-2">
+          <div className="flex-1 text-gray-500 text-xs font-normal font-['Poppins']">
+            Progress
+          </div>
+          <div className="text-gray-800 text-xs font-medium font-['Poppins']">
+            {progress}%
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-0 border-t border-gray-100" />
+
+      {/* Footer with Status and View More */}
+      <div className="flex items-center gap-3">
+        <div 
+          className="h-6 px-2.5 py-1.5 rounded flex items-center gap-2"
+          style={{ backgroundColor: statusStyle.bg }}
+        >
+          <div 
+            className="text-xs font-medium font-['Poppins']"
+            style={{ color: statusStyle.text }}
+          >
+            {currentStatus}
+          </div>
+        </div>
+        <div className="flex-1 flex justify-end items-center gap-0.5">
+          {(isSuperAdmin || hasPermission('projects', 'read')) && (
+            <Link
+              to={`/projects/${id}`}
+              className="flex items-center gap-0.5 hover:gap-1 transition-all duration-200"
+            >
+              <div className="text-[#0e489a] text-[10px] font-medium font-['General_Sans'] uppercase">
+                VIEW MORE
+              </div>
+              <div className="w-3 h-3 relative overflow-hidden">
+                <ArrowRight size={12} className="text-[#0e489a]" />
+              </div>
+            </Link>
+          )}
+        </div>
       </div>
     </GlassCard>
   );
