@@ -17,7 +17,7 @@ import {
   updateTaskStatusAsync,
 } from "@/redux/slices/tasksSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
-import { useToast } from "@/hooks/use-toast";
+// removed useToast import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +29,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import usePermission from "@/hooks/usePermission";
+import { useNavigate } from "react-router-dom";
 
 const Tasks = () => {
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
+  const navigate = useNavigate();
+  // removed useToast usage
   const allTasks = useAppSelector(selectAllTasks);
   const projects = useAppSelector(selectAllProjects);
   const { hasPermission } = usePermission();
@@ -44,16 +46,15 @@ const Tasks = () => {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
+  const [newTaskInitialStatus, setNewTaskInitialStatus] = useState<"TODO" | "IN_PROGRESS" | "DONE" | null>(null);
+  const [lockNewTaskStatus, setLockNewTaskStatus] = useState(false);
+
   const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
     dispatch(fetchProjects());
   }, [dispatch]);
-
-
-
-
 
   const filteredTasks = allTasks.filter((task) => {
     if (searchTerm) {
@@ -107,6 +108,7 @@ const Tasks = () => {
 
   const handleTaskClick = (taskId: string) => {
     dispatch(setSelectedTask(taskId));
+    navigate(`/tasks/${taskId}`);
   };
 
   const handleEditTask = (task: any) => {
@@ -122,24 +124,13 @@ const Tasks = () => {
 
     try {
       const result = await dispatch(deleteTaskAsync(deletingTaskId));
-      
       if (deleteTaskAsync.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Task deleted successfully!",
-        });
-        // Refresh tasks list
         dispatch(fetchAllTasksByCompany());
       } else {
-        throw new Error(result.payload as string || 'Failed to delete task');
+        throw new Error((result.payload as string) || 'Failed to delete task');
       }
     } catch (error) {
       console.error('Error deleting task:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setDeletingTaskId(null);
     }
@@ -153,6 +144,8 @@ const Tasks = () => {
 
   const handleNewTaskSuccess = () => {
     setShowNewTaskDialog(false);
+    setNewTaskInitialStatus(null);
+    setLockNewTaskStatus(false);
     // Refresh tasks list
     dispatch(fetchAllTasksByCompany());
   };
@@ -163,24 +156,13 @@ const Tasks = () => {
         id: taskId, 
         status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE'
       }));
-      
       if (updateTaskStatusAsync.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Task status updated successfully!",
-        });
-        // Refresh tasks list
         dispatch(fetchAllTasksByCompany());
       } else {
-        throw new Error(result.payload as string || 'Failed to update task status');
+        throw new Error((result.payload as string) || 'Failed to update task status');
       }
     } catch (error) {
       console.error('Error updating task status:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update task status. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -225,7 +207,11 @@ const Tasks = () => {
             <MotionButton 
               variant="default" 
               motion="subtle"
-              onClick={() => setShowNewTaskDialog(true)}
+              onClick={() => {
+                setLockNewTaskStatus(false);
+                setNewTaskInitialStatus(null);
+                setShowNewTaskDialog(true);
+              }}
             >
               <Plus size={18} className="mr-2" /> New Task
             </MotionButton>
@@ -266,10 +252,11 @@ const Tasks = () => {
              onTaskClick={handleTaskClick}
              onEditTask={handleEditTask}
              onDeleteTask={handleDeleteTask}
-             onAddTask={(status) => {
-               setShowNewTaskDialog(true);
-               // You could set a default status here if needed
-             }}
+            onAddTask={(status) => {
+              setNewTaskInitialStatus(status as 'TODO' | 'IN_PROGRESS' | 'DONE');
+              setLockNewTaskStatus(true);
+              setShowNewTaskDialog(true);
+            }}
              onUpdateTaskStatus={handleUpdateTaskStatus}
              className="animate-fade-in"
            />
@@ -287,8 +274,18 @@ const Tasks = () => {
         {/* New Task Dialog */}
         <AddTaskDialog
           open={showNewTaskDialog}
-          onOpenChange={(open) => !open && setShowNewTaskDialog(false)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowNewTaskDialog(false);
+              setNewTaskInitialStatus(null);
+              setLockNewTaskStatus(false);
+            } else {
+              setShowNewTaskDialog(true);
+            }
+          }}
           projectId={''}
+          initialStatus={newTaskInitialStatus || undefined}
+          lockStatus={lockNewTaskStatus}
           onSuccess={handleNewTaskSuccess}
         />
 

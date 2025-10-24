@@ -39,7 +39,6 @@ import {
   selectProjectDocuments,
   selectProjectDocumentsLoading,
 } from "@/redux/slices/documentsSlice";
-import { useToast } from "@/hooks/use-toast";
 import usePermission from "@/hooks/usePermission";
 import {
   AlertDialog,
@@ -139,7 +138,7 @@ const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
+  // removed useToast usage
   const project = useAppSelector(selectSelectedProject);
   const loading = useAppSelector(selectProjectLoading);
   const projectTasks = useAppSelector(selectProjectTasks);
@@ -153,8 +152,7 @@ const ProjectDetails = () => {
       dispatch(fetchProjectById(id));
       dispatch(fetchTasksByProject(id));
       dispatch(fetchDocumentsByProject(id));
-      
-      // Fetch project members locally
+
       setMembersLoading(true);
       dispatch(getProjectMembers(id))
          .unwrap()
@@ -163,17 +161,12 @@ const ProjectDetails = () => {
          })
         .catch((error) => {
           console.error('Failed to fetch project members:', error);
-          toast({
-            title: "Error",
-            description: "Failed to fetch project members",
-            variant: "destructive",
-          });
         })
         .finally(() => {
           setMembersLoading(false);
         });
     }
-  }, [dispatch, id, toast]);
+  }, [dispatch, id]);
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
@@ -199,26 +192,15 @@ const ProjectDetails = () => {
 
     try {
       const result = await dispatch(deleteTaskAsync(deletingTaskId));
-      
       if (deleteTaskAsync.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Task deleted successfully!",
-        });
-        // Refresh project tasks list
         if (id) {
           dispatch(fetchTasksByProject(id));
         }
       } else {
-        throw new Error(result.payload as string || 'Failed to delete task');
+        throw new Error((result.payload as string) || 'Failed to delete task');
       }
     } catch (error) {
       console.error('Error deleting task:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete task. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setDeletingTaskId(null);
     }

@@ -25,7 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 
 interface AddTaskDialogProps {
   open: boolean;
@@ -36,6 +35,10 @@ interface AddTaskDialogProps {
   onSuccess?: () => void;
   projectMembers?: any[];
   membersLoading?: boolean;
+  // New props to support preselected and locked status
+  initialStatus?: "TODO" | "IN_PROGRESS" | "DONE";
+  lockStatus?: boolean;
+  parentId?: string; // Added for subtask creation
 }
 
 interface TaskFormData {
@@ -82,11 +85,14 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
   onSuccess,
   projectMembers,
   membersLoading,
+  initialStatus,
+  lockStatus,
+  parentId,
 }) => {
   const isEditMode = !!task;
   const isFromTasksPage = !fromProject;
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
+  // Removed useToast usage; toasts handled in Redux slices
   const loading = useAppSelector(selectTaskLoading);
   const error = useAppSelector(selectTaskError);
   const projects = useAppSelector(selectAllProjects);
@@ -104,15 +110,13 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   
-  // Local state for members when isFromTasksPage
+  // Local state for members when fetching inside this component
   const [localMembers, setLocalMembers] = useState<any[]>([]);
   const [localMembersLoading, setLocalMembersLoading] = useState(false);
   
-  // Use project members from props or local state based on context
-  const currentMembers = isFromTasksPage ? localMembers : (projectMembers || []);
-  const currentMembersLoading = isFromTasksPage ? localMembersLoading : (membersLoading || false);
-
-  // Projects and project members are now fetched by parent components for better performance
+  // Prefer members passed from parent; fall back to locally fetched ones
+  const currentMembers = (projectMembers && projectMembers.length > 0) ? projectMembers : localMembers;
+  const currentMembersLoading = (typeof membersLoading === 'boolean') ? membersLoading : localMembersLoading;
 
   // Reset form when dialog opens/closes or populate with task data for edit
   useEffect(() => {
@@ -134,7 +138,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
         setFormData({
           title: "",
           description: "",
-          status: "",
+          status: initialStatus || "",
           priority: "",
           dueDate: "",
           estimatedHours: "",
@@ -144,17 +148,36 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
       }
       setFormErrors({});
     }
-  }, [open, isEditMode, task]);
+  }, [open, isEditMode, task, initialStatus, projectId]);
+
+  // When opened from Project page and parent didn't provide members, fetch them
+  // Fetch members on open whenever we have a projectId and none were provided by parent
+  useEffect(() => {
+    if (!open) return;
+    const pid = formData.projectId || projectId || task?.project?.id;
+    if (!pid) return;
+    if (projectMembers && projectMembers.length > 0) return; // already provided by parent
+
+    setLocalMembersLoading(true);
+    dispatch(getProjectMembers(pid))
+      .unwrap()
+      .then((response) => {
+        setLocalMembers(response.members || []);
+      })
+      .catch((error) => {
+        console.error('Failed to fetch project members:', error);
+      })
+      .finally(() => {
+        setLocalMembersLoading(false);
+      });
+  }, [open, formData.projectId, projectId, task, projectMembers, dispatch]);
 
   // Handle form field changes
   const handleInputChange = (field: keyof TaskFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (formErrors[field as keyof FormErrors]) {
       setFormErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-    
-    // Fetch members when project is selected from tasks page
     if (field === 'projectId' && value && isFromTasksPage) {
       setLocalMembersLoading(true);
       dispatch(getProjectMembers(value))
@@ -164,11 +187,6 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
         })
         .catch((error) => {
           console.error('Failed to fetch project members:', error);
-          toast({
-            title: "Error",
-            description: "Failed to fetch project members",
-            variant: "destructive",
-          });
         })
         .finally(() => {
           setLocalMembersLoading(false);
@@ -248,10 +266,6 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           updateTaskAsync({ id: task.id, taskData: updateData })
         );
         if (updateTaskAsync.fulfilled.match(result)) {
-          toast({
-            title: "Success",
-            description: "Task updated successfully",
-          });
           if (onSuccess) {
             onSuccess();
           } else {
@@ -277,14 +291,11 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               ? formData.memberId
               : undefined,
           projectId: formData.projectId || projectId,
+          parentId: parentId, // pass parent id if provided
         };
 
         const result = await dispatch(createTaskAsync(taskData));
         if (createTaskAsync.fulfilled.match(result)) {
-          toast({
-            title: "Success",
-            description: "Task created successfully",
-          });
           if (onSuccess) {
             onSuccess();
           } else {
@@ -297,16 +308,13 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
     }
   };
 
-  // Show error toast when error changes
+  // Show error toast when error changes (centralized in slices)
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
+    // No component-level toast; rely on slice toasts
+  }, [error]);
+
+  // Helper to get status label
+  const getStatusLabel = (value: string) => TASK_STATUSES.find(s => s.value === value)?.label || value;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -369,29 +377,36 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
             )}
 
             {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange("status", value)}
-              >
-                <SelectTrigger
-                  className={formErrors.status ? "border-red-500" : ""}
+            {lockStatus ? (
+              <div className="space-y-2">
+                <Label>Status *</Label>
+                <Input value={getStatusLabel(formData.status)} disabled />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleInputChange("status", value)}
                 >
-                  <SelectValue placeholder="Select task status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_STATUSES.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.status && (
-                <p className="text-sm text-red-500">{formErrors.status}</p>
-              )}
-            </div>
+                  <SelectTrigger
+                    className={formErrors.status ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Select task status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_STATUSES.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formErrors.status && (
+                  <p className="text-sm text-red-500">{formErrors.status}</p>
+                )}
+              </div>
+            )}
 
             {/* Priority */}
             <div className="space-y-2">
@@ -510,18 +525,11 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={loading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || membersLoading}>
-              {loading
-                ? isEditMode
-                  ? "Updating..."
-                  : "Creating..."
-                : isEditMode
-                ? "Update Task"
-                : "Create Task"}
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Task"}
             </Button>
           </DialogFooter>
         </form>

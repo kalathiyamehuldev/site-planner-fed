@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
+import { toast } from 'sonner';
 
 // API Response interface
 interface ApiResponse<T = any> {
@@ -22,6 +23,7 @@ export interface ApiTask {
   estimatedHours?: number;
   projectId: string;
   memberId?: string;
+  parentId?: string; // added for parent linking
   createdAt: string;
   updatedAt: string;
   member?: {
@@ -45,6 +47,7 @@ export interface CreateTaskData {
   estimatedHours?: number;
   projectId: string;
   memberId?: string;
+  parentId?: string; // Added to support subtask creation
 }
 
 export interface UpdateTaskData extends Partial<CreateTaskData> { }
@@ -81,6 +84,7 @@ export interface Task {
     id: string;
     name: string;
   };
+  parentId?: string; // added for parent linking
   createdAt: string;
   updatedAt: string;
 }
@@ -100,34 +104,36 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   assignee: apiTask.member ? `${apiTask.member.firstName} ${apiTask.member.lastName}` : undefined,
   member: apiTask.member,
   project: apiTask.project,
+  parentId: apiTask.parentId, // map parentId
   createdAt: apiTask.createdAt,
   updatedAt: apiTask.updatedAt,
 });
 
-// Helper function to get selected company ID from state
-const getSelectedCompanyId = (getState: any) => {
-  const state = getState();
-  return state.auth.selectedCompany?.id || JSON.parse(localStorage.getItem('selectedCompany') || '{}')?.id;
-};
-
 export const fetchAllTasksByCompany = createAsyncThunk(
   'tasks/fetchAllTasksByCompany',
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
+      const response = await api.get('/tasks');
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch tasks';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
 
-      const response = await api.get(`/tasks?companyId=${companyId}`);
-      if (response.data.status === 'error') {
-        return rejectWithValue(response.data.error || response.data.message || 'Failed to fetch tasks');
-      }
-
-      return response.data.items.map(transformApiTask);
+      toast.success(message || 'Tasks fetched successfully');
+      // Handle both paginated and array responses
+      const items = Array.isArray((data as any)?.items)
+        ? (data as any).items
+        : Array.isArray(data as any)
+          ? (data as any)
+          : [];
+      return items.map(transformApiTask);
     } catch (error: any) {
-      console.log("error", error)
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch tasks');
+      const errMsg = error?.message || 'Failed to fetch tasks';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -136,15 +142,21 @@ export const fetchTasksByProject = createAsyncThunk(
   'tasks/fetchTasksByProject',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/tasks/project/${projectId}`) as ApiResponse<ApiTask[]>;
-      if (response.status === 'success' && response.data) {
-        return response.data.map(transformApiTask);
+      const response = await api.get(`/tasks/project/${projectId}`);
+      const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
+
+      if (status === 'success' && data) {
+        toast.success(message || 'Project tasks fetched successfully');
+        return data.map(transformApiTask);
       } else {
-        return rejectWithValue(response.message || 'Failed to fetch project tasks');
+        const errMsg = error || message || 'Failed to fetch project tasks';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      console.log("error", error)
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch project tasks');
+      const errMsg = error?.message || 'Failed to fetch project tasks';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -153,14 +165,21 @@ export const fetchTaskById = createAsyncThunk(
   'tasks/fetchTaskById',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/tasks/${id}`) as ApiResponse<ApiTask>;
-      if (response.status === 'success' && response.data) {
-        return transformApiTask(response.data);
+      const response = await api.get(`/tasks/${id}`);
+      const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
+
+      if (status === 'success' && data) {
+        toast.success(message || 'Task fetched successfully');
+        return transformApiTask(data);
       } else {
-        return rejectWithValue(response.message || 'Failed to fetch task');
+        const errMsg = error || message || 'Failed to fetch task';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch task');
+      const errMsg = error?.message || 'Failed to fetch task';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -169,14 +188,21 @@ export const createTaskAsync = createAsyncThunk(
   'tasks/createTask',
   async (taskData: CreateTaskData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/tasks', taskData) as ApiResponse<ApiTask>;
-      if (response.status === 'success' && response.data) {
-        return transformApiTask(response.data);
+      const response = await api.post('/tasks', taskData);
+      const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
+
+      if (status === 'success' && data) {
+        toast.success(message || 'Task created successfully');
+        return transformApiTask(data);
       } else {
-        return rejectWithValue(response.message || 'Failed to create task');
+        const errMsg = error || message || 'Failed to create task';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create task');
+      const errMsg = error?.message || 'Failed to create task';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -185,14 +211,21 @@ export const updateTaskAsync = createAsyncThunk(
   'tasks/updateTask',
   async ({ id, taskData }: { id: string; taskData: UpdateTaskData }, { rejectWithValue }) => {
     try {
-      const response = await api.patch(`/tasks/${id}`, taskData) as ApiResponse<ApiTask>;
-      if (response.status === 'success' && response.data) {
-        return transformApiTask(response.data);
+      const response = await api.patch(`/tasks/${id}`, taskData);
+      const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
+
+      if (status === 'success' && data) {
+        toast.success(message || 'Task updated successfully');
+        return transformApiTask(data);
       } else {
-        return rejectWithValue(response.message || 'Failed to update task');
+        const errMsg = error || message || 'Failed to update task';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update task');
+      const errMsg = error?.message || 'Failed to update task';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -201,14 +234,21 @@ export const deleteTaskAsync = createAsyncThunk(
   'tasks/deleteTask',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await api.delete(`/tasks/${id}`) as ApiResponse<void>;
-      if (response.status === 'success') {
+      const response = await api.delete(`/tasks/${id}`);
+      const { status, message, error } = response as unknown as ApiResponse<void>;
+
+      if (status === 'success') {
+        toast.success(message || 'Task deleted successfully');
         return id;
       } else {
-        return rejectWithValue(response.message || 'Failed to delete task');
+        const errMsg = error || message || 'Failed to delete task';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete task');
+      const errMsg = error?.message || 'Failed to delete task';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -217,14 +257,21 @@ export const updateTaskStatusAsync = createAsyncThunk(
   'tasks/updateTaskStatus',
   async ({ id, status }: { id: string; status: Task['status'] }, { rejectWithValue }) => {
     try {
-      const response = await api.patch(`/tasks/${id}`, { status }) as ApiResponse<ApiTask>;
-      if (response.status === 'success' && response.data) {
-        return transformApiTask(response.data);
+      const response = await api.patch(`/tasks/${id}`, { status });
+      const { status: respStatus, data, message, error } = response as unknown as ApiResponse<ApiTask>;
+
+      if (respStatus === 'success' && data) {
+        toast.success(message || 'Task status updated successfully');
+        return transformApiTask(data);
       } else {
-        return rejectWithValue(response.message || 'Failed to update task status');
+        const errMsg = error || message || 'Failed to update task status';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update task status');
+      const errMsg = error?.message || 'Failed to update task status';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );

@@ -20,6 +20,7 @@ import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
+import TaskView from "./components/tasks/TaskView";
 import TimeTracking from "./pages/TimeTracking";
 import TodoList from "./pages/TodoList";
 import Invoices from "./pages/Invoices";
@@ -83,6 +84,7 @@ const App = () => (
                             element={<ProjectDetails />}
                           />
                           <Route path="/tasks" element={<Tasks />} />
+                          <Route path="/tasks/:id" element={<TaskView />} />
                           <Route
                             path="/time-tracking"
                             element={<TimeTracking />}

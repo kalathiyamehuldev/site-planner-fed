@@ -42,7 +42,6 @@ import {
   DocumentFilterParams
 } from "@/redux/slices/documentsSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
-import { fetchAllTasksByCompany, selectAllTasks } from "@/redux/slices/tasksSlice";
 import {
   fetchFolders,
   createFolder,
@@ -123,7 +122,6 @@ const Documents = () => {
   // Redux selectors
   const documents = useAppSelector(selectAllDocuments);
   const projects = useAppSelector(selectAllProjects);
-  const tasks = useAppSelector(selectAllTasks);
   const folders = useAppSelector(selectAllFolders);
   const loading = useAppSelector((state) => state.documents.loading);
   const folderLoading = useAppSelector(selectFolderLoading);
@@ -134,7 +132,7 @@ const Documents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFileType, setSelectedFileType] = useState("All");
   const [selectedProject, setSelectedProject] = useState("All");
-  const [selectedTask, setSelectedTask] = useState("All");
+  // const [selectedTask, setSelectedTask] = useState("All");
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
@@ -173,7 +171,7 @@ const Documents = () => {
     title: '',
     description: '',
     projectId: '',
-    taskId: '',
+    // taskId: '',
     file: null as File | null
   });
   const { hasPermission } = usePermission();
@@ -181,16 +179,13 @@ const Documents = () => {
   useEffect(() => {
     // dispatch(fetchRootDocuments());
     
-    // Fetch projects and tasks only if not already loaded
+    // Fetch projects only if not already loaded
     if (projects.length === 0) {
       dispatch(fetchProjects());
     }
-    if (tasks.length === 0) {
-      dispatch(fetchAllTasksByCompany());
-    }
     
     dispatch(fetchFolders(undefined));
-  }, [dispatch, projects.length, tasks.length]);
+  }, [dispatch, projects.length]);
 
   // Update folder project names when projects are loaded
   useEffect(() => {
@@ -211,10 +206,6 @@ const Documents = () => {
     return projects.find(p => p.id === document.projectId)?.title || 'No Project';
   };
 
-  const getTaskName = (document: Document) => {
-    return tasks.find(t => t.id === document.taskId)?.title || 'No Task';
-  };
-
   // Filter documents based on search and filters
   const filteredDocuments = documents.filter(document => {
     // Search filter
@@ -223,9 +214,8 @@ const Documents = () => {
       const matchesName = document.name.toLowerCase().includes(searchLower);
       const matchesDescription = document.description?.toLowerCase().includes(searchLower);
       const matchesProject = getProjectName(document).toLowerCase().includes(searchLower);
-      const matchesTask = getTaskName(document).toLowerCase().includes(searchLower);
       
-      if (!matchesName && !matchesDescription && !matchesProject && !matchesTask) {
+      if (!matchesName && !matchesDescription && !matchesProject) {
         return false;
       }
     }
@@ -238,11 +228,11 @@ const Documents = () => {
     }
     
     // Task filter
-    if (selectedTask !== "All") {
-      if (document.taskId !== selectedTask) {
-        return false;
-      }
-    }
+    // if (selectedTask !== "All") {
+    //   if (document.taskId !== selectedTask) {
+    //     return false;
+    //   }
+    // }
     
     // File type filter
     if (selectedFileType !== "All") {
@@ -709,7 +699,7 @@ const Documents = () => {
           </div>
           
           {/* Clear Filters Button */}
-          {(searchTerm || selectedProject !== "All" || selectedTask !== "All" || selectedFileType !== "All") && (
+          {(searchTerm || selectedProject !== "All" || selectedFileType !== "All") && (
             <MotionButton
               variant="outline"
               size="sm"
@@ -717,7 +707,7 @@ const Documents = () => {
               onClick={() => {
                 setSearchTerm("");
                 setSelectedProject("All");
-                setSelectedTask("All");
+                // setSelectedTask("All");
                 setSelectedFileType("All");
               }}
               className="whitespace-nowrap"

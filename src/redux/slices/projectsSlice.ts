@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
+import { toast } from 'sonner';
 
 // API Response interface
 interface ApiResponse<T = any> {
@@ -104,135 +105,127 @@ export const fetchProjects = createAsyncThunk(
     try {
       const companyId = getSelectedCompanyId(getState);
       if (!companyId) {
-        throw new Error('No company selected');
+        const errMsg = 'No company selected';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
       const response: any = await api.get(`/projects?companyId=${companyId}`);
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to fetch projects');
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch projects';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      return (response?.items || []).map(transformApiProject);
+
+      toast.success(message || 'Projects fetched successfully');
+      const items = (data?.items ?? response?.items ?? data ?? []);
+      return (items || []).map(transformApiProject);
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch projects');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to fetch projects';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
 
 export const fetchProjectById = createAsyncThunk(
   'projects/fetchProjectById',
-  async (id: string, { rejectWithValue, getState }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
+      const response: any = await api.get(`/projects/${id}`);
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      const response = await api.get(`/projects/${id}?companyId=${companyId}`) as ApiResponse<{ project: ApiProject }>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to fetch project');
-      }
-      
-      return transformApiProject(response.data!.project);
+
+      toast.success(message || 'Project fetched successfully');
+      const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
+      return transformApiProject(project);
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to fetch project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
 
 export const createProject = createAsyncThunk(
   'projects/createProject',
-  async (projectData: Omit<CreateProjectData, 'companyId'>, { rejectWithValue, getState }) => {
+  async (projectData: Omit<CreateProjectData, 'companyId'>, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      // Convert Date objects to ISO strings for API
       const apiData = {
         ...projectData,
         startDate: projectData.startDate ? projectData.startDate.toISOString() : undefined,
         endDate: projectData.endDate ? projectData.endDate.toISOString() : undefined,
       };
 
-      const response = await api.post(`/projects?companyId=${companyId}`, apiData) as ApiResponse<{ project: ApiProject }>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error || 'Failed to create project');
+      const response: any = await api.post('/projects', apiData);
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to create project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      return transformApiProject(response.data!.project);
+
+      toast.success(message || 'Project created successfully');
+      const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
+      return transformApiProject(project);
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to create project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to create project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
 
 export const updateProjectAsync = createAsyncThunk(
   'projects/updateProject',
-  async ({ id, projectData }: { id: string; projectData: UpdateProjectData }, { rejectWithValue, getState }) => {
+  async ({ id, projectData }: { id: string; projectData: UpdateProjectData }, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
+      const response: any = await api.put(`/projects/${id}`, projectData);
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to update project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      const response = await api.put(`/projects/${id}?companyId=${companyId}`, projectData) as ApiResponse<{ project: ApiProject }>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to update project');
-      }
-      
-      return transformApiProject(response.data!.project);
+
+      toast.success(message || 'Project updated successfully');
+      const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
+      return transformApiProject(project);
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to update project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to update project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
 
 export const deleteProjectAsync = createAsyncThunk(
   'projects/deleteProject',
-  async (id: string, { rejectWithValue, getState }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
-      const companyId = getSelectedCompanyId(getState);
-      if (!companyId) {
-        throw new Error('No company selected');
+      const response: any = await api.delete(`/projects/${id}`);
+      const { status, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to delete project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      const response = await api.delete(`/projects/${id}?companyId=${companyId}`) as ApiResponse<null>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to delete project');
-      }
-      
+
+      toast.success(message || 'Project deleted successfully');
       return id;
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to delete project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to delete project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -242,21 +235,21 @@ export const addMemberToProject = createAsyncThunk(
   'projects/addMemberToProject',
   async ({ projectId, userId, role = 'VIEWER' }: { projectId: string; userId: string; role?: string }, { rejectWithValue }) => {
     try {
-      
-      const response = await api.post(`/projects/${projectId}/members/${userId}`, { role }) as ApiResponse<{ projectMember: ProjectMember }>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to add member to project');
+      const response: any = await api.post(`/projects/${projectId}/members/${userId}`, { role });
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to add member to project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      return response.data!.projectMember;
+
+      toast.success(message || 'Member added successfully');
+      return (data?.projectMember ?? response?.data?.projectMember ?? data);
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to add member to project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to add member to project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -265,21 +258,21 @@ export const removeMemberFromProject = createAsyncThunk(
   'projects/removeMemberFromProject',
   async ({ projectId, userId }: { projectId: string; userId: string }, { rejectWithValue }) => {
     try {
-      
-      const response = await api.delete(`/projects/${projectId}/members/${userId}`) as ApiResponse<null>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to remove member from project');
+      const response: any = await api.delete(`/projects/${projectId}/members/${userId}`);
+      const { status, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to remove member from project';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
+
+      toast.success(message || 'Member removed successfully');
       return { projectId, userId };
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to remove member from project');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to remove member from project';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -288,21 +281,21 @@ export const getProjectMembers = createAsyncThunk(
   'projects/getProjectMembers',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      
-      const response = await api.get(`/projects/${projectId}/members`) as ApiResponse<{ members: ProjectMember[] }>;
-      
-      if (response.status === 'error') {
-        return rejectWithValue(response.message || response.error|| 'Failed to fetch project members');
+      const response: any = await api.get(`/projects/${projectId}/members`);
+      const { status, data, message, error } = response || {};
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch project members';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
       }
-      
-      return { projectId, members: response.data!.members };
+
+      toast.success(message || 'Project members fetched successfully');
+      return { projectId, members: (data?.members ?? response?.data?.members ?? data ?? []) };
     } catch (error: any) {
-      // Handle axios error response
-      if (error.response?.data) {
-        const apiError = error.response.data as ApiResponse;
-        return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch project members');
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errMsg = error?.message || 'Failed to fetch project members';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
