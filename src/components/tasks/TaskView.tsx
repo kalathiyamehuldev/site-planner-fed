@@ -31,6 +31,7 @@ import {
 import api from "@/lib/axios";
 import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
+import ActionButton from "@/components/ui/ActionButton";
 import { getProjectMembers } from "@/redux/slices/projectsSlice";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { selectUser } from "@/redux/slices/authSlice";
@@ -414,13 +415,19 @@ const TaskView: React.FC = () => {
                   </button>
                 )}
                 {timerForThisTask ? (
-                  <Button size="sm" variant="secondary" onClick={handleStopTimer}>
-                    <solar.Time.Stopwatch className="mr-2 size-4" weight="Bold" /> Stop Timer
-                  </Button>
+                  <ActionButton
+                    variant="gray"
+                    onClick={handleStopTimer}
+                    leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                    text="Stop Timer"
+                  />
                 ) : (
-                  <Button size="sm" variant="default" onClick={handleStartTimer}>
-                    <solar.Time.Stopwatch className="mr-2 size-4" weight="Bold" /> Start Timer
-                  </Button>
+                  <ActionButton
+                    variant="secondary"
+                    onClick={handleStartTimer}
+                    leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                    text="Start Timer"
+                  />
                 )}
               </div>
             </div>
@@ -459,13 +466,19 @@ const TaskView: React.FC = () => {
                 </button>
               )}
               {timerForThisTask ? (
-                <Button variant="secondary" onClick={handleStopTimer}>
-                  <solar.Time.Stopwatch className="mr-2 size-4" weight="Bold" /> Stop Timer
-                </Button>
+                <ActionButton
+                  variant="secondary"
+                  onClick={handleStopTimer}
+                  leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                  text="Stop Timer"
+                />
               ) : (
-                <Button variant="default" onClick={handleStartTimer}>
-                  <solar.Time.Stopwatch className="mr-2 size-4" weight="Bold" /> Start Timer
-                </Button>
+                <ActionButton
+                  variant="secondary"
+                  onClick={handleStartTimer}
+                  leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                  text="Start Timer"
+                />
               )}
             </div>
           </div>
@@ -478,7 +491,7 @@ const TaskView: React.FC = () => {
             <GlassCard className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-3">
                 <solar.Notes.ArchiveMinimalistic className="size-4 text-muted-foreground" />
-                <h2 className="text-lg font-medium">Description</h2>
+                <h2 className="font-medium">Description</h2>
                 {/* Removed Add Sub-task button from Description */}
               </div>
               {editingDescription ? (
@@ -504,13 +517,24 @@ const TaskView: React.FC = () => {
               )}
             </GlassCard>
 
-            {/* Subtasks - show only when exists */}
-            {subtasks.length > 0 && (
-              <GlassCard className="p-4 md:p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <solar.List.ChecklistMinimalistic className="size-4 text-muted-foreground" />
-                  <h2 className="text-lg font-medium">Subtasks</h2>
+            {/* Subtasks */}
+            <GlassCard className="p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <solar.List.ChecklistMinimalistic className="size-4 text-muted-foreground" />
+                <h2 className="font-medium">Subtasks</h2>
+              </div>
+              {subtasks.length === 0 ? (
+                <div className="py-10 flex flex-col items-center justify-center">
+                  <div className="text-sm text-muted-foreground mb-3">No sub-task found. Add a Sub-task</div>
+                  <ActionButton
+                    variant="primary"
+                    onClick={() => setIsAddSubtaskOpen(true)}
+                    leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
+                    text="Add Subtask"
+                  />
                 </div>
+              ) : (
+                <>
                 <div className="space-y-2">
                   {/* Desktop table-like list */}
                   <div className="hidden md:grid grid-cols-12 gap-3 text-xs font-medium text-muted-foreground pb-2 border-b">
@@ -892,6 +916,7 @@ const TaskView: React.FC = () => {
                             dispatch(deleteTaskAsync(st.id)).unwrap()
                               .then(() => setSubtasks((prev) => prev.filter(s => s.id !== st.id)));
                           }}
+                          className="opacity-70 group-hover:opacity-100"
                           title="Delete"
                         >
                           <TrashBinTrash weight="Bold" size={20} color="red"/>
@@ -901,16 +926,20 @@ const TaskView: React.FC = () => {
                   ))}
                 </div>
                 <div className="pt-3">
-                  <Button size="sm" variant="default" onClick={() => setIsAddSubtaskOpen(true)}>
-                    + Add Sub-task
-                  </Button>
+                  <ActionButton
+                    variant="primary"
+                    onClick={() => setIsAddSubtaskOpen(true)}
+                    leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
+                    text="Add Subtask"
+                  />
                 </div>
-              </GlassCard>
-            )}
+                </>
+              )}
+            </GlassCard>
 
             {/* Comments */}
             <GlassCard className="p-4 md:p-6">
-              <h2 className="text-lg font-medium mb-4">Comments</h2>
+              <h2 className="font-medium mb-4">Comments</h2>
               <div className="space-y-4">
                 {commentsLoading ? (
                   <div className="text-sm text-muted-foreground">Loading comments...</div>
@@ -949,22 +978,22 @@ const TaskView: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {currentUser?.id && c?.fromUser?.id === currentUser.id && (
+                                  {currentUser?.id && String(c?.fromUser?.id ?? c?.author?.id) === String(currentUser?.id) && (
                                     <button
-                                      className="p-1 text-primary hover:underline text-xs"
+                                      className="p-1 text-primary hover:underline text-xs opacity-70 group-hover:opacity-100"
                                       title="Edit comment"
                                       onClick={() => setEditingComments((prev) => ({ ...prev, [c.id]: { text: c.content, saving: false } }))}
                                     >
-                                      <Pen2 weight="Bold" size={16}/>
+                                      <Pen2 weight="Outline" color="blue" size={20}/>
                                     </button>
                                   )}
-                                  {currentUser?.id && c?.fromUser?.id === currentUser.id && (
+                                  {currentUser?.id && String(c?.fromUser?.id ?? c?.author?.id) === String(currentUser?.id) && (
                                     <button
-                                      className="p-1 text-red-500 hover:text-red-600"
+                                      className="p-1 opacity-70 group-hover:opacity-100"
                                       title="Delete comment"
                                       onClick={() => handleDeleteCommentWithThread(c)}
                                     >
-                                      <TrashBinTrash weight="Bold" size={16} />
+                                      <TrashBinTrash weight="Bold" color="red" size={20} />
                                     </button>
                                   )}
                                 </div>
@@ -1120,7 +1149,7 @@ const TaskView: React.FC = () => {
                                   const rAvatar = getAvatarData(rAuthor);
                                   const rCount = (t: string) => (rc.reactions || []).filter((r: any) => r?.type === t).length;
                                   const rReacted = (t: string) => (rc.reactions || []).some((r: any) => r?.type === t && r?.userId === currentUser?.id);
-                                  const rOwn = currentUser?.id && rc?.fromUser?.id === currentUser.id;
+                                  const rOwn = !!currentUser?.id && String(rc?.fromUser?.id ?? rc?.author?.id) === String(currentUser.id);
                                   const rEditing = !!editingComments[rc.id];
                                   return (
                                     <div key={rc.id} className="flex items-start gap-3">
@@ -1142,22 +1171,22 @@ const TaskView: React.FC = () => {
                                             )}
                                           </div>
                                           <div className="flex items-center gap-2">
-                                            {rOwn && (
+                                            {String(rc?.fromUser?.id ?? rc?.author?.id) === String(currentUser?.id) && (
                                               <button
-                                                className="p-1 text-primary hover:underline text-xs"
+                                                className="p-1 text-primary hover:underline text-xs opacity-70 group-hover:opacity-100"
                                                 title="Edit reply"
                                                 onClick={() => setEditingComments((prev) => ({ ...prev, [rc.id]: { text: rc.content, saving: false } }))}
                                               >
-                                                <Pen2 weight="Bold" size={16}/>
+                                                <Pen2 weight="Outline" color="blue" size={20}/>
                                               </button>
                                             )}
                                             {rOwn && (
                                               <button
-                                                className="p-1 text-red-600 hover:text-red-700"
+                                                className="p-1 opacity-70 group-hover:opacity-100"
                                                 title="Delete reply"
                                                 onClick={() => handleDeleteCommentWithThread(rc)}
                                               >
-                                                <TrashBinTrash weight="Bold" size={16} />
+                                                <TrashBinTrash weight="Bold" color="red" size={20} />
                                               </button>
                                             )}
                                           </div>
@@ -1311,7 +1340,7 @@ const TaskView: React.FC = () => {
                                               const rrAvatar = getAvatarData(rrAuthor);
                                               const rrCount = (t: string) => (rrc.reactions || []).filter((r: any) => r?.type === t).length;
                                               const rrReacted = (t: string) => (rrc.reactions || []).some((r: any) => r?.type === t && r?.userId === currentUser?.id);
-                                              const rrOwn = currentUser?.id && rrc?.fromUser?.id === currentUser?.id;
+                                              const rrOwn = !!currentUser?.id && String(rrc?.fromUser?.id ?? rrc?.author?.id) === String(currentUser.id);
                                               const rrEditing = !!editingComments[rrc.id];
                                               return (
                                                 <div key={rrc.id} className="flex items-start gap-3">
@@ -1335,20 +1364,20 @@ const TaskView: React.FC = () => {
                                                       <div className="flex items-center gap-2">
                                                         {rrOwn && (
                                                           <button
-                                                            className="p-1 text-primary hover:underline text-[10px]"
+                                                            className="p-1 text-primary hover:underline text-[10px] opacity-70 group-hover:opacity-100"
                                                             title="Edit reply"
                                                             onClick={() => setEditingComments((prev) => ({ ...prev, [rrc.id]: { text: rrc.content, saving: false } }))}
                                                           >
-                                                            <Pen2 weight="Bold" size={16}/>
+                                                            <Pen2 weight="Outline" color="blue" size={16}/>
                                                           </button>
                                                         )}
                                                         {rrOwn && (
                                                           <button
-                                                            className="p-1 text-red-600 hover:text-red-700"
+                                                            className="p-1 opacity-70 group-hover:opacity-100"
                                                             title="Delete reply"
                                                             onClick={() => handleDeleteCommentWithThread(rrc)}
                                                           >
-                                                            <TrashBinTrash weight="Bold" size={16} />
+                                                            <TrashBinTrash weight="Bold" color="red" size={16} />
                                                           </button>
                                                         )}
                                                       </div>
@@ -1469,7 +1498,7 @@ const TaskView: React.FC = () => {
           {/* Right column (Task Info) */}
           <div className="lg:col-span-4 space-y-6">
             <GlassCard className="p-4 md:p-6">
-              <h2 className="text-lg font-medium mb-4">Task Info</h2>
+              <h2 className="font-medium mb-4">Task Info</h2>
               <div className="space-y-3 text-sm">
                 {/* Status removed as per request */}
                 <InfoRow label="Project">
@@ -1593,11 +1622,7 @@ const TaskView: React.FC = () => {
                     </button>
                   )}
                 </InfoRow>
-                <div className="pt-3">
-                  <Button size="sm" variant="default" onClick={() => setIsAddSubtaskOpen(true)}>
-                    + Add Sub-task
-                  </Button>
-                </div>
+                {/* Add Subtask removed from Task Info to avoid duplication */}
               </div>
             </GlassCard>
           </div>

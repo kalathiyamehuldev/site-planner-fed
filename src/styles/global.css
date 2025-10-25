@@ -395,3 +395,84 @@ td {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--neutral-500);
 }
+
+/* Shared App Button styles */
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0; /* control spacing via icon margins to cap at 8px */
+  border-radius: 8px;
+  font-family: Poppins, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+  transition: background-color 300ms ease-in-out, border-color 300ms ease-in-out, color 300ms ease-in-out, box-shadow 300ms ease-in-out;
+  /* Responsive base sizing */
+  padding: 8px 16px;
+  font-size: 13.5px;
+  height: 34px;
+}
+
+@media (min-width: 640px) {
+  .app-btn {
+    padding: 10px 18px;
+    font-size: 14.5px;
+    height: 36px;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    height: 40px;
+  }
+}
+
+/* Reduce left padding when a left icon exists for balanced look */
+.app-btn.has-left-icon { padding-left: 14px; }
+@media (min-width: 768px) { .app-btn.has-left-icon { padding-left: 16px; } }
+
+.app-btn__label { color: inherit; font-size: inherit; }
+.app-btn__icon-left { display: inline-flex; margin-right: 8px; }
+.app-btn__icon-right { display: inline-flex; margin-left: 8px; }
+
+/* Increase icon size slightly */
+.app-btn__icon-left svg,
+.app-btn__icon-right svg { width: 18px; height: 18px; }
+@media (min-width: 768px) {
+  .app-btn__icon-left svg,
+  .app-btn__icon-right svg { width: 20px; height: 20px; }
+}
+
+/* Sizes */
+.app-btn--xl { width: 145px; height: 48px; padding: 12px 24px; font-size: 16px; line-height: 24px; }
+.app-btn--l  { width: 131px; height: 40px; padding: 8px 20px;  font-size: 14px; line-height: 20px; }
+.app-btn--m  { width: 105px; height: 36px; padding: 8px 14px;  font-size: 12px; line-height: 20px; font-weight: 600; }
+.app-btn--s  { width: 101px; height: 32px; padding: 6px 12px;  font-size: 12px; line-height: 20px; font-weight: 600; }
+
+/* Variants */
+.app-btn--primary { background: #1B78F9; color: #FFFFFF; border: 1.5px solid transparent; }
+.app-btn--primary:hover { background: #1766D3; }
+.app-btn--primary:active { background: #1458B5; }
+.app-btn--primary:focus-visible { background: #1B78F9; border: 2px solid #99C7FF; outline: none; }
+.app-btn--disabled.app-btn--primary, .app-btn--primary:disabled { background: #AFC8EB; color: #FFFFFF; cursor: not-allowed; }
+
+.app-btn--secondary { background: #FFFFFF; color: #1B78F9; border: 1.5px solid #1B78F9; }
+.app-btn--secondary:hover { background: #EAF2FE; color: #1766D3; border-color: #1766D3; }
+.app-btn--secondary:active { background: #D6E6FD; color: #1458B5; border-color: #1458B5; }
+.app-btn--secondary:focus-visible { background: #EAF2FE; color: #1B78F9; border: 2px solid #99C7FF; outline: none; }
+.app-btn--disabled.app-btn--secondary, .app-btn--secondary:disabled { color: #AFC8EB; border-color: #AFC8EB; background: #FFFFFF; cursor: not-allowed; }
+
+.app-btn--gray { background: #F2F4F7; color: #2B2C40; border: 1.5px solid transparent; }
+.app-btn--gray:hover { background: #E4E7EB; color: #1B1B1B; }
+.app-btn--gray:active { background: #D0D4D9; color: #1B1B1B; }
+.app-btn--gray:focus-visible { background: #F2F4F7; color: #1B1B1B; border: 2px solid #99C7FF; outline: none; }
+.app-btn--disabled.app-btn--gray, .app-btn--gray:disabled { background: #E8EAED; color: #8A8F99; cursor: not-allowed; }
+
+.app-btn--text { background: #FFFFFF; color: #1B78F9; border: 1.5px solid transparent; }
+.app-btn--text:hover { background: #F3F7FD; color: #1766D3; }
+.app-btn--text:active { background: #E2ECFB; color: #1458B5; }
+.app-btn--text:focus-visible { background: #F3F7FD; color: #1B78F9; border: 2px solid #99C7FF; outline: none; }
+.app-btn--disabled.app-btn--text, .app-btn--text:disabled { background: #FFFFFF; color: #AFC8EB; cursor: not-allowed; }
