@@ -92,6 +92,24 @@ export interface Task {
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
+// Comments interfaces
+export interface TaskComment {
+  id: string;
+  content: string;
+  author?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  parentId?: string;
+  mentionUserIds?: string[];
+  reactions?: any[];
+  attachments?: any[];
+}
+
 // Transform API task to frontend format
 const transformApiTask = (apiTask: ApiTask): Task => ({
   id: apiTask.id,
@@ -276,6 +294,170 @@ export const updateTaskStatusAsync = createAsyncThunk(
   }
 );
 
+// Comments thunks
+export const fetchTaskCommentsAsync = createAsyncThunk(
+  'tasks/fetchTaskComments',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/tasks/${taskId}/comments`);
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch comments';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      const items = Array.isArray((data as any)?.items)
+        ? (data as any).items
+        : Array.isArray(data as any)
+          ? (data as any)
+          : [];
+
+      toast.success(message || 'Comments fetched successfully');
+      return { taskId, comments: items as TaskComment[] };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to fetch comments';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
+export const createTaskCommentAsync = createAsyncThunk(
+  'tasks/createTaskComment',
+  async (
+    { taskId, content, parentId, mentionUserIds }: { taskId: string; content: string; parentId?: string; mentionUserIds?: string[] },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.post(`/tasks/${taskId}/comments`, { content, parentId, mentionUserIds });
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to create comment';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      toast.success(message || 'Comment posted');
+      return { taskId, comment: data as TaskComment };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to create comment';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
+// Add: update comment thunk
+export const updateTaskCommentAsync = createAsyncThunk(
+  'tasks/updateTaskComment',
+  async (
+    { taskId, commentId, content }: { taskId: string; commentId: string; content: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.patch(`/tasks/comments/${commentId}`, { content });
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to update comment';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      toast.success(message || 'Comment updated');
+      return { taskId, comment: data as TaskComment };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to update comment';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
+export const deleteTaskCommentAsync = createAsyncThunk(
+  'tasks/deleteTaskComment',
+  async (
+    { taskId, commentId }: { taskId: string; commentId: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.delete(`/tasks/comments/${commentId}`);
+      const { status, message, error } = response as unknown as ApiResponse<void>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to delete comment';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      toast.success(message || 'Comment deleted');
+      return { taskId, commentId };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to delete comment';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
+export const addTaskCommentReactionAsync = createAsyncThunk(
+  'tasks/addTaskCommentReaction',
+  async (
+    { taskId, commentId, type }: { taskId: string; commentId: string; type: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.post(`/tasks/comments/${commentId}/reactions`, { type });
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to add reaction';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      toast.success(message || 'Reaction added');
+      return { taskId, commentId, reaction: data };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to add reaction';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
+export const removeTaskCommentReactionAsync = createAsyncThunk(
+  'tasks/removeTaskCommentReaction',
+  async (
+    { taskId, commentId, type }: { taskId: string; commentId: string; type: string },
+    { rejectWithValue, getState }
+  ) => {
+    try {
+      const response = await api.delete(`/tasks/comments/${commentId}/reactions`, { data: { type } });
+      const { status, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to remove reaction';
+        toast.error(errMsg);
+        return rejectWithValue({ taskId, error: errMsg });
+      }
+
+      const state = getState() as RootState;
+      const userId = (state as any)?.auth?.user?.id;
+
+      toast.success(message || 'Reaction removed');
+      return { taskId, commentId, type, userId };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to remove reaction';
+      toast.error(errMsg);
+      return rejectWithValue({ taskId, error: errMsg });
+    }
+  }
+);
+
 interface TasksState {
   tasks: Task[];
   projectTasks: Task[];
@@ -285,6 +467,10 @@ interface TasksState {
   total: number;
   page: number;
   limit: number;
+  // Comments state
+  commentsByTaskId: Record<string, TaskComment[]>;
+  commentsLoading: boolean;
+  commentsError: string | null;
 }
 
 const initialState: TasksState = {
@@ -296,6 +482,10 @@ const initialState: TasksState = {
   total: 0,
   page: 1,
   limit: 10,
+  // Comments initial state
+  commentsByTaskId: {},
+  commentsLoading: false,
+  commentsError: null,
 };
 
 export const tasksSlice = createSlice({
@@ -427,6 +617,111 @@ export const tasksSlice = createSlice({
       .addCase(updateTaskStatusAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Comments reducers
+      .addCase(fetchTaskCommentsAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(fetchTaskCommentsAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, comments } = action.payload as { taskId: string; comments: TaskComment[] };
+        state.commentsByTaskId[taskId] = comments;
+      })
+      .addCase(fetchTaskCommentsAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to fetch comments');
+      })
+      .addCase(createTaskCommentAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(createTaskCommentAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, comment } = action.payload as { taskId: string; comment: TaskComment };
+        const existing = state.commentsByTaskId[taskId] || [];
+        state.commentsByTaskId[taskId] = [...existing, comment];
+      })
+      .addCase(createTaskCommentAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to create comment');
+      })
+      // Insert: update comment reducers
+      .addCase(updateTaskCommentAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(updateTaskCommentAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, comment } = action.payload as { taskId: string; comment: TaskComment };
+        const existing = state.commentsByTaskId[taskId] || [];
+        const idx = existing.findIndex(c => c.id === comment.id);
+        if (idx !== -1) {
+          existing[idx] = { ...existing[idx], ...comment };
+          state.commentsByTaskId[taskId] = [...existing];
+        }
+      })
+      .addCase(updateTaskCommentAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to update comment');
+      })
+      .addCase(deleteTaskCommentAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(deleteTaskCommentAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, commentId } = action.payload as { taskId: string; commentId: string };
+        const existing = state.commentsByTaskId[taskId] || [];
+        state.commentsByTaskId[taskId] = existing.filter(c => c.id !== commentId);
+      })
+      .addCase(deleteTaskCommentAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to delete comment');
+      })
+      // Comment reactions
+      .addCase(addTaskCommentReactionAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(addTaskCommentReactionAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, commentId, reaction } = action.payload as { taskId: string; commentId: string; reaction: any };
+        const comments = state.commentsByTaskId[taskId] || [];
+        const idx = comments.findIndex(c => c.id === commentId);
+        if (idx !== -1) {
+          const c = comments[idx];
+          const existingReactions = c.reactions || [];
+          c.reactions = [...existingReactions, reaction];
+        }
+      })
+      .addCase(addTaskCommentReactionAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to add reaction');
+      })
+      .addCase(removeTaskCommentReactionAsync.pending, (state) => {
+        state.commentsLoading = true;
+        state.commentsError = null;
+      })
+      .addCase(removeTaskCommentReactionAsync.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { taskId, commentId, type, userId } = action.payload as { taskId: string; commentId: string; type: string; userId?: string };
+        const comments = state.commentsByTaskId[taskId] || [];
+        const idx = comments.findIndex(c => c.id === commentId);
+        if (idx !== -1) {
+          const c = comments[idx];
+          c.reactions = (c.reactions || []).filter((r: any) => !(r?.type === type && (r?.userId === userId)));
+        }
+      })
+      .addCase(removeTaskCommentReactionAsync.rejected, (state, action) => {
+        state.commentsLoading = false;
+        const payload = action.payload as any;
+        state.commentsError = payload?.error || (action.error.message ?? 'Failed to remove reaction');
       });
   },
 });
@@ -455,5 +750,10 @@ export const selectTasksByPriority = (priority: TaskPriority) => (state: RootSta
   state.tasks.tasks.filter(task => task.priority === priority);
 export const selectTasksByAssignee = (assigneeId: string) => (state: RootState) =>
   state.tasks.tasks.filter(task => task.member?.id === assigneeId);
+
+// Comments selectors
+export const selectCommentsByTaskId = (taskId: string) => (state: RootState) => state.tasks.commentsByTaskId[taskId] || [];
+export const selectCommentsLoading = (state: RootState) => state.tasks.commentsLoading;
+export const selectCommentsError = (state: RootState) => state.tasks.commentsError;
 
 export default tasksSlice.reducer;

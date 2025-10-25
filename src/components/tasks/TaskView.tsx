@@ -12,6 +12,15 @@ import {
   type Task as TaskType,
   updateTaskAsync,
   deleteTaskAsync,
+  fetchTaskCommentsAsync,
+  createTaskCommentAsync,
+  deleteTaskCommentAsync,
+  selectCommentsByTaskId,
+  selectCommentsLoading,
+  selectCommentsError,
+  addTaskCommentReactionAsync,
+  removeTaskCommentReactionAsync,
+  updateTaskCommentAsync,
 } from "@/redux/slices/tasksSlice";
 import {
   startTimer,
@@ -20,10 +29,12 @@ import {
   selectIsTimerRunning,
 } from "@/redux/slices/timeTrackingSlice";
 import api from "@/lib/axios";
-import solar, { TrashBinTrash } from "@solar-icons/react";
+import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import { getProjectMembers } from "@/redux/slices/projectsSlice";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { selectUser } from "@/redux/slices/authSlice";
+import usePermission from "@/hooks/usePermission";
 
 const statusLabel: Record<string, string> = {
   TODO: "Not Started",
@@ -70,6 +81,8 @@ const TaskView: React.FC = () => {
   const loading = useAppSelector(selectTaskLoading);
   const activeTimer = useAppSelector(selectActiveTimer);
   const isTimerRunning = useAppSelector(selectIsTimerRunning);
+  const currentUser = useAppSelector(selectUser);
+  const { hasPermission } = usePermission();
 
   const [subtasks, setSubtasks] = useState<TaskType[]>([]);
   const [subtasksLoading, setSubtasksLoading] = useState(false);
@@ -79,7 +92,19 @@ const TaskView: React.FC = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
-  // Inline edit toggles
+  // Comments: use Redux slice selectors; keep local input state
+  const comments = useAppSelector(selectCommentsByTaskId(id || ''));
+  const commentsLoading = useAppSelector(selectCommentsLoading);
+  const commentsError = useAppSelector(selectCommentsError);
+  const [newComment, setNewComment] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
+  const [newCommentMentions, setNewCommentMentions] = useState<string[]>([]);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, { text: string; posting: boolean; mentions: string[]; mentionOpen: boolean; mentionQuery: string }>>({});
+  const [editingComments, setEditingComments] = useState<Record<string, { text: string; saving: boolean }>>({});
+
+  // Restore inline edit toggles and subtask edit tracking
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [editingAssignee, setEditingAssignee] = useState(false);
@@ -89,52 +114,112 @@ const TaskView: React.FC = () => {
   const [parentTask, setParentTask] = useState<{ id: string; title: string } | null>(null);
   const [subtaskEditing, setSubtaskEditing] = useState<Record<string, { title?: boolean; status?: boolean; priority?: boolean; dueDate?: boolean; assignee?: boolean }>>({});
 
+  // Fetch task and comments on load/id change
   useEffect(() => {
-    if (id) {
-      dispatch(fetchTaskById(id));
-    }
-  }, [dispatch, id]);
+    if (!id) return;
+    dispatch(fetchTaskById(id));
+  }, [id, dispatch]);
 
   useEffect(() => {
     if (!id) return;
-    setSubtasksLoading(true);
-    setSubtasksError(null);
-    api
-      .get(`/tasks/parent/${id}`)
-      .then((response: any) => {
-        const { status, data, error, message } = response || {};
-        if (status === 'error') {
-          setSubtasksError(error || message || 'Failed to fetch subtasks');
-          setSubtasks([]);
-          return;
-        }
-        const items = Array.isArray((data as any)?.items)
-          ? (data as any).items
-          : Array.isArray(data as any)
-            ? (data as any)
-            : [];
-        const mapped: TaskType[] = items.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          status: t.status,
-          priority: t.priority,
-          dueDate: t.dueDate,
-          estimatedHours: t.estimatedHours,
-          assignee: t.member ? `${t.member.firstName} ${t.member.lastName}` : undefined,
-          member: t.member,
-          project: t.project,
-          createdAt: t.createdAt,
-          updatedAt: t.updatedAt,
-        }));
-        setSubtasks(mapped);
-      })
-      .catch((err: any) => {
-        setSubtasksError(err?.message || 'Unknown error fetching subtasks');
-        setSubtasks([]);
-      })
-      .finally(() => setSubtasksLoading(false));
-  }, [id]);
+    dispatch(fetchTaskCommentsAsync(id));
+  }, [id, dispatch]);
+
+  const threaded = useMemo(() => {
+    const byParent: Record<string, any[]> = {};
+    const tops: any[] = [];
+    comments.forEach((c: any) => {
+      const pid = c?.parentId;
+      if (pid) {
+        (byParent[pid] ||= []).push(c);
+      } else {
+        tops.push(c);
+      }
+    });
+    return { tops, byParent };
+  }, [comments]);
+
+  const allDescendantIds = (rootId: string) => {
+    const res: string[] = [];
+    const stack = [rootId];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      const kids = threaded.byParent[cur] || [];
+      for (const k of kids) {
+        res.push(k.id);
+        stack.push(k.id);
+      }
+    }
+    return res;
+  };
+
+  useEffect(() => {
+    const match = newComment.match(/@([\w\s]*)$/);
+    if (match) {
+      setMentionOpen(true);
+      setMentionQuery(match[1].trim());
+    } else {
+      setMentionOpen(false);
+      setMentionQuery("");
+    }
+  }, [newComment]);
+
+  const handlePostComment = async () => {
+    const content = newComment.trim();
+    if (!id || !content) return;
+    if (!hasPermission('tasks','update')) return;
+    setPostingComment(true);
+    try {
+      await dispatch(createTaskCommentAsync({ taskId: id, content, mentionUserIds: newCommentMentions })).unwrap();
+      setNewComment("");
+      setNewCommentMentions([]);
+      setMentionOpen(false);
+      setMentionQuery("");
+    } catch (_) {
+      // Errors toasted in slice
+    } finally {
+      setPostingComment(false);
+    }
+  };
+
+  const handleSelectMentionMain = (user: any) => {
+    const fullName = `${user.firstName} ${user.lastName}`;
+    const replaced = newComment.replace(/@([\w\s]*)$/, `@${fullName} `);
+    setNewComment(replaced);
+    setNewCommentMentions((prev) => (prev.includes(user.id) ? prev : [...prev, user.id]));
+    setMentionOpen(false);
+    setMentionQuery("");
+  };
+
+  const toggleReaction = (commentId: string, type: 'thumbs_up' | 'heart' | 'laugh') => {
+    if (!id || !currentUser?.id) return;
+    if (!hasPermission('tasks','update')) return;
+    const comment = comments.find((x: any) => x.id === commentId);
+    const myReaction = (comment?.reactions || []).find((r: any) => r?.userId === currentUser.id);
+    if (myReaction?.type === type) {
+      dispatch(removeTaskCommentReactionAsync({ taskId: id, commentId, type }));
+      return;
+    }
+    if (myReaction && myReaction.type !== type) {
+      dispatch(removeTaskCommentReactionAsync({ taskId: id, commentId, type: myReaction.type }))
+        .unwrap()
+        .finally(() => {
+          dispatch(addTaskCommentReactionAsync({ taskId: id, commentId, type }));
+        });
+      return;
+    }
+    dispatch(addTaskCommentReactionAsync({ taskId: id, commentId, type }));
+  };
+
+  const handleDeleteCommentWithThread = async (comment: any) => {
+    if (!id || !comment?.id) return;
+    try {
+      // Delete only the selected comment. Backend enforces author-only deletion.
+      await dispatch(deleteTaskCommentAsync({ taskId: id, commentId: comment.id })).unwrap();
+    } catch (_) {
+      // Errors toasted in slice
+    }
+  };
 
   // Fetch members for inline assignment editing
   useEffect(() => {
@@ -178,11 +263,16 @@ const TaskView: React.FC = () => {
       .finally(() => setSubtasksLoading(false));
   };
 
+  // Ensure subtasks fetched when id changes
+  useEffect(() => {
+    refetchSubtasks();
+  }, [id]);
   const toggleSubtaskEdit = (
     taskId: string,
     field: 'title' | 'status' | 'priority' | 'dueDate' | 'assignee',
     value: boolean
   ) => {
+    if (!hasPermission('tasks','update')) return;
     setSubtaskEditing((prev) => ({
       ...prev,
       [taskId]: {
@@ -255,7 +345,7 @@ const TaskView: React.FC = () => {
                 ) : (
                   <h1
                     className="text-lg md:text-xl font-light leading-tight cursor-pointer"
-                    onClick={() => setEditingTitle(true)}
+                    onClick={() => hasPermission('tasks','update') && setEditingTitle(true)}
                   >
                     {task?.title || 'Task'}
                   </h1>
@@ -284,7 +374,7 @@ const TaskView: React.FC = () => {
                 ) : (
                   <h1
                     className="text-base font-light leading-tight cursor-pointer flex-1"
-                    onClick={() => setEditingTitle(true)}
+                    onClick={() => hasPermission('tasks','update') && setEditingTitle(true)}
                   >
                     {task?.title || 'Task'}
                   </h1>
@@ -318,7 +408,7 @@ const TaskView: React.FC = () => {
                       "px-2 py-1 rounded-md text-xs",
                       statusColor[task?.status || 'TODO']
                     )}
-                    onClick={() => setEditingHeaderStatus(true)}
+                    onClick={() => hasPermission('tasks','update') && setEditingHeaderStatus(true)}
                   >
                     {statusLabel[task?.status || 'TODO']}
                   </button>
@@ -363,7 +453,7 @@ const TaskView: React.FC = () => {
                     "px-2 py-1 rounded-md text-sm",
                     statusColor[task?.status || 'TODO']
                   )}
-                  onClick={() => setEditingHeaderStatus(true)}
+                  onClick={() => hasPermission('tasks','update') && setEditingHeaderStatus(true)}
                 >
                   {statusLabel[task?.status || 'TODO']}
                 </button>
@@ -407,7 +497,7 @@ const TaskView: React.FC = () => {
               ) : (
                 <p
                   className="text-sm md:text-base leading-relaxed text-[#2a2e35] cursor-pointer"
-                  onClick={() => setEditingDescription(true)}
+                  onClick={() => hasPermission('tasks','update') && setEditingDescription(true)}
                 >
                   {task?.description || "No description provided."}
                 </p>
@@ -822,18 +912,556 @@ const TaskView: React.FC = () => {
             <GlassCard className="p-4 md:p-6">
               <h2 className="text-lg font-medium mb-4">Comments</h2>
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <solar.Security.ShieldUser className="size-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No comments yet.</p>
-                </div>
-                <div className="flex items-center gap-2">
+                {commentsLoading ? (
+                  <div className="text-sm text-muted-foreground">Loading comments...</div>
+                ) : commentsError ? (
+                  <div className="text-sm text-red-600">{commentsError}</div>
+                ) : comments.length === 0 ? (
+                  <div className="flex items-center gap-2">
+                    <solar.Security.ShieldUser className="size-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No comments yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {threaded.tops.map((c: any) => {
+                      const authorName = c?.fromUser ? `${c.fromUser.firstName} ${c.fromUser.lastName}` : "Unknown";
+                      const avatar = getAvatarData(authorName);
+                      const count = (t: string) => (c.reactions || []).filter((r: any) => r?.type === t).length;
+                      const reacted = (t: string) => (c.reactions || []).some((r: any) => r?.type === t && r?.userId === currentUser?.id);
+                      return (
+                        <div key={c.id} className="space-y-2">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium"
+                              style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
+                              aria-label={authorName}
+                            >
+                              {avatar.initials}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm font-medium">
+                                  {authorName}
+                                  {c?.updatedAt && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      {new Date(c.updatedAt).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {currentUser?.id && c?.fromUser?.id === currentUser.id && (
+                                    <button
+                                      className="p-1 text-primary hover:underline text-xs"
+                                      title="Edit comment"
+                                      onClick={() => setEditingComments((prev) => ({ ...prev, [c.id]: { text: c.content, saving: false } }))}
+                                    >
+                                      <Pen2 weight="Bold" size={16}/>
+                                    </button>
+                                  )}
+                                  {currentUser?.id && c?.fromUser?.id === currentUser.id && (
+                                    <button
+                                      className="p-1 text-red-500 hover:text-red-600"
+                                      title="Delete comment"
+                                      onClick={() => handleDeleteCommentWithThread(c)}
+                                    >
+                                      <TrashBinTrash weight="Bold" size={16} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {editingComments[c.id] ? (
+                                <div className="mt-1 space-y-2">
+                                  <input
+                                    type="text"
+                                    className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm w-full"
+                                    value={editingComments[c.id].text}
+                                    disabled={editingComments[c.id].saving}
+                                    onChange={(e) => setEditingComments((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', saving: false }), text: e.target.value } }))}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      disabled={!editingComments[c.id].text.trim() || editingComments[c.id].saving}
+                                      onClick={async () => {
+                                        if (!id) return;
+                                        setEditingComments((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', saving: false }), saving: true } }));
+                                        try {
+                                          await dispatch(updateTaskCommentAsync({ taskId: id, commentId: c.id, content: editingComments[c.id].text.trim() })).unwrap();
+                                          setEditingComments((prev) => { const next = { ...prev }; delete next[c.id]; return next; });
+                                        } catch (_) {
+                                          setEditingComments((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', saving: false }), saving: false } }));
+                                        }
+                                      }}
+                                    >
+                                      {editingComments[c.id].saving ? 'Saving...' : 'Save'}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[c.id]; return next; })}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-foreground whitespace-pre-wrap">{c.content}</p>
+                              )}
+
+                              {/* Reactions and actions */}
+                              <div className="mt-2 flex items-center gap-3">
+                                <button
+                                  className={cn("inline-flex items-center gap-1 text-xs", reacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
+                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'thumbs_up')}
+                                >
+                                  <solar.Like.Like className="size-4" weight={reacted('thumbs_up') ? 'Bold' : 'Linear'} /> {count('thumbs_up') || ''}
+                                </button>
+                                <button
+                                  className={cn("inline-flex items-center gap-1 text-xs", reacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
+                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'heart')}
+                                >
+                                  <solar.Like.Heart className="size-4" weight={reacted('heart') ? 'Bold' : 'Linear'} /> {count('heart') || ''}
+                                </button>
+                                <button
+                                  className={cn("inline-flex items-center gap-1 text-xs", reacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
+                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'laugh')}
+                                >
+                                  <solar.Faces.SmileCircle className="size-4" weight={reacted('laugh') ? 'Bold' : 'Linear'} /> {count('laugh') || ''}
+                                </button>
+                                {hasPermission('tasks','update') && (
+                                  <button
+                                    className="text-xs text-primary hover:underline"
+                                    onClick={() => setReplyDrafts((prev) => ({ ...prev, [c.id]: prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }))}
+                                  >
+                                    Reply
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Reply draft */}
+                              {replyDrafts[c.id] && (
+                                <div className="mt-2 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Write a reply"
+                                      className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                      disabled={!hasPermission('tasks','update')}
+                                      value={replyDrafts[c.id].text}
+                                      onChange={(e) => {
+                                        const text = e.target.value;
+                                        const match = text.match(/@([\w\s]*)$/);
+                                        setReplyDrafts((prev) => ({
+                                          ...prev,
+                                          [c.id]: {
+                                            ...(prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }),
+                                            text,
+                                            mentionOpen: !!match,
+                                            mentionQuery: match ? match[1].trim() : '',
+                                          },
+                                        }));
+                                      }}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      disabled={!replyDrafts[c.id].text.trim() || replyDrafts[c.id].posting || !hasPermission('tasks','update')}
+                                      onClick={async () => {
+                                        if (!id || !hasPermission('tasks','update')) return;
+                                        setReplyDrafts((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: true } }));
+                                        try {
+                                          await dispatch(createTaskCommentAsync({ taskId: id, content: replyDrafts[c.id].text.trim(), parentId: c.id, mentionUserIds: replyDrafts[c.id].mentions })).unwrap();
+                                          setReplyDrafts((prev) => ({ ...prev, [c.id]: { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }));
+                                        } catch (_) {
+                                          setReplyDrafts((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: false } }));
+                                        }
+                                      }}
+                                    >
+                                      {replyDrafts[c.id].posting ? 'Posting...' : 'Send'}
+                                    </Button>
+                                  </div>
+
+                                  {/* Mention dropdown for reply */}
+                                  {replyDrafts[c.id].mentionOpen && members.length > 0 && (
+                                    <div className="border rounded-md bg-popover p-2 text-sm max-h-40 overflow-auto w-full md:w-1/2">
+                                      {(members || [])
+                                        .filter((m: any) => {
+                                          const name = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
+                                          return name.includes((replyDrafts[c.id].mentionQuery || '').toLowerCase());
+                                        })
+                                        .map((m: any) => (
+                                          <button
+                                            key={m.user.id}
+                                            className="block w-full text-left px-2 py-1 hover:bg-muted"
+                                            onClick={() => {
+                                              const fullName = `${m.user.firstName} ${m.user.lastName}`;
+                                              setReplyDrafts((prev) => {
+                                                const curr = prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' };
+                                                const replaced = curr.text.replace(/@([\w\s]*)$/, `@${fullName} `);
+                                                const nextMentions = curr.mentions.includes(m.user.id) ? curr.mentions : [...curr.mentions, m.user.id];
+                                                return {
+                                                  ...prev,
+                                                  [c.id]: { ...curr, text: replaced, mentions: nextMentions, mentionOpen: false, mentionQuery: '' },
+                                                };
+                                              });
+                                            }}
+                                          >
+                                            {m.user.firstName} {m.user.lastName}
+                                          </button>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Replies - nested with edit and reply */}
+                              <div className="mt-3 ml-10 space-y-2">
+                                {(threaded.byParent[c.id] || []).map((rc: any) => {
+                                  const rAuthor = rc?.fromUser ? `${rc.fromUser.firstName} ${rc.fromUser.lastName}` : 'Unknown';
+                                  const rAvatar = getAvatarData(rAuthor);
+                                  const rCount = (t: string) => (rc.reactions || []).filter((r: any) => r?.type === t).length;
+                                  const rReacted = (t: string) => (rc.reactions || []).some((r: any) => r?.type === t && r?.userId === currentUser?.id);
+                                  const rOwn = currentUser?.id && rc?.fromUser?.id === currentUser.id;
+                                  const rEditing = !!editingComments[rc.id];
+                                  return (
+                                    <div key={rc.id} className="flex items-start gap-3">
+                                      <div
+                                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium"
+                                        style={{ backgroundColor: rAvatar.bgColor, color: rAvatar.color }}
+                                        aria-label={rAuthor}
+                                      >
+                                        {rAvatar.initials}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <div className="text-sm font-medium">
+                                            {rAuthor}
+                                            {rc?.updatedAt && (
+                                              <span className="ml-2 text-xs text-muted-foreground">
+                                                {new Date(rc.updatedAt).toLocaleString()}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {rOwn && (
+                                              <button
+                                                className="p-1 text-primary hover:underline text-xs"
+                                                title="Edit reply"
+                                                onClick={() => setEditingComments((prev) => ({ ...prev, [rc.id]: { text: rc.content, saving: false } }))}
+                                              >
+                                                <Pen2 weight="Bold" size={16}/>
+                                              </button>
+                                            )}
+                                            {rOwn && (
+                                              <button
+                                                className="p-1 text-red-600 hover:text-red-700"
+                                                title="Delete reply"
+                                                onClick={() => handleDeleteCommentWithThread(rc)}
+                                              >
+                                                <TrashBinTrash weight="Bold" size={16} />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {rEditing ? (
+                                          <div className="mt-1 space-y-2">
+                                            <input
+                                              type="text"
+                                              className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm w-full"
+                                              value={editingComments[rc.id].text}
+                                              disabled={editingComments[rc.id].saving}
+                                              onChange={(e) => setEditingComments((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', saving: false }), text: e.target.value } }))}
+                                            />
+                                            <div className="flex items-center gap-2">
+                                              <Button
+                                                size="sm"
+                                                disabled={!editingComments[rc.id].text.trim() || editingComments[rc.id].saving}
+                                                onClick={async () => {
+                                                  if (!id) return;
+                                                  setEditingComments((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', saving: false }), saving: true } }));
+                                                  try {
+                                                    await dispatch(updateTaskCommentAsync({ taskId: id, commentId: rc.id, content: editingComments[rc.id].text.trim() })).unwrap();
+                                                    setEditingComments((prev) => { const next = { ...prev }; delete next[rc.id]; return next; });
+                                                  } catch (_) {
+                                                    setEditingComments((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', saving: false }), saving: false } }));
+                                                  }
+                                                }}
+                                              >
+                                                {editingComments[rc.id].saving ? 'Saving...' : 'Save'}
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[rc.id]; return next; })}
+                                              >
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-foreground whitespace-pre-wrap">{rc.content}</p>
+                                        )}
+
+                                        <div className="mt-2 flex items-center gap-3">
+                                          <button
+                                            className={cn("inline-flex items-center gap-1 text-xs", rReacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
+                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'thumbs_up')}
+                                          >
+                                            <solar.Like.Like className="size-4" weight={rReacted('thumbs_up') ? 'Bold' : 'Linear'} /> {rCount('thumbs_up') || ''}
+                                          </button>
+                                          <button
+                                            className={cn("inline-flex items-center gap-1 text-xs", rReacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
+                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'heart')}
+                                          >
+                                            <solar.Like.Heart className="size-4" weight={rReacted('heart') ? 'Bold' : 'Linear'} /> {rCount('heart') || ''}
+                                          </button>
+                                          <button
+                                            className={cn("inline-flex items-center gap-1 text-xs", rReacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
+                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'laugh')}
+                                          >
+                                            <solar.Faces.SmileCircle className="size-4" weight={rReacted('laugh') ? 'Bold' : 'Linear'} /> {rCount('laugh') || ''}
+                                          </button>
+                                          {hasPermission('tasks','update') && (
+                                            <button
+                                              className="text-xs text-primary hover:underline"
+                                              onClick={() => setReplyDrafts((prev) => ({ ...prev, [rc.id]: prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }))}
+                                            >
+                                              Reply
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        {replyDrafts[rc.id] && (
+                                          <div className="mt-2 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="text"
+                                                placeholder="Write a reply"
+                                                className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                                disabled={!hasPermission('tasks','update')}
+                                                value={replyDrafts[rc.id].text}
+                                                onChange={(e) => {
+                                                  const text = e.target.value;
+                                                  const match = text.match(/@([\w\s]*)$/);
+                                                  setReplyDrafts((prev) => ({
+                                                    ...prev,
+                                                    [rc.id]: {
+                                                      ...(prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }),
+                                                      text,
+                                                      mentionOpen: !!match,
+                                                      mentionQuery: match ? match[1].trim() : '',
+                                                    },
+                                                  }));
+                                                }}
+                                              />
+                                              <Button
+                                                size="sm"
+                                                disabled={!replyDrafts[rc.id].text.trim() || replyDrafts[rc.id].posting || !hasPermission('tasks','update')}
+                                                onClick={async () => {
+                                                  if (!id || !hasPermission('tasks','update')) return;
+                                                  setReplyDrafts((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: true } }));
+                                                  try {
+                                                    await dispatch(createTaskCommentAsync({ taskId: id, content: replyDrafts[rc.id].text.trim(), parentId: rc.id, mentionUserIds: replyDrafts[rc.id].mentions })).unwrap();
+                                                    setReplyDrafts((prev) => ({ ...prev, [rc.id]: { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }));
+                                                  } catch (_) {
+                                                    setReplyDrafts((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: false } }));
+                                                  }
+                                                }}
+                                              >
+                                                {replyDrafts[rc.id].posting ? 'Posting...' : 'Send'}
+                                              </Button>
+                                            </div>
+
+                                            {replyDrafts[rc.id].mentionOpen && members.length > 0 && (
+                                              <div className="border rounded-md bg-popover p-2 text-sm max-h-40 overflow-auto w-full md:w-1/2">
+                                                {(members || [])
+                                                  .filter((m: any) => {
+                                                    const name = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
+                                                    return name.includes((replyDrafts[rc.id].mentionQuery || '').toLowerCase());
+                                                  })
+                                                  .map((m: any) => (
+                                                    <button
+                                                      key={m.user.id}
+                                                      className="block w-full text-left px-2 py-1 hover:bg-muted"
+                                                      onClick={() => {
+                                                        const fullName = `${m.user.firstName} ${m.user.lastName}`;
+                                                        setReplyDrafts((prev) => {
+                                                          const curr = prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' };
+                                                          const replaced = curr.text.replace(/@([\w\s]*)$/, `@${fullName} `);
+                                                          const nextMentions = curr.mentions.includes(m.user.id) ? curr.mentions : [...curr.mentions, m.user.id];
+                                                          return {
+                                                            ...prev,
+                                                            [rc.id]: { ...curr, text: replaced, mentions: nextMentions, mentionOpen: false, mentionQuery: '' },
+                                                          };
+                                                        });
+                                                      }}
+                                                    >
+                                                      {m.user.firstName} {m.user.lastName}
+                                                    </button>
+                                                  ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Children of reply (second level) */}
+                                        {(threaded.byParent[rc.id] || []).length > 0 && (
+                                          <div className="mt-3 ml-10 space-y-2">
+                                            {(threaded.byParent[rc.id] || []).map((rrc: any) => {
+                                              const rrAuthor = rrc?.fromUser ? `${rrc.fromUser.firstName} ${rrc.fromUser.lastName}` : 'Unknown';
+                                              const rrAvatar = getAvatarData(rrAuthor);
+                                              const rrCount = (t: string) => (rrc.reactions || []).filter((r: any) => r?.type === t).length;
+                                              const rrReacted = (t: string) => (rrc.reactions || []).some((r: any) => r?.type === t && r?.userId === currentUser?.id);
+                                              const rrOwn = currentUser?.id && rrc?.fromUser?.id === currentUser?.id;
+                                              const rrEditing = !!editingComments[rrc.id];
+                                              return (
+                                                <div key={rrc.id} className="flex items-start gap-3">
+                                                  <div
+                                                    className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-medium"
+                                                    style={{ backgroundColor: rrAvatar.bgColor, color: rrAvatar.color }}
+                                                    aria-label={rrAuthor}
+                                                  >
+                                                    {rrAvatar.initials}
+                                                  </div>
+                                                  <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                      <div className="text-sm font-medium">
+                                                        {rrAuthor}
+                                                        {rrc?.updatedAt && (
+                                                          <span className="ml-2 text-xs text-muted-foreground">
+                                                            {new Date(rrc.updatedAt).toLocaleString()}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <div className="flex items-center gap-2">
+                                                        {rrOwn && (
+                                                          <button
+                                                            className="p-1 text-primary hover:underline text-[10px]"
+                                                            title="Edit reply"
+                                                            onClick={() => setEditingComments((prev) => ({ ...prev, [rrc.id]: { text: rrc.content, saving: false } }))}
+                                                          >
+                                                            <Pen2 weight="Bold" size={16}/>
+                                                          </button>
+                                                        )}
+                                                        {rrOwn && (
+                                                          <button
+                                                            className="p-1 text-red-600 hover:text-red-700"
+                                                            title="Delete reply"
+                                                            onClick={() => handleDeleteCommentWithThread(rrc)}
+                                                          >
+                                                            <TrashBinTrash weight="Bold" size={16} />
+                                                          </button>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    {rrEditing ? (
+                                                      <div className="mt-1 space-y-2">
+                                                        <input
+                                                          type="text"
+                                                          className="flex-1 h-8 rounded-md border border-input bg-background px-3 text-sm w-full"
+                                                          value={editingComments[rrc.id].text}
+                                                          disabled={editingComments[rrc.id].saving}
+                                                          onChange={(e) => setEditingComments((prev) => ({ ...prev, [rrc.id]: { ...(prev[rrc.id] || { text: '', saving: false }), text: e.target.value } }))}
+                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                          <Button
+                                                            size="sm"
+                                                            disabled={!editingComments[rrc.id].text.trim() || editingComments[rrc.id].saving}
+                                                            onClick={async () => {
+                                                              if (!id) return;
+                                                              setEditingComments((prev) => ({ ...prev, [rrc.id]: { ...(prev[rrc.id] || { text: '', saving: false }), saving: true } }));
+                                                              try {
+                                                                await dispatch(updateTaskCommentAsync({ taskId: id, commentId: rrc.id, content: editingComments[rrc.id].text.trim() })).unwrap();
+                                                                setEditingComments((prev) => { const next = { ...prev }; delete next[rrc.id]; return next; });
+                                                              } catch (_) {
+                                                                setEditingComments((prev) => ({ ...prev, [rrc.id]: { ...(prev[rrc.id] || { text: '', saving: false }), saving: false } }));
+                                                              }
+                                                            }}
+                                                          >
+                                                            {editingComments[rrc.id].saving ? 'Saving...' : 'Save'}
+                                                          </Button>
+                                                          <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[rrc.id]; return next; })}
+                                                          >
+                                                            Cancel
+                                                          </Button>
+                                                        </div>
+                                                      </div>
+                                                    ) : (
+                                                      <p className="text-sm text-foreground whitespace-pre-wrap">{rrc.content}</p>
+                                                    )}
+                                                    <div className="mt-2 flex items-center gap-3">
+                                                      <button
+                                                        className={cn("inline-flex items-center gap-1 text-xs", rrReacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
+                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'thumbs_up')}
+                                                      >
+                                                        <solar.Like.Like className="size-4" weight={rrReacted('thumbs_up') ? 'Bold' : 'Linear'} /> {rrCount('thumbs_up') || ''}
+                                                      </button>
+                                                      <button
+                                                        className={cn("inline-flex items-center gap-1 text-xs", rrReacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
+                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'heart')}
+                                                      >
+                                                        <solar.Like.Heart className="size-4" weight={rrReacted('heart') ? 'Bold' : 'Linear'} /> {rrCount('heart') || ''}
+                                                      </button>
+                                                      <button
+                                                        className={cn("inline-flex items-center gap-1 text-xs", rrReacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
+                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'laugh')}
+                                                      >
+                                                        <solar.Faces.SmileCircle className="size-4" weight={rrReacted('laugh') ? 'Bold' : 'Linear'} /> {rrCount('laugh') || ''}
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 relative">
                   <input
                     type="text"
                     placeholder="Add a comment"
                     className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    disabled={!hasPermission('tasks','update')}
                   />
-                  <Button size="sm">Post</Button>
+                  <Button size="sm" onClick={handlePostComment} disabled={!newComment.trim() || postingComment || !hasPermission('tasks','update')}>
+                    {postingComment ? "Posting..." : "Post"}
+                  </Button>
                 </div>
+
+                {/* Mention dropdown for main composer */}
+                {mentionOpen && members.length > 0 && (
+                  <div className="border rounded-md bg-popover p-2 text-sm max-h-40 overflow-auto w-full md:w-1/2">
+                    {(members || [])
+                      .filter((m: any) => {
+                        const name = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
+                        return name.includes((mentionQuery || '').toLowerCase());
+                      })
+                      .map((m: any) => (
+                        <button
+                          key={m.user.id}
+                          className="block w-full text-left px-2 py-1 hover:bg-muted"
+                          onClick={() => handleSelectMentionMain(m.user)}
+                        >
+                          {m.user.firstName} {m.user.lastName}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
             </GlassCard>
           </div>
@@ -886,7 +1514,7 @@ const TaskView: React.FC = () => {
                       </select>
                     </div>
                   ) : (
-                    <button className="flex items-center gap-2" onClick={() => setEditingAssignee(true)}>
+                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks','update') && setEditingAssignee(true)}>
                       <span>{assignedName || '-'}</span>
                     </button>
                   )}
@@ -924,7 +1552,7 @@ const TaskView: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <button className="flex items-center gap-2" onClick={() => setEditingDueDate(true)}>
+                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks','update') && setEditingDueDate(true)}>
                       <solar.Time.ClockCircle className="size-4 text-muted-foreground" />
                       <span>{formatDate(task?.dueDate)}</span>
                     </button>
@@ -958,7 +1586,7 @@ const TaskView: React.FC = () => {
                         'px-2 py-1 rounded-md',
                         (task?.priority || 'MEDIUM') === 'URGENT' ? 'bg-red-100 text-red-700' : (task?.priority || 'MEDIUM') === 'HIGH' ? 'bg-orange-100 text-orange-700' : (task?.priority || 'MEDIUM') === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
                       )}
-                      onClick={() => setEditingPriority(true)}
+                      onClick={() => hasPermission('tasks','update') && setEditingPriority(true)}
                       title={task?.priority || 'MEDIUM'}
                     >
                       {task?.priority}
