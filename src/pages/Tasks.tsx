@@ -6,8 +6,11 @@ import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
+import TaskTimeline from "@/components/tasks/TaskTimeline";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User, List, LayoutGrid } from "lucide-react";
+import solar from "@solar-icons/react";
+import ActionButton from "@/components/ui/ActionButton";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
@@ -49,7 +52,7 @@ const Tasks = () => {
   const [newTaskInitialStatus, setNewTaskInitialStatus] = useState<"TODO" | "IN_PROGRESS" | "DONE" | null>(null);
   const [lockNewTaskStatus, setLockNewTaskStatus] = useState(false);
 
-  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
+  const [viewMode, setViewMode] = useState<"list" | "kanban" | "timeline">("kanban");
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
@@ -178,43 +181,42 @@ const Tasks = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-secondary rounded-lg p-1">
-              <button
+              <ActionButton
+                text="Board"
+                variant={viewMode === "kanban" ? "secondary" : "gray"}
+                leftIcon={<LayoutGrid size={16} />}
+                className="px-3 py-2 text-sm"
                 onClick={() => setViewMode("kanban")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                  viewMode === "kanban"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <LayoutGrid size={16} />
-                Board
-              </button>
-              <button
+              />
+              <ActionButton
+                text="List"
+                variant={viewMode === "list" ? "secondary" : "gray"}
+                leftIcon={<List size={16} />}
+                className="px-3 py-2 text-sm"
                 onClick={() => setViewMode("list")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                  viewMode === "list"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <List size={16} />
-                List
-              </button>
+              />
+              <ActionButton
+                text="Timeline"
+                variant={viewMode === "timeline" ? "secondary" : "gray"}
+                leftIcon={<solar.Time.Stopwatch className="h-4 w-4" />}
+                className="px-3 py-2 text-sm"
+                onClick={() => setViewMode("timeline")}
+              />
             </div>
             {hasPermission('tasks', 'create') && (
-            <MotionButton 
-              variant="default" 
-              motion="subtle"
+            <ActionButton 
+              variant="primary" 
+              // motion="subtle"
+              leftIcon={<Plus size={18} className="mr-2" />}
+              text="New Task"
               onClick={() => {
                 setLockNewTaskStatus(false);
                 setNewTaskInitialStatus(null);
                 setShowNewTaskDialog(true);
               }}
             >
-              <Plus size={18} className="mr-2" /> New Task
-            </MotionButton>
+              {/* <Plus size={18} className="mr-2" /> New Task */}
+            </ActionButton>
             )}
           </div>
         </div>
@@ -260,7 +262,11 @@ const Tasks = () => {
              onUpdateTaskStatus={handleUpdateTaskStatus}
              className="animate-fade-in"
            />
-         ):(
+         ) : viewMode === "timeline" ? (
+          <div className="animate-fade-in">
+            <TaskTimeline />
+          </div>
+         ) : (
           <TaskTable
             tasks={filteredTasks}
             onTaskClick={handleTaskClick}

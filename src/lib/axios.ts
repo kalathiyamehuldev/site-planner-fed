@@ -3,13 +3,8 @@ import { toast } from 'sonner';
 
 // Environment-specific API configuration
 const getApiBaseUrl = () => {
-    // Check if we're in production (Vercel)
-    if (import.meta.env.PROD) {
-        // In production, use the same domain with /api prefix for proxy
-        return '/api';
-    }
-    // Development environment - use Vite proxy
-    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    // Always use the unified proxy path. Vite (dev) and Vercel (prod) rewrite /api to backend.
+    return 'http://localhost:8000' //'/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

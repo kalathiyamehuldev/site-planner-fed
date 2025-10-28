@@ -4,6 +4,7 @@ import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -64,45 +65,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       bgColor: `${colors[colorIndex]}1A` // 10% opacity
     };
   };
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      "Not Started": {
-        bg: "bg-gray-200",
-        text: "text-[#1a2624]",
-        label: "Not Started"
-      },
-      "In Progress": {
-        bg: "bg-[#e0f3ff]",
-        text: "text-[#6c96b0]",
-        label: "In Progress"
-      },
-      "On Hold": {
-        bg: "bg-[#fef3e2]",
-        text: "text-[#f59e0b]",
-        label: "On Hold"
-      },
-      "Completed": {
-        bg: "bg-[#eaf6ec]",
-        text: "text-[#27ae60]",
-        label: "Completed"
-      },
-      // "Cancelled": {
-      //   bg: "bg-[#fee2e2]",
-      //   text: "text-[#ef4444]",
-      //   label: "Cancelled"
-      // }
-    };
-
-    const config = statusConfig[status] || statusConfig["Not Started"];
-    
-    return (
-      <div className={cn("px-2 py-0.5 rounded-sm inline-flex", config.bg)}>
-        <div className={cn("text-center text-xs font-normal font-['Manrope'] leading-none", config.text)}>
-          {config.label}
-        </div>
-      </div>
-    );
-  };
+  // StatusBadge now provided by shared component for consistency across views
 
   const statusColors = {
     "Not Started": "bg-gray-100 text-gray-600",
@@ -184,7 +147,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    {getStatusBadge(transformedTask.status)}
+                    <StatusBadge status={transformedTask.status} />
                   </div>
                 </div>
 
@@ -410,7 +373,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                     </td>
                   )}
                   <td className="px-3">
-                    {getStatusBadge(transformedTask.status)}
+                    <StatusBadge status={transformedTask.status} />
                   </td>
                   <td className="px-3 hidden md:table-cell">
                     <div className="flex items-center gap-2">

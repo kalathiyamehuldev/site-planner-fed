@@ -458,6 +458,37 @@ export const removeTaskCommentReactionAsync = createAsyncThunk(
   }
 );
 
+// Fetch subtasks by parent ID (company is derived from JWT on backend)
+export const fetchSubtasksByParent = createAsyncThunk(
+  'tasks/fetchSubtasksByParent',
+  async (parentId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/tasks/parent/${parentId}`);
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch subtasks';
+        toast.error(errMsg);
+        return rejectWithValue({ parentId, error: errMsg });
+      }
+
+      const items = Array.isArray((data as any)?.items)
+        ? (data as any).items
+        : Array.isArray(data as any)
+          ? (data as any)
+          : [];
+
+      const mapped = items.map(transformApiTask);
+      toast.success(message || 'Subtasks fetched successfully');
+      return { parentId, subtasks: mapped } as { parentId: string; subtasks: Task[] };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to fetch subtasks';
+      toast.error(errMsg);
+      return rejectWithValue({ parentId, error: errMsg });
+    }
+  }
+);
+
 interface TasksState {
   tasks: Task[];
   projectTasks: Task[];
@@ -471,6 +502,9 @@ interface TasksState {
   commentsByTaskId: Record<string, TaskComment[]>;
   commentsLoading: boolean;
   commentsError: string | null;
+  // Subtasks state
+  subtasksByParentId: Record<string, Task[]>;
+  subtasksLoading: boolean;
 }
 
 const initialState: TasksState = {
@@ -486,6 +520,9 @@ const initialState: TasksState = {
   commentsByTaskId: {},
   commentsLoading: false,
   commentsError: null,
+  // Subtasks initial state
+  subtasksByParentId: {},
+  subtasksLoading: false,
 };
 
 export const tasksSlice = createSlice({
@@ -722,6 +759,18 @@ export const tasksSlice = createSlice({
         state.commentsLoading = false;
         const payload = action.payload as any;
         state.commentsError = payload?.error || (action.error.message ?? 'Failed to remove reaction');
+      })
+      // Subtasks reducers
+      .addCase(fetchSubtasksByParent.pending, (state) => {
+        state.subtasksLoading = true;
+      })
+      .addCase(fetchSubtasksByParent.fulfilled, (state, action) => {
+        state.subtasksLoading = false;
+        const { parentId, subtasks } = action.payload as { parentId: string; subtasks: Task[] };
+        state.subtasksByParentId[parentId] = subtasks;
+      })
+      .addCase(fetchSubtasksByParent.rejected, (state) => {
+        state.subtasksLoading = false;
       });
   },
 });
@@ -755,5 +804,8 @@ export const selectTasksByAssignee = (assigneeId: string) => (state: RootState) 
 export const selectCommentsByTaskId = (taskId: string) => (state: RootState) => state.tasks.commentsByTaskId[taskId] || [];
 export const selectCommentsLoading = (state: RootState) => state.tasks.commentsLoading;
 export const selectCommentsError = (state: RootState) => state.tasks.commentsError;
+// Subtasks selectors
+export const selectSubtasksByParentId = (parentId: string) => (state: RootState) => state.tasks.subtasksByParentId[parentId] || [];
+export const selectSubtasksLoading = (state: RootState) => state.tasks.subtasksLoading;
 
 export default tasksSlice.reducer;

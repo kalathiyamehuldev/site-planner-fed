@@ -21,6 +21,9 @@ import {
   addTaskCommentReactionAsync,
   removeTaskCommentReactionAsync,
   updateTaskCommentAsync,
+  fetchSubtasksByParent,
+  selectSubtasksByParentId,
+  selectSubtasksLoading,
 } from "@/redux/slices/tasksSlice";
 import {
   startTimer,
@@ -28,7 +31,6 @@ import {
   selectActiveTimer,
   selectIsTimerRunning,
 } from "@/redux/slices/timeTrackingSlice";
-import api from "@/lib/axios";
 import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ActionButton from "@/components/ui/ActionButton";
@@ -85,9 +87,8 @@ const TaskView: React.FC = () => {
   const currentUser = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
 
-  const [subtasks, setSubtasks] = useState<TaskType[]>([]);
-  const [subtasksLoading, setSubtasksLoading] = useState(false);
-  const [subtasksError, setSubtasksError] = useState<string | null>(null);
+  const subtasks = useAppSelector(selectSubtasksByParentId(id || ""));
+  const subtasksLoading = useAppSelector(selectSubtasksLoading);
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
 
   const [members, setMembers] = useState<any[]>([]);
@@ -234,40 +235,12 @@ const TaskView: React.FC = () => {
       .finally(() => setMembersLoading(false));
   }, [task?.project?.id, dispatch]);
 
-  const refetchSubtasks = () => {
-    if (!id) return;
-    setSubtasksLoading(true);
-    api.get(`/tasks/parent/${id}`)
-      .then((response: any) => {
-        const { status, data } = response || {};
-        const items = Array.isArray((data as any)?.items)
-          ? (data as any).items
-          : Array.isArray(data as any)
-            ? (data as any)
-            : [];
-        const mapped: TaskType[] = items.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          status: t.status,
-          priority: t.priority,
-          dueDate: t.dueDate,
-          estimatedHours: t.estimatedHours,
-          assignee: t.member ? `${t.member.firstName} ${t.member.lastName}` : undefined,
-          member: t.member,
-          project: t.project,
-          createdAt: t.createdAt,
-          updatedAt: t.updatedAt,
-        }));
-        setSubtasks(mapped);
-      })
-      .finally(() => setSubtasksLoading(false));
-  };
-
-  // Ensure subtasks fetched when id changes
+  // Ensure subtasks fetched via slice when id changes
   useEffect(() => {
-    refetchSubtasks();
-  }, [id]);
+    if (id) {
+      dispatch(fetchSubtasksByParent(id));
+    }
+  }, [id, dispatch]);
   const toggleSubtaskEdit = (
     taskId: string,
     field: 'title' | 'status' | 'priority' | 'dueDate' | 'assignee',
@@ -571,7 +544,7 @@ const TaskView: React.FC = () => {
                                 toggleSubtaskEdit(st.id, 'title', false);
                                 if (val && val !== st.title) {
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
-                                    .then(() => setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, title: val } : s)));
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }
                               }}
                               autoFocus
@@ -585,7 +558,7 @@ const TaskView: React.FC = () => {
                               onValueChange={(val) => {
                                 if (val !== (st.status || 'TODO')) {
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
-                                    .then(() => setSubtasks(prev => prev.map(x => x.id === st.id ? { ...x, status: val as TaskType['status'] } : x)));
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }
                                 toggleSubtaskEdit(st.id, 'status', false);
                               }}
@@ -615,7 +588,7 @@ const TaskView: React.FC = () => {
                               onValueChange={(val) => {
                                 if (val !== (st.priority || 'MEDIUM')) {
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
-                                    .then(() => setSubtasks(prev => prev.map(x => x.id === st.id ? { ...x, priority: val as TaskType['priority'] } : x)));
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }
                                 toggleSubtaskEdit(st.id, 'priority', false);
                               }}
@@ -664,13 +637,7 @@ const TaskView: React.FC = () => {
                                   : undefined;
                                 dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
                                   .unwrap()
-                                  .then(() =>
-                                    setSubtasks((prev) =>
-                                      prev.map((s) =>
-                                        s.id === st.id ? { ...s, member: updatedMember, assignee: updatedAssignee } : s
-                                      )
-                                    )
-                                  );
+                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 toggleSubtaskEdit(st.id, 'assignee', false);
                               }}
                             >
@@ -720,7 +687,7 @@ const TaskView: React.FC = () => {
                                 toggleSubtaskEdit(st.id, 'dueDate', false);
                                 if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
-                                    .then(() => setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, dueDate: val } : s)));
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }
                               }}
                             />
@@ -736,7 +703,7 @@ const TaskView: React.FC = () => {
                             aria-label="Delete subtask"
                             onClick={() => {
                               dispatch(deleteTaskAsync(st.id)).unwrap()
-                                .then(() => setSubtasks((prev) => prev.filter(s => s.id !== st.id)));
+                                .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                             }}
                             className="opacity-70 group-hover:opacity-100 mx-auto"
                             title="Delete"
@@ -765,7 +732,7 @@ const TaskView: React.FC = () => {
                                 toggleSubtaskEdit(st.id, 'title', false);
                                 if (val && val !== st.title) {
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
-                                    .then(() => setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, title: val } : s)));
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }
                               }}
                               autoFocus
@@ -778,7 +745,7 @@ const TaskView: React.FC = () => {
                                 onValueChange={(val) => {
                                   if (val !== (st.status || 'TODO')) {
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
-                                      .then(() => setSubtasks(prev => prev.map(x => x.id === st.id ? { ...x, status: val as TaskType['status'] } : x)));
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
                                   toggleSubtaskEdit(st.id, 'status', false);
                                 }}
@@ -803,7 +770,7 @@ const TaskView: React.FC = () => {
                                 onValueChange={(val) => {
                                   if (val !== (st.priority || 'MEDIUM')) {
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
-                                      .then(() => setSubtasks(prev => prev.map(x => x.id === st.id ? { ...x, priority: val as TaskType['priority'] } : x)));
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
                                   toggleSubtaskEdit(st.id, 'priority', false);
                                 }}
@@ -841,7 +808,7 @@ const TaskView: React.FC = () => {
                                   toggleSubtaskEdit(st.id, 'dueDate', false);
                                   if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
-                                      .then(() => setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, dueDate: val } : s)));
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
                                 }}
                               />
@@ -867,15 +834,9 @@ const TaskView: React.FC = () => {
                                   const updatedAssignee = selected
                                     ? `${selected.user.firstName} ${selected.user.lastName}`
                                     : undefined;
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
-                                    .unwrap()
-                                    .then(() =>
-                                      setSubtasks((prev) =>
-                                        prev.map((s) =>
-                                          s.id === st.id ? { ...s, member: updatedMember, assignee: updatedAssignee } : s
-                                        )
-                                      )
-                                    );
+                                dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
+                                  .unwrap()
+                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   toggleSubtaskEdit(st.id, 'assignee', false);
                                 }}
                               >
@@ -910,17 +871,17 @@ const TaskView: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <button
+                        <Button
                           aria-label="Delete subtask"
                           onClick={() => {
-                            dispatch(deleteTaskAsync(st.id)).unwrap()
-                              .then(() => setSubtasks((prev) => prev.filter(s => s.id !== st.id)));
+                              dispatch(deleteTaskAsync(st.id)).unwrap()
+                                .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                           }}
                           className="opacity-70 group-hover:opacity-100"
                           title="Delete"
                         >
                           <TrashBinTrash weight="Bold" size={20} color="red"/>
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1638,7 +1599,7 @@ const TaskView: React.FC = () => {
           fromProject
           initialStatus="TODO"
           parentId={task.id}
-          onSuccess={() => { setIsAddSubtaskOpen(false); refetchSubtasks(); }}
+  onSuccess={() => { setIsAddSubtaskOpen(false); if (id) dispatch(fetchSubtasksByParent(id)); }}
         />
       )}
     </PageContainer>
