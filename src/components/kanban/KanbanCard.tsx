@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
-import { 
-  MessageSquare, 
-  CheckSquare, 
-  Pin, 
-  Calendar, 
+import {
+  MessageSquare,
+  CheckSquare,
+  Pin,
+  Calendar,
   Clock,
   Edit,
   Trash2,
@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Link } from "react-router-dom";
 import usePermission from "@/hooks/usePermission";
 
 interface KanbanCardProps {
@@ -28,12 +29,12 @@ interface KanbanCardProps {
   className?: string;
 }
 
-const KanbanCard = ({ 
-  task, 
-  onTaskClick, 
-  onEditTask, 
-  onDeleteTask, 
-  className 
+const KanbanCard = ({
+  task,
+  onTaskClick,
+  onEditTask,
+  onDeleteTask,
+  className
 }: KanbanCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const { hasPermission } = usePermission();
@@ -55,8 +56,8 @@ const KanbanCard = ({
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No due date";
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      month: 'short', 
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
@@ -75,7 +76,7 @@ const KanbanCard = ({
   };
 
   return (
-    <GlassCard 
+    <GlassCard
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -92,9 +93,10 @@ const KanbanCard = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="mb-2 cursor-pointer h-16 flex items-start">
-              <h3 
-                className="font-medium text-sm"
+            <div className="mb-2 h-16 flex items-start">
+              <Link
+                to={`/tasks/${task.id}`}
+                className="font-medium text-sm hover:text-blue-600 transition-colors cursor-pointer"
                 style={{
                   display: '-webkit-box',
                   WebkitLineClamp: 3,
@@ -103,9 +105,10 @@ const KanbanCard = ({
                   lineHeight: '1.4em',
                   maxHeight: '4.2em'
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 {task.title}
-              </h3>
+              </Link>
             </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
@@ -149,7 +152,7 @@ const KanbanCard = ({
         </div>
 
         {/* Action Icons */}
-        <div className="flex items-center gap-1">
+        {/* <div className="flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -187,8 +190,8 @@ const KanbanCard = ({
                   <p>Pin</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </div>
+            </TooltipProvider> 
+          </div>*/}
       </div>
 
       {/* Date and Actions */}
@@ -222,7 +225,7 @@ const KanbanCard = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

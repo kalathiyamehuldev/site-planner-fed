@@ -64,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import usePermission from "@/hooks/usePermission";
+import ActionButton from "@/components/ui/ActionButton";
 
 // File type categories for filtering
 const fileTypeCategories = [
@@ -604,15 +605,16 @@ const Documents = () => {
           </div>
           {hasPermission('folders', 'create') && (
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
-              <MotionButton 
-                variant="outline" 
-                size="sm" 
+              <ActionButton 
+                variant="primary" 
+                // size="sm" 
                 motion="subtle" 
                 className="w-full sm:w-auto"
                 onClick={createNewFolder}
+                text="New Folder"
+                leftIcon={<FolderOpen size={16} className="mr-2" />}
               >
-                <FolderOpen size={16} className="mr-2" /> New Folder
-              </MotionButton>
+              </ActionButton>
             </div>
           )}
         </div>
@@ -768,12 +770,18 @@ const Documents = () => {
                     <FileText className="mx-auto mb-4 text-muted-foreground" size={48} />
                     <h3 className="text-xl font-medium mb-2">No Items Found</h3>
                     <p className="text-muted-foreground mb-6">
-                      {selectedFolderId ? 'This folder is empty.' : 'No Project Documents found.'}
+                      {selectedFolderId ? 'This folder is empty.' : 'No Documents found.'}
                     </p>
                     {hasPermission('folders', 'create') && (
-                      <MotionButton variant="default" motion="subtle" onClick={createNewFolder}>
-                        <FolderOpen size={18} className="mr-2" /> New Folder
-                      </MotionButton>
+                      <ActionButton 
+                        variant="primary" 
+                        motion="subtle" 
+                        className="w-full sm:w-auto"
+                        onClick={createNewFolder}
+                        text="New Folder"
+                        leftIcon={<FolderOpen size={16} className="mr-2" />}
+                      >
+                      </ActionButton>
                     )}
                   </GlassCard>
                 );
@@ -955,12 +963,18 @@ const Documents = () => {
                     <FileText className="mx-auto mb-4 text-muted-foreground" size={48} />
                     <h3 className="text-xl font-medium mb-2">No Items Found</h3>
                     <p className="text-muted-foreground mb-6">
-                      {selectedFolderId ? 'This folder is empty.' : 'No documents match your current filters. Try a different search or category.'}
+                      {selectedFolderId ? 'This folder is empty.' : 'No Documents found.'}
                     </p>
-                    {hasPermission('documents', 'create') && (
-                      <MotionButton variant="default" motion="subtle" onClick={() => setShowUploadModal(true)}>
-                        <Upload size={18} className="mr-2" /> Upload Documents
-                      </MotionButton>
+                    {hasPermission('folders', 'create') && (
+                      <ActionButton 
+                        variant="primary" 
+                        motion="subtle" 
+                        className="w-full sm:w-auto"
+                        onClick={createNewFolder}
+                        text="New Folder"
+                        leftIcon={<FolderOpen size={16} className="mr-2" />}
+                      >
+                      </ActionButton>
                     )}
                   </GlassCard>
                 );

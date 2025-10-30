@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/tooltip";
 import { convertToDecimalDuration } from "@/lib/timeUtils";
 import usePermission from "@/hooks/usePermission";
+import ActionButton from "@/components/ui/ActionButton";
 
 const TimeTracking = () => {
   const dispatch = useAppDispatch();
@@ -760,13 +761,20 @@ console.log("timeEntryData",timeEntryData);
             </p>
           </div>
           <div className="flex gap-3">
-            <MotionButton variant="outline" size="sm" motion="subtle">
-              <Download size={16} className="mr-2" /> Export
-            </MotionButton>
+            <ActionButton
+              variant="secondary"
+              motion="subtle"
+              leftIcon={<Download size={16} className="mr-2" />}
+              text="Export"
+            />
             {hasPermission('time_tracking', 'create') && (
-              <MotionButton variant="default" size="sm" motion="subtle" onClick={handleNewTimeEntry}>
-                <Plus size={16} className="mr-2" /> New Time Entry
-              </MotionButton>
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                leftIcon={<Plus size={16} className="mr-2" />}
+                text="New Time Entry"
+                onClick={handleNewTimeEntry}
+              />
             )}
           </div>
         </div>
@@ -1567,21 +1575,23 @@ console.log("timeEntryData",timeEntryData);
 
             <div className="mt-6 flex justify-end gap-2">
               {!isTimerRunning && (
-                <MotionButton
-                  variant="outline"
+                <ActionButton
+                  variant="secondary"
                   motion="subtle"
+                  leftIcon={<Play size={16} className="mr-2" />}
+                  text="Start Timer"
                   onClick={handleStartTimer}
                 >
-                  <Play size={16} className="mr-2" /> Start Timer
-                </MotionButton>
+                </ActionButton>
               )}
-              <MotionButton
-                variant="default"
+              <ActionButton
+                variant="primary"
                 motion="subtle"
                 onClick={handleCreateTimeEntry}
+                leftIcon={<Plus size={16} className="mr-2" />}
+                text="Add Time Entry"
               >
-                <Plus size={16} className="mr-2" /> Add Time Entry
-              </MotionButton>
+              </ActionButton>
             </div>
           </GlassCard>
         </div>

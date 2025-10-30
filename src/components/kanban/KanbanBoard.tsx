@@ -63,19 +63,22 @@ const KanbanBoard = ({
     // { id: "CANCELLED", title: "Cancelled" },
   ];
 
-  const tasksByStatus = tasks.reduce((acc: Record<string, any[]>, task) => {
+  // Filter to show only subtasks (tasks with parentId)
+  const subtasks = tasks.filter(task => task.parentId);
+  
+  const tasksByStatus = subtasks.reduce((acc: Record<string, any[]>, task) => {
     const status = task.status || "TODO";
     if (!acc[status]) acc[status] = [];
     acc[status].push(task);
     return acc;
   }, {});
 
-  if (tasks.length === 0) {
+  if (subtasks.length === 0) {
     return (
       <GlassCard className={cn("p-8 text-center", className)}>
         <div className="text-3xl mb-4">✨</div>
-        <h3 className="text-xl font-medium mb-2">No tasks found</h3>
-        <p className="text-muted-foreground">No tasks match your criteria.</p>
+        <h3 className="text-xl font-medium mb-2">No subtasks found</h3>
+        <p className="text-muted-foreground">Create subtasks within parent tasks to see them here.</p>
       </GlassCard>
     );
   }

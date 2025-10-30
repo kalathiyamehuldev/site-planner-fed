@@ -7,7 +7,7 @@ import {
   getProjectMembers,
 } from "@/redux/slices/projectsSlice";
 import { CreateTaskData, UpdateTaskData } from "@/redux/slices/tasksSlice";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -521,16 +521,16 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           </div>
 
           <DialogFooter>
-            <Button
+            <ActionButton
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => onOpenChange(false)}
+              text='Cancel'
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Task"}
-            </Button>
+            </ActionButton>
+            <ActionButton type="submit" disabled={loading}
+            text={loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Task"}>
+            </ActionButton>
           </DialogFooter>
         </form>
       </DialogContent>

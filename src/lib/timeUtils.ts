@@ -31,9 +31,9 @@ export const convertFromDecimalDuration = (duration: number): { hours: number; m
 export const formatDuration = (duration: number): string => {
   const { hours, minutes } = convertFromDecimalDuration(duration);
   if (minutes === 0) {
-    return `${hours}h`;
+    return `${hours}`;
   }
-  return `${hours}h ${minutes}m`;
+  return `${hours}`;
 };
 
 /**

@@ -31,6 +31,11 @@ import {
 import { useNavigate } from "react-router-dom";
 import usePermission from "@/hooks/usePermission";
 import solar from "@solar-icons/react";
+import { 
+  fetchTimeEntrySummary, 
+  selectTimeEntrySummary 
+} from "@/redux/slices/timeTrackingSlice";
+import { formatDuration as formatHoursDuration } from "@/lib/timeUtils";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -38,6 +43,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
+  const timeSummary = useAppSelector(selectTimeEntrySummary);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const { hasPermission, isSuperAdmin } = usePermission();
@@ -48,6 +54,7 @@ const Dashboard = () => {
   useEffect(() => {
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
+    dispatch(fetchTimeEntrySummary({}));
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
@@ -164,15 +171,15 @@ const Dashboard = () => {
       </div>
       <div className="flex-1 flex flex-col justify-center items-start gap-1 sm:gap-2 min-w-0">
         <div className="w-full flex flex-col justify-start items-start">
-          <div className="w-full text-left text-gray-600 text-xs font-normal truncate">
+          <div className="w-full text-right text-gray-600 text-xs font-normal truncate">
             {label}
           </div>
-          <div className="w-full text-left text-gray-800 text-2xl sm:text-3xl font-semibold truncate">
+          <div className="w-full text-right text-gray-800 text-2xl sm:text-3xl font-semibold truncate">
             {value}
           </div>
         </div>
         {trend && (
-          <div className="w-full text-left">
+          <div className="w-full text-right">
             <span 
               className={cn(
                 "text-[9px] sm:text-[10px] font-semibold",
@@ -229,7 +236,7 @@ const Dashboard = () => {
             <StatCard
               icon={solar.Time.ClockCircle}
               label="Tasked Hours"
-              value="183"
+              value={formatHoursDuration(timeSummary?.totalHours || 0)}
               trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.3s]"
               iconBgColor="#ff6b6b"
@@ -260,14 +267,22 @@ const Dashboard = () => {
                 <ChevronRight size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
-              {recentProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  {...project}
-                />
-              ))}
-            </div>
+            {allProjects.length === 0 ? (
+              <GlassCard className="p-8 text-center">
+                <div className="text-3xl mb-4">✨</div>
+                <h3 className="text-xl font-medium mb-2">No projects found</h3>
+                <p className="text-muted-foreground">Add new projects in your company.</p>
+              </GlassCard>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+                {recentProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    {...project}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         )}
 

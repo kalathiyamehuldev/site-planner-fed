@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { updateRole, fetchRoles, selectAllRoles } from '@/redux/slices/rolesSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -234,9 +234,11 @@ const EditRolePage: React.FC = () => {
     <PageContainer>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit Role</h1>
-          <Button variant="outline" onClick={() => navigate('/roles')}>
-            Cancel
-          </Button>
+          <ActionButton
+            variant="secondary"
+            onClick={() => navigate('/roles')}
+            text="Cancel"
+          />
         </div>
 
         <Card>
@@ -348,9 +350,12 @@ const EditRolePage: React.FC = () => {
               </div>
               
               <CardFooter className="pt-2">
-                <Button type="submit" className="w-full sm:w-auto">
-                  Update Role
-                </Button>
+                <ActionButton
+                  variant="primary"
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  text="Update Role"
+                />
               </CardFooter>
             </form>
           </CardContent>

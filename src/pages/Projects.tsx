@@ -4,14 +4,16 @@ import { Link } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Filter, ArrowRight } from "lucide-react";
+import { Search, Filter, ArrowRight, Plus } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, selectProjectLoading, selectProjectError, fetchProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectCard from "@/components/ProjectCard";
 import usePermission from "@/hooks/usePermission";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import solar from "@solar-icons/react";
 
 const Projects = () => {
   const dispatch = useAppDispatch();
@@ -72,14 +74,14 @@ const Projects = () => {
             </p>
             </div>
             {hasPermission(resource, 'create') && (
-              <MotionButton
-                variant="default"
-              motion="subtle"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus size={18} className="mr-2" /> New Project
-            </MotionButton>
-          )}
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                onClick={() => setIsAddDialogOpen(true)}
+                leftIcon={<Plus size={18} className="mr-2" />}
+                text="New Project"
+              />
+            )}
         </div>
 
         {/* Filters and Search */}
@@ -196,16 +198,17 @@ const Projects = () => {
 
         {/* Empty State */}
         {!loading && !error && filteredProjects.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No projects found</p>
+          <div className="text-center py-12 bg-white">
+            <div className="text-3xl mb-4">✨</div>
+            <h3 className="text-xl font-medium mb-4">No projects found</h3>
             {(isSuperAdmin || hasPermission(resource, 'create')) && (
-              <MotionButton
-                variant="default"
+              <ActionButton
+                variant="primary"
                 motion="subtle"
                 onClick={() => setIsAddDialogOpen(true)}
-              >
-                <Plus size={18} className="mr-2" /> Create Your First Project
-              </MotionButton>
+                leftIcon={<Plus size={18} className="mr-2" />}
+                text="Create Your First Project"
+              />
             )}
           </div>
         )}
@@ -220,23 +223,29 @@ const Projects = () => {
                 title={project.title}
                 client={project.client}
                 status={project.status}
-                dueDate={new Date(project.endDate)?.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                dueDate={(() => {
+                  if (!project.endDate) return "No Due Date";
+                  const d = new Date(project.endDate);
+                  return isNaN(d.getTime())
+                    ? "No Due Date"
+                    : d.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      });
+                })()}
                 team={project.team}
                 progress={project.progress}
-                className={cn("opacity-0 animate-scale-in border-2 rounded-xl", {
+                className={cn("opacity-0 animate-scale-in rounded-xl", {
                   "animation-delay-[0.1s]": index % 3 === 0,
                   "animation-delay-[0.2s]": index % 3 === 1,
                   "animation-delay-[0.3s]": index % 3 === 2,
                   // Status-based border colors
-                  "border-blue-500": project.status === "In Progress",
-                  "border-emerald-500": project.status === "Active",
-                  "border-gray-400": project.status === "Not Started",
-                  "border-amber-500": project.status === "On Hold",
-                  "border-green-500": project.status === "Completed",
+                  // "border-blue-500": project.status === "In Progress",
+                  // "border-emerald-500": project.status === "Active",
+                  // "border-gray-400": project.status === "Not Started",
+                  // "border-amber-500": project.status === "On Hold",
+                  // "border-green-500": project.status === "Completed",
                 })}
                 style={{ animationFillMode: "forwards" }}
                 onDelete={() => {

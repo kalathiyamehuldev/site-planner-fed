@@ -20,8 +20,8 @@ import {
 import usePermission from '@/hooks/usePermission';
 import PageContainer from '@/components/layout/PageContainer';
 import RoleCard from '@/components/roles/RoleCard';
-import { MotionButton } from '@/components/ui/motion-button';
 import { cn } from '@/lib/utils';
+import ActionButton from '@/components/ui/ActionButton';
 
 // Component for managing roles
 
@@ -113,13 +113,14 @@ const RolesPage: React.FC = () => {
             </p>
           </div>
           {hasPermission('roles', 'create') && (
-            <MotionButton
-              variant="default"
+            <ActionButton
+              variant="primary"
               motion="subtle"
               onClick={handleCreateRole}
+              leftIcon={<Plus size={18} className="mr-2" />}
+              text="Create Role"
             >
-              <Plus size={18} className="mr-2" /> Create Role
-            </MotionButton>
+            </ActionButton>
           )}
         </div>
 
@@ -151,13 +152,14 @@ const RolesPage: React.FC = () => {
         {!isLoading && roles.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No roles found</p>
-            <MotionButton
-              variant="default"
+            <ActionButton
+              variant="primary"
               motion="subtle"
               onClick={handleCreateRole}
+              leftIcon={<Plus size={18} className="mr-2" />}
+              text="Create Your First Role"
             >
-              <Plus size={18} className="mr-2" /> Create Your First Role
-            </MotionButton>
+            </ActionButton>
           </div>
         )}
 

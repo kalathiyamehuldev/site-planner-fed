@@ -17,6 +17,7 @@ import {
   Edit,
   ArrowLeft,
   Plus,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
@@ -51,6 +52,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
+import ActionButton from "@/components/ui/ActionButton";
+import { DocumentsMinimalistic } from "@solar-icons/react";
 
 // Static data for progress (keeping as requested)
 const staticProjectData = {
@@ -297,24 +300,26 @@ const ProjectDetails = () => {
           </div>
           <div className="flex flex-wrap gap-3">
             {hasPermission(resource, 'update') && (
-              <MotionButton
-                variant="outline"
-                size="sm"
+              <ActionButton
+                variant="secondary"
+                // size="sm"
                 motion="subtle"
                 onClick={() => setEditDialogOpen(true)}
+                leftIcon={<Edit size={16} className="mr-2" />}
+                text="Edit Project"
               >
-                <Edit size={16} className="mr-2" /> Edit Project
-              </MotionButton>
+              </ActionButton>
             )}
             {hasPermission(taskResource, 'create') && (
-              <MotionButton
-                variant="default"
-                size="sm"
+              <ActionButton
+                variant="primary"
+                // size="sm"
                 motion="subtle"
                 onClick={() => setAddTaskDialogOpen(true)}
+                leftIcon={<Plus size={16} className="mr-2" />}
+                text="Add Task"
               >
-                <Plus size={16} className="mr-2" /> Add Task
-              </MotionButton>
+              </ActionButton>
             )}
           </div>
         </div>
@@ -468,12 +473,11 @@ const ProjectDetails = () => {
                 <h2 className="text-xl font-medium">Recent Tasks</h2>
                 <MotionButton
                   variant="ghost"
-                  size="sm"
                   motion="subtle"
                   className="text-primary"
                   onClick={() => setActiveTab("tasks")}
                 >
-                  View All Tasks
+                  <ChevronRight size={32} />
                 </MotionButton>
               </div>
               <TaskTable
@@ -489,16 +493,16 @@ const ProjectDetails = () => {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">All Tasks</h2>
-              {hasPermission(taskResource, 'create') && (
-                <MotionButton
-                  variant="default"
-                  size="sm"
+              {/* {hasPermission(taskResource, 'create') && (
+                <ActionButton
+                  variant="primary"
                   motion="subtle"
                   onClick={() => setAddTaskDialogOpen(true)}
+                  leftIcon={<Plus size={16} className="mr-2" />}
+                  text="Add Task"
                 >
-                  <Plus size={16} className="mr-2" /> Add Task
-                </MotionButton>
-              )}
+                </ActionButton>
+              )} */}
             </div>
             {tasksLoading ? (
               <div className="flex items-center justify-center p-12">
@@ -535,8 +539,11 @@ const ProjectDetails = () => {
                   <div className="text-lg">Loading documents...</div>
                 </div>
               ) : projectDocuments.length === 0 ? (
-                <div className="flex items-center justify-center p-12 text-muted-foreground">
-                  No documents found for this project.
+                <div className="text-center py-12">
+                  <DocumentsMinimalistic weight="Bold" size={24} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">
+                    No documents found for this project
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
