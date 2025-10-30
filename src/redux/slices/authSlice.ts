@@ -276,6 +276,34 @@ export const getProfile = createAsyncThunk(
         }
     }
 );
+
+// Update profile
+interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address?: string;
+  email?: string;
+  newPassword?: string;
+  company?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+}
+
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (data: UpdateProfilePayload, { rejectWithValue }) => {
+    try {
+      const response = await api.patch('/auth/profile', data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update profile');
+    }
+  }
+);
 export const logout = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
@@ -346,6 +374,53 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.error = action.payload as string;
                 toast.error(action.payload as string);
+            })
+            // Get Profile
+            .addCase(getProfile.pending, (state) => {
+              state.isLoading = true;
+              state.error = null;
+            })
+            .addCase(getProfile.fulfilled, (state, action) => {
+              state.isLoading = false;
+              const payload: any = action.payload;
+              // Profile endpoint returns { user, message }
+              const user = payload?.user ?? payload;
+              state.user = user || state.user;
+              // Sync selected company from payload or user
+              const company = payload?.company ?? user?.company;
+              if (company) {
+                state.selectedCompany = company;
+                localStorage.setItem('selectedCompany', JSON.stringify(company));
+              }
+              state.error = null;
+            })
+            .addCase(getProfile.rejected, (state, action) => {
+              state.isLoading = false;
+              state.error = action.payload as string;
+              toast.error(action.payload as string);
+            })
+            // Update Profile
+            .addCase(updateProfile.pending, (state) => {
+              state.isLoading = true;
+              state.error = null;
+            })
+            .addCase(updateProfile.fulfilled, (state, action) => {
+              state.isLoading = false;
+              // Axios returns response.data; backend may wrap data
+              const data: any = action.payload?.data ?? action.payload;
+              const user = data?.user;
+              const company = data?.company;
+              if (user) state.user = user;
+              if (company) {
+                state.selectedCompany = company;
+                localStorage.setItem('selectedCompany', JSON.stringify(company));
+              }
+              toast.success('Profile updated successfully');
+            })
+            .addCase(updateProfile.rejected, (state, action) => {
+              state.isLoading = false;
+              state.error = action.payload as string;
+              toast.error(action.payload as string);
             })
             // Register Company
             .addCase(registerCompany.pending, (state) => {

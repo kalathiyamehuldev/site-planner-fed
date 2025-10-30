@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ChevronDown, User, LogOut } from "lucide-react";
 import {
   DropdownMenu,
@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "@/redux/hooks";
-import { logout } from "@/redux/slices/authSlice";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { logout, getProfile, selectUser } from "@/redux/slices/authSlice";
 
 interface DashboardHeaderProps {
   userName?: string;
@@ -18,12 +18,21 @@ interface DashboardHeaderProps {
 }
 
 const DashboardHeader = ({ 
-  userName = "Alex Polo", 
-  userRole = "Project Manager",
+  userName,
+  userRole,
   onLogout 
 }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
+
+  useEffect(() => {
+    // If user not loaded yet but token exists, fetch profile
+    const token = localStorage.getItem('token');
+    if (!user && token) {
+      dispatch(getProfile());
+    }
+  }, [dispatch, user]);
 
   // Generate avatar initials
   const getInitials = (name: string) => {
@@ -62,16 +71,18 @@ const DashboardHeader = ({
             >
               {/* Avatar */}
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-300 rounded-lg flex items-center justify-center text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
-                {getInitials(userName)}
+                {getInitials(
+                  userName || (user ? `${user.firstName} ${user.lastName}` : "User")
+                )}
               </div>
               
               {/* User Info - Show on desktop */}
               <div className="text-left min-w-0">
                 <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                  {userName}
+                  {userName || (user ? `${user.firstName} ${user.lastName}` : "User")}
                 </div>
                 <div className="text-[10px] sm:text-xs text-gray-500 truncate">
-                  {userRole}
+                  {userRole || (user?.role?.name ? user.role.name : "")}
                 </div>
               </div>
               

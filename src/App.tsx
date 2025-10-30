@@ -36,6 +36,7 @@ import NotFound from "./pages/NotFound";
 import RolesPage from "./pages/Roles";
 import CreateRolePage from "./pages/CreateRole";
 import EditRolePage from "./pages/EditRole";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
                           <Route path="/roles" element={<RolesPage />}/>
                           <Route path="/roles/create" element={<CreateRolePage />}/>
                           <Route path="/roles/edit/:roleId" element={<EditRolePage />}/>
+                          <Route path="/profile" element={<Profile />} />
                           <Route path="/admin" element={<Admin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

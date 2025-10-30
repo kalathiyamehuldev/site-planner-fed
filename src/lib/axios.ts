@@ -3,8 +3,13 @@ import { toast } from 'sonner';
 
 // Environment-specific API configuration
 const getApiBaseUrl = () => {
-    // Always use the unified proxy path. Vite (dev) and Vercel (prod) rewrite /api to backend.
-    return 'http://localhost:8000' //'/api';
+    // Check if we're in production (Vercel)
+    if (import.meta.env.PROD) {
+        // In production, use the same domain with /api prefix for proxy
+        return '/api';
+    }
+    // Development environment - use Vite proxy
+    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -53,8 +58,20 @@ api.interceptors.response.use(
             }
             
             // Handle other HTTP errors
-            const errorMessage = data?.error || data?.message || `HTTP Error ${status}`;
-            return Promise.reject(new Error(errorMessage));
+            // Prefer DTO validation messages over generic "Bad Request"
+            let errorMessage: string = `HTTP Error ${status}`;
+            if (Array.isArray(data?.message) && data.message.length > 0) {
+                errorMessage = String(data.message[0]);
+            } else if (typeof data?.message === 'string' && data.message) {
+                errorMessage = data.message;
+            } else if (typeof data?.error === 'string' && data.error) {
+                errorMessage = data.error;
+            }
+
+            const wrappedError: any = new Error(errorMessage);
+            // Preserve original axios response for downstream handlers that inspect it
+            wrappedError.response = error.response;
+            return Promise.reject(wrappedError);
         }
         
         // Handle network errors

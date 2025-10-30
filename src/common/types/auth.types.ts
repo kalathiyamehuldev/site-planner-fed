@@ -29,6 +29,8 @@ export interface User {
     lastName: string;
     email: string;
     userType: UserType;
+    // Indicates the logged-in user is the company account
+    isCompany?: boolean;
     role: {
         id: string;
         name: string;
