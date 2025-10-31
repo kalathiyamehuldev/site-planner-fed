@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
@@ -71,15 +71,21 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       bgColor: `${colors[colorIndex]}1A` // 10% opacity
     };
   };
-  // Filter parent tasks and fetch subtasks
+  // Filter parent tasks and fetch subtasks only if not loaded
   const parentTasks = tasks.filter(task => !task.parentId);
-  
-  // Fetch subtasks for all parent tasks
+  const missingParentIds = useMemo(() => {
+    return parentTasks
+      .map((t) => t.id)
+      .filter((id) => !(id in subtasksByParent));
+  }, [parentTasks, subtasksByParent]);
+
   useEffect(() => {
-    parentTasks.forEach((task) => {
-      dispatch(fetchSubtasksByParent(task.id));
-    });
-  }, [parentTasks, dispatch]);
+    if (missingParentIds.length > 0) {
+      missingParentIds.forEach((parentId) => {
+        dispatch(fetchSubtasksByParent(parentId));
+      });
+    }
+  }, [missingParentIds, dispatch]);
 
   const toggleExpand = (taskId: string) => {
     setExpandedParents(prev => ({ ...prev, [taskId]: !prev[taskId] }));
@@ -150,7 +156,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
           const subtasks = subtasksByParent[task.id] || [];
           const hasSubtasks = subtasks.length > 0;
           const isExpanded = expandedParents[task.id];
-          
+
           return (
             <div key={task.id} className="space-y-2">
               <GlassCard
@@ -162,222 +168,222 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                 }}
                 onClick={() => onTaskClick?.(task.id)}
               >
-              <div className="space-y-3">
-                {/* Header: Title and Status */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 flex items-start gap-2">
-                    {hasSubtasks && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(task.id);
+                <div className="space-y-3">
+                  {/* Header: Title and Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0 flex items-start gap-2">
+                      {hasSubtasks && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpand(task.id);
+                          }}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
+                        >
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </Button>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={`/tasks/${task.id}`}
+                          className="text-gray-800 text-base font-semibold font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {task.title}
+                        </Link>
+                        {showProject && (
+                          <p className="text-gray-500 text-xs font-normal font-['Poppins']">{transformedTask.projectName}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <StatusBadge status={transformedTask.status} />
+                    </div>
+                  </div>
+
+                  {/* Info Grid: Date and Hours */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} className="text-gray-500 flex-shrink-0" />
+                      <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.dueDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock size={16} className="text-gray-500 flex-shrink-0" />
+                      <span className="text-gray-700 text-sm font-medium font-['Poppins']">{task.estimatedHours || 0}h</span>
+                    </div>
+                  </div>
+
+                  {/* Assignee and Priority Row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                        style={{
+                          backgroundColor: avatarData.bgColor,
+                          color: avatarData.color
                         }}
-                        className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
                       >
-                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                      </Button>
-                    )}
-                    <div className="flex-1 min-w-0">
+                        {avatarData.initials}
+                      </div>
+                      <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.assignedTo}</span>
+                    </div>
+
+                    {/* Priority */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        transformedTask.priority === 'High' ? 'bg-[#dc3545]' :
+                          transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
+                      )} />
+                      <span className="text-gray-600 text-xs font-medium font-['Poppins']">
+                        {transformedTask.priority}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-100" />
+
+                  {/* Footer: View More and Actions */}
+                  <div className="flex items-center justify-between">
+                    {hasPermission(resource, 'read') && (
                       <Link
                         to={`/tasks/${task.id}`}
-                        className="text-gray-800 text-base font-semibold font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-[#0e489a] text-[10px] font-medium font-['General_Sans'] uppercase hover:gap-2 transition-all duration-200"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {task.title}
+                        VIEW MORE
+                        <ArrowRight size={12} />
                       </Link>
-                      {showProject && (
-                        <p className="text-gray-500 text-xs font-normal font-['Poppins']">{transformedTask.projectName}</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      {hasPermission(resource, 'update') && onEditTask && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditTask(task);
+                          }}
+                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+                        >
+                          <Edit size={14} />
+                        </Button>
+                      )}
+                      {hasPermission(resource, 'delete') && onDeleteTask && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteTask(task.id);
+                          }}
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
                       )}
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
-                    <StatusBadge status={transformedTask.status} />
-                  </div>
                 </div>
+              </GlassCard>
 
-                {/* Info Grid: Date and Hours */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.dueDate}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700 text-sm font-medium font-['Poppins']">{task.estimatedHours || 0}h</span>
-                  </div>
-                </div>
+              {/* Subtasks */}
+              {isExpanded && hasSubtasks && (
+                <div className="ml-4 space-y-2">
+                  {subtasks.map((subtask, subIndex) => {
+                    const transformedSubtask = transformTaskForTable(subtask);
+                    const subtaskAvatarData = getAvatarData(transformedSubtask.assignedTo);
 
-                {/* Assignee and Priority Row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                      style={{
-                        backgroundColor: avatarData.bgColor,
-                        color: avatarData.color
-                      }}
-                    >
-                      {avatarData.initials}
-                    </div>
-                    <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.assignedTo}</span>
-                  </div>
-
-                  {/* Priority */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      transformedTask.priority === 'High' ? 'bg-[#dc3545]' :
-                        transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
-                    )} />
-                    <span className="text-gray-600 text-xs font-medium font-['Poppins']">
-                      {transformedTask.priority}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-gray-100" />
-
-                {/* Footer: View More and Actions */}
-                <div className="flex items-center justify-between">
-                  {hasPermission(resource, 'read') && (
-                    <Link
-                      to={`/tasks/${task.id}`}
-                      className="flex items-center gap-1 text-[#0e489a] text-[10px] font-medium font-['General_Sans'] uppercase hover:gap-2 transition-all duration-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      VIEW MORE
-                      <ArrowRight size={12} />
-                    </Link>
-                  )}
-                  <div className="flex items-center gap-2">
-                    {hasPermission(resource, 'update') && onEditTask && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditTask(task);
-                        }}
-                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+                    return (
+                      <GlassCard
+                        key={subtask.id}
+                        variant="clean"
+                        className="p-4 cursor-pointer hover:shadow-md hover:shadow-gray-200/50 transition-all duration-300 border border-gray-100 hover:border-gray-200 bg-gray-50/50"
+                        onClick={() => onTaskClick?.(subtask.id)}
                       >
-                        <Edit size={14} />
-                      </Button>
-                    )}
-                    {hasPermission(resource, 'delete') && onDeleteTask && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteTask(task.id);
-                        }}
-                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-            
-            {/* Subtasks */}
-            {isExpanded && hasSubtasks && (
-              <div className="ml-4 space-y-2">
-                {subtasks.map((subtask, subIndex) => {
-                  const transformedSubtask = transformTaskForTable(subtask);
-                  const subtaskAvatarData = getAvatarData(transformedSubtask.assignedTo);
-                  
-                  return (
-                    <GlassCard
-                      key={subtask.id}
-                      variant="clean"
-                      className="p-4 cursor-pointer hover:shadow-md hover:shadow-gray-200/50 transition-all duration-300 border border-gray-100 hover:border-gray-200 bg-gray-50/50"
-                      onClick={() => onTaskClick?.(subtask.id)}
-                    >
-                      <div className="space-y-2">
-                        {/* Subtask Header */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <Link
-                              to={`/tasks/${subtask.id}`}
-                              className="text-gray-700 text-sm font-medium font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {subtask.title}
-                            </Link>
-                          </div>
-                          <div className="flex-shrink-0">
-                            <StatusBadge status={transformedSubtask.status} />
-                          </div>
-                        </div>
-
-                        {/* Subtask Info */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} className="text-gray-500 flex-shrink-0" />
-                            <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.dueDate}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock size={14} className="text-gray-500 flex-shrink-0" />
-                            <span className="text-gray-600 text-xs font-medium font-['Poppins']">{subtask.estimatedHours || 0}h</span>
-                          </div>
-                        </div>
-
-                        {/* Subtask Assignee and Actions */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                              style={{ 
-                                backgroundColor: subtaskAvatarData.bgColor,
-                                color: subtaskAvatarData.color 
-                              }}
-                            >
-                              {subtaskAvatarData.initials}
+                        <div className="space-y-2">
+                          {/* Subtask Header */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <Link
+                                to={`/tasks/${subtask.id}`}
+                                className="text-gray-700 text-sm font-medium font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {subtask.title}
+                              </Link>
                             </div>
-                            <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.assignedTo}</span>
+                            <div className="flex-shrink-0">
+                              <StatusBadge status={transformedSubtask.status} />
+                            </div>
                           </div>
-                          
-                          <div className="flex items-center gap-1">
-                            {hasPermission(resource, 'update') && onEditTask && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditTask(subtask);
+
+                          {/* Subtask Info */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.dueDate}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock size={14} className="text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600 text-xs font-medium font-['Poppins']">{subtask.estimatedHours || 0}h</span>
+                            </div>
+                          </div>
+
+                          {/* Subtask Assignee and Actions */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                                style={{
+                                  backgroundColor: subtaskAvatarData.bgColor,
+                                  color: subtaskAvatarData.color
                                 }}
-                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
                               >
-                                <Edit size={12} />
-                              </Button>
-                            )}
-                            {hasPermission(resource, 'delete') && onDeleteTask && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteTask(subtask.id);
-                                }}
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                              >
-                                <Trash2 size={12} />
-                              </Button>
-                            )}
+                                {subtaskAvatarData.initials}
+                              </div>
+                              <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.assignedTo}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {hasPermission(resource, 'update') && onEditTask && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditTask(subtask);
+                                  }}
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+                                >
+                                  <Edit size={12} />
+                                </Button>
+                              )}
+                              {hasPermission(resource, 'delete') && onDeleteTask && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteTask(subtask.id);
+                                  }}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+                                >
+                                  <Trash2 size={12} />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </GlassCard>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                      </GlassCard>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -425,20 +431,20 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
               const subtasks = subtasksByParent[task.id] || [];
               const hasSubtasks = subtasks.length > 0;
               const isExpanded = expandedParents[task.id];
-              
-              return (
-                <React.Fragment key={task.id}>
-                  <tr
-                    className={cn(
-                      "h-16 hover:bg-gray-50/50 transition-colors cursor-pointer animate-fade-in",
-                      isExpanded && hasSubtasks ? "border-b-0" : "border-b border-[#1a2624]/10"
-                    )}
-                    style={{
-                      animationDelay: `${index * 0.05}s`,
-                      animationFillMode: "forwards",
-                    }}
-                    onClick={() => onTaskClick?.(task.id)}
-                  >
+
+              const parentRow = (
+                <tr
+                  key={`parent-${task.id}`}
+                  className={cn(
+                    "h-16 hover:bg-gray-50/50 transition-colors cursor-pointer animate-fade-in",
+                    isExpanded && hasSubtasks ? "border-b-0" : "border-b border-[#1a2624]/10"
+                  )}
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: "forwards",
+                  }}
+                  onClick={() => onTaskClick?.(task.id)}
+                >
                   <td className="px-3 max-w-xs">
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-1">
@@ -640,189 +646,189 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                     </div>
                   </td>
                 </tr>
-                
-                {/* Subtasks */}
-                {isExpanded && hasSubtasks && subtasks.map((subtask, subIndex) => {
-                  const transformedSubtask = transformTaskForTable(subtask);
-                  const isLastSubtask = subIndex === subtasks.length - 1;
-                  return (
-                    <tr
-                      key={subtask.id}
-                      className={cn(
-                        "h-12 hover:bg-blue-50/30 transition-colors cursor-pointer bg-blue-50/10 border-l-2 border-l-blue-200",
-                        isLastSubtask ? "border-b border-[#1a2624]/10" : "border-b border-[#1a2624]/5"
-                      )}
-                      onClick={() => onTaskClick?.(subtask.id)}
-                    >
-                      <td className="px-3 max-w-xs">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1 ml-6">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Link
-                                    to={`/tasks/${subtask.id}`}
-                                    className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-normal cursor-pointer hover:text-blue-600 transition-colors"
-                                    style={{
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 1,
-                                      WebkitBoxOrient: 'vertical',
-                                      overflow: 'hidden',
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {subtask.title}
-                                  </Link>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" align="start" className="max-w-xs">
-                                  <p>{subtask.title}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          {!showProject && subtask.description && (
-                            <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none ml-6 hidden sm:block"
-                              style={{
-                                display: '-webkit-box',
-                                WebkitLineClamp: 1,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {subtask.description}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      {showProject && (
-                        <td className="px-3 max-w-xs hidden sm:table-cell">
+              );
+
+              const subtaskRows = isExpanded && hasSubtasks ? subtasks.map((subtask, subIndex) => {
+                const transformedSubtask = transformTaskForTable(subtask);
+                const isLastSubtask = subIndex === subtasks.length - 1;
+                return (
+                  <tr
+                    key={`subtask-${subtask.id}`}
+                    className={cn(
+                      "h-12 hover:bg-blue-50/30 transition-colors cursor-pointer bg-blue-50/10 border-l-2 border-l-blue-200",
+                      isLastSubtask ? "border-b border-[#1a2624]/10" : "border-b border-[#1a2624]/5"
+                    )}
+                    onClick={() => onTaskClick?.(subtask.id)}
+                  >
+                    <td className="px-3 max-w-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 ml-6">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight cursor-pointer"
+                                <Link
+                                  to={`/tasks/${subtask.id}`}
+                                  className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-normal cursor-pointer hover:text-blue-600 transition-colors"
                                   style={{
                                     display: '-webkit-box',
-                                    WebkitLineClamp: 2,
+                                    WebkitLineClamp: 1,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
                                   }}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  {transformedSubtask.projectName}
-                                </div>
+                                  {subtask.title}
+                                </Link>
                               </TooltipTrigger>
                               <TooltipContent side="top" align="start" className="max-w-xs">
-                                <p>{transformedSubtask.projectName}</p>
+                                <p>{subtask.title}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        </td>
-                      )}
-                      <td className="px-3">
-                        <StatusBadge status={transformedSubtask.status} />
-                      </td>
-                      <td className="px-3 hidden md:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 relative overflow-hidden">
-                            <div className={cn(
-                              "w-2 h-2 left-[7.79px] top-[7.79px] absolute rounded-full",
-                              transformedSubtask.priority === 'Urgent' ? 'bg-[#ff6e0d]' :
-                              transformedSubtask.priority === 'High' ? 'bg-[#dc3545]' :
-                                transformedSubtask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
-                            )} />
-                          </div>
-                          <div className="text-[#1a2624]/80 text-sm font-normal font-['Manrope'] leading-tight">
-                            {transformedSubtask.priority}
-                          </div>
                         </div>
-                      </td>
-                      <td className="px-3 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const avatarData = getAvatarData(transformedSubtask.assignedTo);
-                            return (
-                              <div 
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium"
-                                style={{ 
-                                  backgroundColor: avatarData.bgColor,
-                                  color: avatarData.color 
+                        {!showProject && subtask.description && (
+                          <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none ml-6 hidden sm:block"
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {subtask.description}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    {showProject && (
+                      <td className="px-3 max-w-xs hidden sm:table-cell">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight cursor-pointer"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
                                 }}
                               >
-                                {avatarData.initials}
+                                {transformedSubtask.projectName}
                               </div>
-                            );
-                          })()}
-                          <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
-                            {transformedSubtask.assignedTo}
-                          </div>
-                        </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-xs">
+                              <p>{transformedSubtask.projectName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
-                      <td className="px-3 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 relative overflow-hidden">
-                            <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
-                          </div>
-                          <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
-                            {transformedSubtask.dueDate}
-                          </div>
+                    )}
+                    <td className="px-3">
+                      <StatusBadge status={transformedSubtask.status} />
+                    </td>
+                    <td className="px-3 hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 relative overflow-hidden">
+                          <div className={cn(
+                            "w-2 h-2 left-[7.79px] top-[7.79px] absolute rounded-full",
+                            transformedSubtask.priority === 'Urgent' ? 'bg-[#ff6e0d]' :
+                              transformedSubtask.priority === 'High' ? 'bg-[#dc3545]' :
+                                transformedSubtask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
+                          )} />
                         </div>
-                      </td>
-                      <td className="px-3 hidden xl:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 relative overflow-hidden">
-                            <Clock size={14} className="text-muted-foreground" />
-                          </div>
-                          <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight">
-                            {subtask.estimatedHours || 0} hours
-                          </div>
+                        <div className="text-[#1a2624]/80 text-sm font-normal font-['Manrope'] leading-tight">
+                          {transformedSubtask.priority}
                         </div>
-                      </td>
-                      <td className="px-3">
-                        <div className="flex items-center justify-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-6 h-6 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                      </div>
+                    </td>
+                    <td className="px-3 hidden lg:table-cell">
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const avatarData = getAvatarData(transformedSubtask.assignedTo);
+                          return (
+                            <div
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium"
+                              style={{
+                                backgroundColor: avatarData.bgColor,
+                                color: avatarData.color
+                              }}
+                            >
+                              {avatarData.initials}
+                            </div>
+                          );
+                        })()}
+                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
+                          {transformedSubtask.assignedTo}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 hidden lg:table-cell">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 relative overflow-hidden">
+                          <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
+                        </div>
+                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
+                          {transformedSubtask.dueDate}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 hidden xl:table-cell">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 relative overflow-hidden">
+                          <Clock size={14} className="text-muted-foreground" />
+                        </div>
+                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight">
+                          {subtask.estimatedHours || 0} hours
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3">
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-6 h-6 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                            >
+                              <MoreHorizontal size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32">
+                            {hasPermission(resource, 'update') && onEditTask && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditTask(subtask);
+                                }}
+                                className="flex items-center gap-2"
                               >
-                                <MoreHorizontal size={16} />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32">
-                              {hasPermission(resource, 'update') && onEditTask && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEditTask(subtask);
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Edit size={14} />
-                                  Edit
-                                </DropdownMenuItem>
-                              )}
-                              {hasPermission(resource, 'delete') && onDeleteTask && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteTask(subtask.id);
-                                  }}
-                                  className="flex items-center gap-2 text-red-600 focus:text-red-600"
-                                >
-                                  <Trash2 size={14} />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </React.Fragment>
-              );
+                                <Edit size={14} />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {hasPermission(resource, 'delete') && onDeleteTask && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteTask(subtask.id);
+                                }}
+                                className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }) : [];
+
+              return [parentRow, ...subtaskRows];
             })}
           </tbody>
         </table>

@@ -761,12 +761,12 @@ console.log("timeEntryData",timeEntryData);
             </p>
           </div>
           <div className="flex gap-3">
-            <ActionButton
+            {/* <ActionButton
               variant="secondary"
               motion="subtle"
               leftIcon={<Download size={16} className="mr-2" />}
               text="Export"
-            />
+            /> */}
             {hasPermission('time_tracking', 'create') && (
               <ActionButton
                 variant="primary"

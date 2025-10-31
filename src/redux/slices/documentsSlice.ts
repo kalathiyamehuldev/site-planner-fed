@@ -576,7 +576,7 @@ export const replaceDocument = createAsyncThunk(
 
 export const uploadDocumentVersion = createAsyncThunk(
   'documents/uploadDocumentVersion',
-  async ({ id, file, versionNotes }: { id: string; file: File; versionNotes?: string }, { rejectWithValue, getState }) => {
+  async ({ id, file, versionNotes }: { id: string; file: File; versionNotes?: string }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -584,21 +584,20 @@ export const uploadDocumentVersion = createAsyncThunk(
         formData.append('versionNotes', versionNotes);
       }
 
-      const response:any = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/versions`, formData, {
+      const axiosRes = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/versions`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      });console.log('response', response);
-      
-      
-      if (response.status === 'success' && response.data) {
-        return transformApiDocument(response.data);
-      } else {
-        return rejectWithValue(response.message || 'Failed to upload document version');
+      });
+
+      const apiRes = axiosRes.data;
+      if (apiRes.status === 'success' && apiRes.data) {
+        return transformApiDocument(apiRes.data);
       }
+      return rejectWithValue(apiRes.message || apiRes.error || 'Failed to upload document version');
     } catch (error: any) {
-      console.error('Error uploading document version:', error);
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to upload document version');
+      const apiError = error?.response?.data as ApiResponse | undefined;
+      return rejectWithValue(apiError?.message || apiError?.error || error?.message || 'Failed to upload document version');
     }
   }
 );

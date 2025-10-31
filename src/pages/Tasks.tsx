@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
   fetchAllTasksByCompany,
+  fetchParentTasksByCompany,
   setSelectedTask,
   deleteTaskAsync,
   updateTaskStatusAsync,
@@ -55,7 +56,7 @@ const Tasks = () => {
   const [viewMode, setViewMode] = useState<"list" | "kanban" | "timeline">("kanban");
 
   useEffect(() => {
-    dispatch(fetchAllTasksByCompany());
+    dispatch(fetchParentTasksByCompany());
     dispatch(fetchProjects());
   }, [dispatch]);
 
@@ -73,7 +74,7 @@ const Tasks = () => {
       case "mine":
         return task.assignee === "Alex Jones"; // For demo purposes
       case "high-priority":
-        return task.priority === "HIGH";
+        return task.priority === "HIGH" || task.priority === "URGENT";
       case "upcoming":
         return (
           task.dueDate && (
@@ -128,7 +129,7 @@ const Tasks = () => {
     try {
       const result = await dispatch(deleteTaskAsync(deletingTaskId));
       if (deleteTaskAsync.fulfilled.match(result)) {
-        dispatch(fetchAllTasksByCompany());
+        dispatch(fetchParentTasksByCompany());
       } else {
         throw new Error((result.payload as string) || 'Failed to delete task');
       }
@@ -142,7 +143,7 @@ const Tasks = () => {
   const handleEditSuccess = () => {
     setEditingTask(null);
     // Refresh tasks list
-    dispatch(fetchAllTasksByCompany());
+    dispatch(fetchParentTasksByCompany());
   };
 
   const handleNewTaskSuccess = () => {
@@ -150,7 +151,7 @@ const Tasks = () => {
     setNewTaskInitialStatus(null);
     setLockNewTaskStatus(false);
     // Refresh tasks list
-    dispatch(fetchAllTasksByCompany());
+    dispatch(fetchParentTasksByCompany());
   };
 
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
@@ -160,7 +161,7 @@ const Tasks = () => {
         status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE'
       }));
       if (updateTaskStatusAsync.fulfilled.match(result)) {
-        dispatch(fetchAllTasksByCompany());
+        dispatch(fetchParentTasksByCompany());
       } else {
         throw new Error((result.payload as string) || 'Failed to update task status');
       }

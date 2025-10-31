@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { 
-  Document, 
-  fetchDocumentDetails, 
-  updateDocument, 
-  deleteDocument, 
-  downloadDocument, 
-  fetchFilePreview, 
+import {
+  Document,
+  fetchDocumentDetails,
+  updateDocument,
+  deleteDocument,
+  downloadDocument,
+  fetchFilePreview,
   fetchDocumentVersions,
-  selectFilePreview, 
+  selectFilePreview,
   selectPreviewLoading,
   selectDocumentDetails,
   selectDocumentDetailsLoading,
@@ -20,10 +20,10 @@ import {
 import { getProjectMembers } from '@/redux/slices/projectsSlice';
 import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
 import usePermission from '@/hooks/usePermission';
-import { 
-  fetchDocumentComments, 
-  createComment, 
-  updateComment as updateCommentAction, 
+import {
+  fetchDocumentComments,
+  createComment,
+  updateComment as updateCommentAction,
   deleteComment as deleteCommentAction,
   fetchProjectMembers as fetchCommentProjectMembers,
   selectAllComments,
@@ -56,7 +56,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import  DeleteDocumentModal  from '@/components/documents/DeleteDocumentModal';
+import DeleteDocumentModal from '@/components/documents/DeleteDocumentModal';
 import {
   MoreVertical,
   Edit3,
@@ -111,7 +111,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   onRefresh,
   onMove
 }) => {
-  
+
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const projectTasks = useAppSelector(selectProjectTasks);
@@ -122,7 +122,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const documentDetailsLoading = useAppSelector(selectDocumentDetailsLoading);
   const documentVersions = useAppSelector(selectDocumentVersions);
   const versionsLoading = useAppSelector(selectVersionsLoading);
-  
+
   // Initialize data when sidebar opens
   useEffect(() => {
     if (isOpen && document && document.id) {
@@ -149,7 +149,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const commentsError = useAppSelector(selectCommentsError);
   const commentProjectMembers = useAppSelector(selectCommentProjectMembers);
   const membersLoading = useAppSelector(selectMembersLoading);
-  
+
   // State management
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -157,7 +157,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const [documentName, setDocumentName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [newComment, setNewComment] = useState('');
-  const [mentionedUsers, setMentionedUsers] = useState<Array<{id: string, name: string}>>([]);
+  const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: string, name: string }>>([]);
   const [isCommentsCollapsed, setIsCommentsCollapsed] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -181,12 +181,12 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const [accessType, setAccessType] = useState<AccessType>(AccessType.EVERYONE);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
-  
+
+
   // Permission check
   const { hasPermission } = usePermission();
   const resource = 'documents';
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch comments when document changes
@@ -245,14 +245,14 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleSaveDescription = async () => {
     if (!document) return;
-    
+
     setIsUpdating(true);
     try {
       await dispatch(updateDocument({
         id: document.id,
         documentData: { description: description }
       })).unwrap();
-      
+
       setIsEditingDescription(false);
       dispatch(fetchDocumentDetails(document?.id));
       toast({
@@ -272,12 +272,12 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleSaveAccessibility = async () => {
     if (!document) return;
-    
+
     setIsUpdating(true);
     try {
       await dispatch(updateDocument({
         id: document.id,
-        documentData: { 
+        documentData: {
           accessType: accessType,
           userIds: accessType === AccessType.SELECTED_USERS ? selectedUserIds : []
         }
@@ -310,7 +310,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
     try {
       const result = await dispatch(downloadDocument(documentDetails.id));
-      
+
       if (downloadDocument.fulfilled.match(result)) {
         toast({
           title: 'Success',
@@ -333,13 +333,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     if (!document) return;
     setShowDeleteModal(true);
   };
-  
+
   // Handle task association update
   const handleSaveTaskAssociation = async () => {
     if (!document) return;
-    
+
     setIsUpdating(true);
-    
+
     try {
       const resultAction = await dispatch(
         updateDocument({
@@ -355,7 +355,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
           title: 'Success',
           description: 'Task association updated successfully',
         });
-        
+
         // Update document details with new task association
         if (documentDetails) {
           // Since we're using Redux state, we need to refetch document details
@@ -382,24 +382,24 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const confirmDeleteDocument = async () => {
     if (!document) return;
-    
+
     setIsUpdating(true);
     try {
       await dispatch(deleteDocument(document.id)).unwrap();
-      
+
       toast({
         title: 'Success',
         description: 'Document deleted successfully',
       });
-      
+
       // Close sidebar first to prevent any further API calls on deleted document
       onClose();
-      
+
       // Notify parent component about deletion
       if (onDelete) {
         onDelete(document.id);
       }
-      
+
       // Trigger refresh after a small delay to ensure state is updated
       if (onRefresh) {
         setTimeout(() => {
@@ -420,24 +420,24 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !document) return;
-    
+
     setIsAddingComment(true);
     try {
       const mentionedUserIds = mentionedUsers.map(user => user.id);
-      
+
       await dispatch(createComment({
         content: newComment,
         commentType: 'GENERAL',
         documentId: document.id,
         mentionedUserIds
       }));
-      
+
       // Refresh comments after creating new comment
       await dispatch(fetchDocumentComments({ documentId: document.id }));
-      
+
       setNewComment('');
       setMentionedUsers([]);
-      
+
       toast({
         title: 'Success',
         description: 'Comment added successfully',
@@ -456,16 +456,16 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleUpdateComment = async (commentId: string, newContent: string) => {
     if (!document) return;
-    
+
     try {
       await dispatch(updateCommentAction({
         id: commentId,
         commentData: { content: newContent }
       }));
-      
+
       // Refresh comments after updating comment
       await dispatch(fetchDocumentComments({ documentId: document.id }));
-      
+
       toast({
         title: 'Success',
         description: 'Comment updated successfully',
@@ -482,14 +482,14 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleDeleteComment = async (commentId: string) => {
     if (!document) return;
-    
+
     setIsDeletingComment(commentId);
     try {
       await dispatch(deleteCommentAction(commentId));
-      
+
       // Refresh comments after deleting comment
       await dispatch(fetchDocumentComments({ documentId: document.id }));
-      
+
       toast({
         title: 'Success',
         description: 'Comment deleted successfully',
@@ -518,20 +518,20 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleSaveEdit = async (commentId: string) => {
     if (!editingContent.trim() || !document) return;
-    
+
     setIsUpdatingComment(true);
     try {
       await dispatch(updateCommentAction({
         id: commentId,
         commentData: { content: editingContent.trim() }
       }));
-      
+
       // Refresh comments after editing comment
       await dispatch(fetchDocumentComments({ documentId: document.id }));
-      
+
       setEditingCommentId(null);
       setEditingContent('');
-      
+
       toast({
         title: 'Success',
         description: 'Comment updated successfully',
@@ -562,11 +562,11 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleSubmitReply = async (parentId: string) => {
     if (!replyContent.trim() || !document) return;
-    
+
     setIsSubmittingReply(true);
     try {
       const mentionedUserIds = replyMentionedUser ? [replyMentionedUser] : [];
-      
+
       await dispatch(createComment({
         content: replyContent.trim(),
         commentType: 'GENERAL',
@@ -574,14 +574,14 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
         parentId,
         mentionedUserIds
       }));
-      
+
       // Refresh comments after reply
       await dispatch(fetchDocumentComments({ documentId: document.id }));
-      
+
       setReplyingToCommentId(null);
       setReplyContent('');
       setReplyMentionedUser('');
-      
+
       toast({
         title: 'Success',
         description: 'Reply added successfully',
@@ -601,22 +601,22 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   // Helper function to extract mentioned users from text
   const extractMentionedUsers = (text: string) => {
     const mentionRegex = /@([^\s]+\s+[^\s]+)/g;
-    const mentions: Array<{id: string, name: string}> = [];
+    const mentions: Array<{ id: string, name: string }> = [];
     const seenUserIds = new Set<string>();
     let match;
-    
+
     while ((match = mentionRegex.exec(text)) !== null) {
       const mentionName = match[1];
-      const user = commentProjectMembers.find(member => 
+      const user = commentProjectMembers.find(member =>
         `${member.firstName} ${member.lastName}` === mentionName
       );
-      
+
       if (user && !seenUserIds.has(user.id)) {
         mentions.push({ id: user.id, name: mentionName });
         seenUserIds.add(user.id);
       }
     }
-    
+
     return mentions;
   };
 
@@ -624,7 +624,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const handleTextareaChange = (value: string, type: 'new' | 'edit' | 'reply') => {
     const lastAtIndex = value.lastIndexOf('@');
     const lastSpaceIndex = value.lastIndexOf(' ');
-    
+
     if (lastAtIndex > lastSpaceIndex && lastAtIndex !== -1) {
       const query = value.substring(lastAtIndex + 1);
       setMentionQuery(query);
@@ -635,7 +635,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       setMentionQuery('');
       setCurrentTextarea(null);
     }
-    
+
     // Update the appropriate state
     if (type === 'new') {
       setNewComment(value);
@@ -651,7 +651,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const handleMentionSelect = (member: any) => {
     const mentionText = `@${member.firstName} ${member.lastName}`;
-    
+
     if (currentTextarea === 'new') {
       const lastAtIndex = newComment.lastIndexOf('@');
       const newValue = newComment.substring(0, lastAtIndex) + mentionText + ' ';
@@ -669,13 +669,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       setReplyContent(newValue);
       setReplyMentionedUser(member.id);
     }
-    
+
     setShowMentionDropdown(false);
     setMentionQuery('');
     setCurrentTextarea(null);
   };
 
-  const filteredMembers = commentProjectMembers.filter(member => 
+  const filteredMembers = commentProjectMembers.filter(member =>
     `${member.firstName} ${member.lastName}`.toLowerCase().includes(mentionQuery.toLowerCase())
   );
 
@@ -688,7 +688,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     }
     setCollapsedReplies(newCollapsed);
   };
-  
+
   const getUserInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
@@ -696,7 +696,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     const isEditing = editingCommentId === comment.id;
     const isReplying = replyingToCommentId === comment.id;
     const maxDepth = 3; // Limit nesting depth
-    
+
     return (
       <div key={comment.id} className={`space-y-2 ${depth > 0 ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
         <div className="flex items-start space-x-3">
@@ -713,13 +713,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               <span className="text-xs text-gray-500">
                 {format(new Date(comment.createdAt), 'MMM dd, HH:mm')}
               </span>
-              {depth > 0 && (
+              {/* {depth > 0 && (
                 <Badge variant="outline" className="text-xs px-1 py-0">
                   Reply
                 </Badge>
-              )}
+              )} */}
             </div>
-            
+
             {/* Comment Content */}
             {isEditing ? (
               <div className="space-y-2 relative">
@@ -752,7 +752,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 {comment.content}
               </p>
             )}
-            
+
             {/* Mentioned Users */}
             {comment.mentionedUsers && comment.mentionedUsers.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
@@ -763,7 +763,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 ))}
               </div>
             )}
-            
+
             {/* Action Buttons */}
             {!isEditing && (
               <div className="flex items-center space-x-2 mt-2">
@@ -808,7 +808,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 </DropdownMenu>
               </div>
             )}
-            
+
             {/* Reply Form */}
             {isReplying && (
               <div className="mt-3 space-y-2 p-3 bg-gray-50 rounded-lg relative">
@@ -839,7 +839,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Render nested replies */}
         {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
           <div className="mt-2">
@@ -905,11 +905,11 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     // Use preview URL from API if available
     if (filePreview) {
       const fileType = (filePreview.fileType || document?.files[0].fileType || '').toLowerCase();
-      
+
       if (fileType.includes('pdf')) {
         return (
-          <iframe 
-            src={filePreview.previewUrl} 
+          <iframe
+            src={filePreview.previewUrl}
             className="w-full h-[70vh] rounded-lg border border-gray-200"
             title="PDF Preview"
           />
@@ -917,9 +917,9 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       } else if (fileType.includes('image') || fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg')) {
         return (
           <div className="flex items-center justify-center bg-gray-100 rounded-lg">
-            <img 
-              src={filePreview.previewUrl} 
-              alt={document?.name || 'Document preview'} 
+            <img
+              src={filePreview.previewUrl}
+              alt={document?.name || 'Document preview'}
               className="max-w-full max-h-[70vh] object-contain rounded-lg"
             />
           </div>
@@ -932,8 +932,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-700 font-medium mb-2">{document?.name}</p>
               <p className="text-gray-500 mb-4">Preview not available for this file type</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleDownloadDocument}
                 className="flex items-center gap-2"
               >
@@ -964,7 +964,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       dispatch(fetchDocumentDetails(document.id));
       // Also refresh versions list immediately
       dispatch(fetchDocumentVersions(document.id));
-      
+
       // Force refresh the file preview to show the latest version
       if (documentDetails?.files && documentDetails.files.length > 0) {
         // Get the latest file (should be the first one in the array after refresh)
@@ -997,22 +997,22 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
         document={document}
         onVersionUploaded={handleVersionUploadSuccess}
       />
-      
+
       {/* Delete Document Modal */}
-       <DeleteDocumentModal
-         open={showDeleteModal}
-         onOpenChange={setShowDeleteModal}
-         document={document}
-         onConfirm={confirmDeleteDocument}
-         loading={isUpdating}
-       />
+      <DeleteDocumentModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        document={document}
+        onConfirm={confirmDeleteDocument}
+        loading={isUpdating}
+      />
 
       {showPreview ? (
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowPreview(false)}
               className="flex items-center gap-2"
             >
@@ -1041,16 +1041,16 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Version {getLatestVersion()?.version || document.version || 1}</span>
-                {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.length > 1 && (
-                  <Badge variant="outline" className="text-xs">
-                    {documentDetails.files.length} versions
-                  </Badge>
-                )}
-              </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                  <span className="text-sm font-medium">Version {getLatestVersion()?.version || document.version || 1}</span>
+                  {documentDetails && documentDetails.files && Array.isArray(documentDetails.files) && documentDetails.files.length > 1 && (
+                    <Badge variant="outline" className="text-xs">
+                      {documentDetails.files.length} versions
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     const willOpen = !showVersionHistory;
                     setShowVersionHistory(willOpen);
@@ -1087,33 +1087,33 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                         return bTime - aTime;
                       });
                       return sorted.map((file: any) => (
-                      <div 
-                        key={file.id} 
-                        className="flex items-center justify-between py-2 px-1 hover:bg-gray-100 rounded-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">v{file.version}</span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(file.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            dispatch(fetchFilePreview(file.id));
-                            setShowPreview(true);
-                          }}
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between py-2 px-1 hover:bg-gray-100 rounded-sm"
                         >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">v{file.version}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(file.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              dispatch(fetchFilePreview(file.id));
+                              setShowPreview(true);
+                            }}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </div>
                       ));
                     })()}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="w-full mt-2 flex items-center justify-center gap-1"
                     onClick={() => setIsVersionUploadOpen(true)}
                   >
@@ -1124,8 +1124,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               )}
             </div>
 
-          {/* Thumbnail */}
-          <div className="p-4 border-b">
+            {/* Thumbnail */}
+            <div className="p-4 border-b">
               <div className="relative group cursor-pointer" onClick={() => {
                 setShowPreview(true);
                 const latestFileId = getLatestPreviewFileId();
@@ -1135,9 +1135,9 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               }}>
                 <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
                   {document.url && document.files[0].fileType?.toLowerCase().includes('image') ? (
-                    <img 
-                      src={document.url} 
-                      alt={document.name} 
+                    <img
+                      src={document.url}
+                      alt={document.name}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -1154,154 +1154,178 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
             {/* Document metadata */}
             <div className="p-4 border-b">
-              <h4 className="font-medium mb-2">{documentDetails?.name || document.name}</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
-                <div className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  <span>{formatFileType(getLatestVersion()?.fileType || documentDetails?.files[0].fileType) || document.type}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>{formatFileSize(getLatestVersion()?.fileSize || documentDetails?.files[0].fileSize) || document.size}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                  {(() => {
-                    const latest = getLatestVersion();
-                    const date = latest?.createdAt || documentDetails?.files?.[0]?.createdAt || document?.date;
-                    try {
-                      return date ? format(new Date(date), 'MMM d, yyyy') : '—';
-                    } catch {
-                      return '—';
-                    }
-                  })()}
+              <h4 className="font-medium mb-3 text-gray-900">{documentDetails?.name || document.name}</h4>
+              <div className="space-y-3">
+                {/* Date first */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Last Updated</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {(() => {
+                      const latest = getLatestVersion();
+                      const date = latest?.createdAt || documentDetails?.files?.[0]?.createdAt || document.createdAt;
+                      try {
+                        return date ? format(new Date(date), 'MMM d, yyyy HH:mm') : '—';
+                      } catch {
+                        return '—';
+                      }
+                    })()}
                   </span>
                 </div>
+
+                {/* Version and File Type below date */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Version & Type</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      v{getLatestVersion()?.version || document.version || 1}
+                    </Badge>
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatFileType(getLatestVersion()?.fileType || documentDetails?.files?.[0]?.fileType || document.type) || 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">File Size</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {formatFileSize(getLatestVersion()?.fileSize || documentDetails?.files?.[0]?.fileSize || document.size) || 'Unknown'}
+                  </span>
+                </div>
+
                 {(() => {
                   const latest = getLatestVersion();
                   return (latest && latest.uploadedUser);
                 })() && (
-                  <div className="flex items-center gap-1 col-span-2">
-                    <User className="h-3 w-3" />
-                    <span>Uploaded by {getLatestVersion()?.uploadedUser?.firstName} {getLatestVersion()?.uploadedUser?.lastName}</span>
-                  </div>
-                )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">Uploaded by</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">
+                        {getLatestVersion()?.uploadedUser?.firstName} {getLatestVersion()?.uploadedUser?.lastName}
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
 
             {/* Action buttons */}
             <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleDownloadDocument}
-                  className="flex flex-col items-center gap-1"
+                  className="flex items-center gap-2 justify-center"
                 >
                   <Download className="h-4 w-4" />
-                  <span className="text-xs">Download</span>
+                  <span className="text-sm">Download</span>
                 </Button>
-                {/* <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => onMove && onMove(document)}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <Move className="h-4 w-4" />
-                  <span className="text-xs">Move</span>
-                </Button> */}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => onEdit && onEdit(document)}
-                  className="flex flex-col items-center gap-1"
+                  className="flex items-center gap-2 justify-center"
                 >
                   <Edit3 className="h-4 w-4" />
-                  <span className="text-xs">Edit</span>
+                  <span className="text-sm">Edit</span>
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleDeleteDocument}
-                  className="flex flex-col items-center gap-1 text-red-500"
+                  className="flex items-center gap-2 justify-center text-red-600 border-red-200 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span className="text-xs">Delete</span>
+                  <span className="text-sm">Delete</span>
                 </Button>
               </div>
             </div>
 
             {/* Description */}
             <div className="p-4 border-b">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Descriptive note</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Description</h4>
                 {!isEditingDescription ? (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setIsEditingDescription(true)}
+                    className="h-8 w-8 p-0"
                   >
-                    <Edit3 className="h-3 w-3" />
+                    <Edit3 className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setIsEditingDescription(false)}
+                      className="h-8 w-8 p-0"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="default"
+                      size="sm"
                       onClick={handleSaveDescription}
                       disabled={isUpdating}
+                      className="h-8 px-3"
                     >
                       {isUpdating ? (
-                        <div className="animate-spin h-3 w-3 border-2 border-gray-500 rounded-full border-t-transparent" />
+                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
                       ) : (
-                        <span className="text-xs">Save</span>
+                        <span className="text-sm">Save</span>
                       )}
                     </Button>
                   </div>
                 )}
               </div>
-              
+
               {isEditingDescription ? (
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add a description..."
-                  className="w-full"
-                  rows={3}
+                  placeholder="Add a description for this document..."
+                  className="w-full resize-none"
+                  rows={4}
                 />
               ) : (
-                <p className="text-sm text-gray-600">
-                  {description || "No description provided"}
-                </p>
+                <div className="min-h-[60px] p-3 bg-gray-50 rounded-md border">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {description || "No description provided. Click the edit button to add one."}
+                  </p>
+                </div>
               )}
             </div>
 
             {/* Accessibility */}
             <div className="p-4 border-b">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Accessibility</h4>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Access Control</h4>
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={handleSaveAccessibility}
                   disabled={isUpdating}
+                  className="h-8 px-3"
                 >
                   {isUpdating ? (
-                    <div className="animate-spin h-3 w-3 border-2 border-gray-500 rounded-full border-t-transparent" />
+                    <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
                   ) : (
-                    <span className="text-xs">Save</span>
+                    <span className="text-sm">Save</span>
                   )}
                 </Button>
               </div>
-              
-              <div className="space-y-2">
+
+              <div className="space-y-3">
                 <RadioGroup
                   value={accessType}
                   onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
@@ -1310,41 +1334,48 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                       setSelectedUserIds([]);
                     }
                   }}
+                  className="space-y-3"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="EVERYONE" id="everyone" />
-                    <Label htmlFor="everyone" className="text-sm">Everyone (All users with document permissions)</Label>
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <RadioGroupItem value="EVERYONE" id="everyone" className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="everyone" className="text-sm font-medium cursor-pointer">Everyone</Label>
+                      <p className="text-xs text-gray-500 mt-1">All users with document permissions can access</p>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="SELECTED_USERS" id="selected-users" />
-                    <Label htmlFor="selected-users" className="text-sm">Selected Users Only</Label>
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <RadioGroupItem value="SELECTED_USERS" id="selected-users" className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="selected-users" className="text-sm font-medium cursor-pointer">Selected Users Only</Label>
+                      <p className="text-xs text-gray-500 mt-1">Only specific users can access this document</p>
+                    </div>
                   </div>
                 </RadioGroup>
               </div>
-              
+
               {accessType === AccessType.SELECTED_USERS && (
-                <div className="mt-2 space-y-3">
-                  {/* User selection component */}
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Select Users:</Label>
-                    <UserSelectionComponent
-                      selectedUserIds={selectedUserIds}
-                      onChange={setSelectedUserIds}
-                      projectId={documentDetails?.projectId || document?.projectId || ''}
-                    />
-                  </div>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <Label className="text-sm font-medium mb-2 block text-blue-900">Select Users:</Label>
+                  <UserSelectionComponent
+                    selectedUserIds={selectedUserIds}
+                    onChange={setSelectedUserIds}
+                    projectId={documentDetails?.projectId || document?.projectId || ''}
+                  />
                 </div>
               )}
             </div>
 
             {/* Task association */}
-            {document.taskId && (
+            {(document.taskId || documentDetails?.taskId) && (
               <div className="p-4 border-b">
-                <h4 className="font-medium mb-2">Associated Task</h4>
-                <div className="bg-gray-50 p-2 rounded-md">
-                  <p className="text-sm">
-                    {projectTasks.find(task => task.id === document.taskId)?.title || 'Unknown Task'}
-                  </p>
+                <h4 className="font-medium mb-3 text-gray-900">Associated Task</h4>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <p className="text-sm font-medium text-blue-900">
+                      {projectTasks.find(task => task.id === (document.taskId || documentDetails?.taskId))?.title || 'Unknown Task'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1353,30 +1384,36 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
             <Card className="flex-1 flex flex-col min-h-0">
               <CardContent className="p-4 flex-1 flex flex-col min-h-0">
                 {/* Comments Header */}
-                <div 
-                  className="flex items-center justify-between mb-4 cursor-pointer"
+                <div
+                  className="flex items-center justify-between mb-4 cursor-pointer p-2 hover:bg-gray-50 rounded-lg"
                   onClick={() => setIsCommentsCollapsed(!isCommentsCollapsed)}
                 >
-                  <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Comments ({commentsLoading ? '...' : comments.length})</h4>
-                  {commentsLoading && (
-                    <div className="text-sm text-muted-foreground">Loading comments...</div>
-                  )}
-                  {commentsError && (
-                    <div className="text-sm text-red-500">Failed to load comments</div>
-                  )}
-                </div>
-                  {isCommentsCollapsed ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4" />
-                  )}
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">Comments</h4>
+                    <Badge variant="secondary" className="text-xs">
+                      {commentsLoading ? '...' : comments.length}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {commentsLoading && (
+                      <div className="animate-spin h-4 w-4 border-2 border-gray-300 rounded-full border-t-transparent"></div>
+                    )}
+                    {commentsError && (
+                      <div className="text-xs text-red-500">Error</div>
+                    )}
+                    {isCommentsCollapsed ? (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4 text-gray-500" />
+                    )}
+                  </div>
                 </div>
 
                 {!isCommentsCollapsed && (
                   <div className="flex flex-col flex-1 min-h-0">
                     {/* Add Comment */}
-                    <div className="space-y-3 mb-4 flex-shrink-0">                      
+                    <div className="space-y-3 mb-4 flex-shrink-0">
                       <div className="relative">
                         <Textarea
                           ref={textareaRef}
@@ -1406,7 +1443,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         {/* <div className="flex space-x-2">
                           <Button variant="outline" size="sm" disabled>

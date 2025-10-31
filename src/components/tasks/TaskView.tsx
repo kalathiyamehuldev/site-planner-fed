@@ -36,6 +36,7 @@ import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ActionButton from "@/components/ui/ActionButton";
 import { getProjectMembers } from "@/redux/slices/projectsSlice";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+
 import { selectUser } from "@/redux/slices/authSlice";
 import usePermission from "@/hooks/usePermission";
 
@@ -55,12 +56,12 @@ const statusColor: Record<string, string> = {
 function getAvatarData(name?: string) {
   const initials = name
     ? name
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase()
     : "?";
   const colors = [
     { bg: "#FDE68A", color: "#92400E" },
@@ -113,7 +114,10 @@ const TaskView: React.FC = () => {
   const [editingPriority, setEditingPriority] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingHeaderStatus, setEditingHeaderStatus] = useState(false);
-  const [parentTask, setParentTask] = useState<{ id: string; title: string } | null>(null);
+  // Resolve parent task title from Redux store (no extra fetch that would override selectedTask)
+  const parentTitle = useAppSelector((state) =>
+    task?.parentId ? state.tasks.tasks.find((t) => t.id === task.parentId)?.title : undefined
+  );
   const [subtaskEditing, setSubtaskEditing] = useState<Record<string, { title?: boolean; status?: boolean; priority?: boolean; dueDate?: boolean; assignee?: boolean }>>({});
 
   // Fetch task and comments on load/id change
@@ -169,7 +173,7 @@ const TaskView: React.FC = () => {
   const handlePostComment = async () => {
     const content = newComment.trim();
     if (!id || !content) return;
-    if (!hasPermission('tasks','update')) return;
+    if (!hasPermission('tasks', 'update')) return;
     setPostingComment(true);
     try {
       await dispatch(createTaskCommentAsync({ taskId: id, content, mentionUserIds: newCommentMentions })).unwrap();
@@ -195,7 +199,7 @@ const TaskView: React.FC = () => {
 
   const toggleReaction = (commentId: string, type: 'thumbs_up' | 'heart' | 'laugh') => {
     if (!id || !currentUser?.id) return;
-    if (!hasPermission('tasks','update')) return;
+    if (!hasPermission('tasks', 'update')) return;
     const comment = comments.find((x: any) => x.id === commentId);
     const myReaction = (comment?.reactions || []).find((r: any) => r?.userId === currentUser.id);
     if (myReaction?.type === type) {
@@ -237,16 +241,17 @@ const TaskView: React.FC = () => {
 
   // Ensure subtasks fetched via slice when id changes
   useEffect(() => {
-    if (id) {
+    // Prohibit multi-level nesting: only fetch subtasks for top-level tasks
+    if (id && !task?.parentId) {
       dispatch(fetchSubtasksByParent(id));
     }
-  }, [id, dispatch]);
+  }, [id, task?.parentId, dispatch]);
   const toggleSubtaskEdit = (
     taskId: string,
     field: 'title' | 'status' | 'priority' | 'dueDate' | 'assignee',
     value: boolean
   ) => {
-    if (!hasPermission('tasks','update')) return;
+    if (!hasPermission('tasks', 'update')) return;
     setSubtaskEditing((prev) => ({
       ...prev,
       [taskId]: {
@@ -284,6 +289,7 @@ const TaskView: React.FC = () => {
   };
 
   const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
+  const canAddSubtask = !task?.parentId; // if current task is a subtask, prohibit adding subtasks
 
   return (
     <PageContainer>
@@ -319,10 +325,22 @@ const TaskView: React.FC = () => {
                 ) : (
                   <h1
                     className="text-lg md:text-xl font-light leading-tight cursor-pointer"
-                    onClick={() => hasPermission('tasks','update') && setEditingTitle(true)}
+                    onClick={() => hasPermission('tasks', 'update') && setEditingTitle(true)}
                   >
                     {task?.title || 'Task'}
                   </h1>
+                )}
+                {task?.parentId && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
+                    <span>Parent:</span>
+                    <Link
+                      to={`/tasks/${task.parentId}`}
+                      className="text-foreground font-medium hover:underline"
+                    >
+                      {parentTitle || 'Open Parent'}
+                    </Link>
+                  </div>
                 )}
               </div>
               {/* Mobile: icon and title inline */}
@@ -348,12 +366,24 @@ const TaskView: React.FC = () => {
                 ) : (
                   <h1
                     className="text-base font-light leading-tight cursor-pointer flex-1"
-                    onClick={() => hasPermission('tasks','update') && setEditingTitle(true)}
+                    onClick={() => hasPermission('tasks', 'update') && setEditingTitle(true)}
                   >
                     {task?.title || 'Task'}
                   </h1>
                 )}
               </div>
+              {task?.parentId && (
+                <div className="md:hidden mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
+                  <span>Parent:</span>
+                  <Link
+                    to={`/tasks/${task.parentId}`}
+                    className="text-foreground font-medium hover:underline"
+                  >
+                    {parentTitle || 'Open Parent'}
+                  </Link>
+                </div>
+              )}
               {/* Mobile-only: status + timer below title */}
               <div className="md:hidden flex items-center gap-2 mt-3">
                 {editingHeaderStatus ? (
@@ -382,7 +412,7 @@ const TaskView: React.FC = () => {
                       "px-2 py-1 rounded-md text-xs",
                       statusColor[task?.status || 'TODO']
                     )}
-                    onClick={() => hasPermission('tasks','update') && setEditingHeaderStatus(true)}
+                    onClick={() => hasPermission('tasks', 'update') && setEditingHeaderStatus(true)}
                   >
                     {statusLabel[task?.status || 'TODO']}
                   </button>
@@ -433,7 +463,7 @@ const TaskView: React.FC = () => {
                     "px-2 py-1 rounded-md text-sm",
                     statusColor[task?.status || 'TODO']
                   )}
-                  onClick={() => hasPermission('tasks','update') && setEditingHeaderStatus(true)}
+                  onClick={() => hasPermission('tasks', 'update') && setEditingHeaderStatus(true)}
                 >
                   {statusLabel[task?.status || 'TODO']}
                 </button>
@@ -483,7 +513,7 @@ const TaskView: React.FC = () => {
               ) : (
                 <p
                   className="text-sm md:text-base leading-relaxed text-[#2a2e35] cursor-pointer"
-                  onClick={() => hasPermission('tasks','update') && setEditingDescription(true)}
+                  onClick={() => hasPermission('tasks', 'update') && setEditingDescription(true)}
                 >
                   {task?.description || "No description provided."}
                 </p>
@@ -491,7 +521,7 @@ const TaskView: React.FC = () => {
             </GlassCard>
 
             {/* Subtasks */}
-            <GlassCard className="p-4 md:p-6">
+            <GlassCard className={!canAddSubtask ? "hidden" : "p-4 md:p-6"}>
               <div className="flex items-center gap-2 mb-3">
                 <solar.List.ChecklistMinimalistic className="size-4 text-muted-foreground" />
                 <h2 className="font-medium">Subtasks</h2>
@@ -508,237 +538,54 @@ const TaskView: React.FC = () => {
                 </div>
               ) : (
                 <>
-                <div className="space-y-2">
-                  {/* Desktop table-like list */}
-                  <div className="hidden md:grid grid-cols-12 gap-3 text-xs font-medium text-muted-foreground pb-2 border-b">
-                    <div className="col-span-4">Name</div>
-                    <div className="col-span-2">Status</div>
-                    <div className="col-span-1">Priority</div>
-                    <div className="col-span-2">Assigned</div>
-                    <div className="col-span-2">Due Date</div>
-                    <div className="col-span-1"></div>
-                  </div>
-                  {subtasks.map((st) => (
-                    <div key={st.id} className="group">
-                      <div className="hidden md:grid grid-cols-12 gap-3 py-2 border-b hover:bg-secondary/50 rounded-md">
-                        <div className="col-span-4 truncate font-medium text-left flex items-center gap-2">
-                          <button onClick={() => navigate(`/tasks/${st.id}`)} className="truncate text-left flex-1">
-                            {st.title}
-                          </button>
-                          <button
-                            aria-label="Edit title"
-                            className="opacity-60 hover:opacity-100"
-                            onClick={() => toggleSubtaskEdit(st.id, 'title', true)}
-                          >
-                            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4"/></svg>
-                          </button>
-                        </div>
-                        {/* Title inline edit */}
-                        {subtaskEditing[st.id]?.title && (
-                          <div className="col-span-12 mb-2">
-                            <input
-                              className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                              defaultValue={st.title}
-                              onBlur={(e) => {
-                                const val = e.currentTarget.value.trim();
-                                toggleSubtaskEdit(st.id, 'title', false);
-                                if (val && val !== st.title) {
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
-                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                }
-                              }}
-                              autoFocus
-                            />
-                          </div>
-                        )}
-                        <div className="col-span-2">
-                          {subtaskEditing[st.id]?.status ? (
-                            <Select
-                              value={st.status || 'TODO'}
-                              onValueChange={(val) => {
-                                if (val !== (st.status || 'TODO')) {
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
-                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                }
-                                toggleSubtaskEdit(st.id, 'status', false);
-                              }}
-                            >
-                              <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="TODO">Not Started</SelectItem>
-                                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                                <SelectItem value="DONE">Completed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
+                  <div className="space-y-2">
+                    {/* Desktop table-like list */}
+                    <div className="hidden md:grid grid-cols-12 gap-3 text-xs font-medium text-muted-foreground pb-2 border-b">
+                      <div className="col-span-4">Name</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-1">Priority</div>
+                      <div className="col-span-2">Assigned</div>
+                      <div className="col-span-2">Due Date</div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    {subtasks.map((st) => (
+                      <div key={st.id} className="group">
+                        <div className="hidden md:grid grid-cols-12 gap-3 py-2 border-b hover:bg-secondary/50 rounded-md">
+                          <div className="col-span-4 truncate font-medium text-left flex items-center gap-2">
                             <button
-                              className={cn("px-2 py-1 rounded-md text-xs", statusColor[st.status || 'TODO'])}
-                              onClick={() => toggleSubtaskEdit(st.id, 'status', true)}
+                              onClick={() => navigate(`/tasks/${st.id}`)}
+                              className="truncate text-left flex-1"
+                              title={st.title}
                             >
-                              {statusLabel[st.status || 'TODO']}
-                            </button>
-                          )}
-                        </div>
-                        <div className="col-span-1 flex items-center gap-2">
-                          {subtaskEditing[st.id]?.priority ? (
-                            <Select
-                              value={st.priority || 'MEDIUM'}
-                              onValueChange={(val) => {
-                                if (val !== (st.priority || 'MEDIUM')) {
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
-                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                }
-                                toggleSubtaskEdit(st.id, 'priority', false);
-                              }}
-                            >
-                              <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="LOW"><span className="inline-flex items-center gap-1">{renderPriorityIcon('LOW')}<span>Low</span></span></SelectItem>
-                                <SelectItem value="MEDIUM"><span className="inline-flex items-center gap-1">{renderPriorityIcon('MEDIUM')}<span>Medium</span></span></SelectItem>
-                                <SelectItem value="HIGH"><span className="inline-flex items-center gap-1">{renderPriorityIcon('HIGH')}<span>High</span></span></SelectItem>
-                                <SelectItem value="URGENT"><span className="inline-flex items-center gap-1">{renderPriorityIcon('URGENT')}<span>Urgent</span></span></SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <button
-                              className={cn(
-                                'flex items-center gap-1 px-2 py-1 rounded-md text-xs',
-                                st.priority === 'URGENT' ? 'bg-red-100 text-red-700' : st.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : st.priority === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
-                              )}
-                              onClick={() => toggleSubtaskEdit(st.id, 'priority', true)}
-                              title={st.priority || 'MEDIUM'}
-                            >
-                              {renderPriorityIcon(st.priority)}
-                            </button>
-                          )}
-                        </div>
-                        {/* Assigned member */}
-                        <div className="col-span-2">
-                          {subtaskEditing[st.id]?.assignee ? (
-                            <Select
-                              value={st.member?.id || 'unassigned'}
-                              onValueChange={(val) => {
-                                const memberId = val === 'unassigned' ? undefined : val;
-                                const selected = members.find((m: any) => m.user.id === memberId);
-                                const updatedMember = selected
-                                  ? {
-                                      id: selected.user.id,
-                                      firstName: selected.user.firstName,
-                                      lastName: selected.user.lastName,
-                                      email: selected.user.email,
-                                    }
-                                  : undefined;
-                                const updatedAssignee = selected
-                                  ? `${selected.user.firstName} ${selected.user.lastName}`
-                                  : undefined;
-                                dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
-                                  .unwrap()
-                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                toggleSubtaskEdit(st.id, 'assignee', false);
-                              }}
-                            >
-                              <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
-                                <SelectValue placeholder="Assign member" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {members.map((m: any) => (
-                                  <SelectItem key={m.user.id} value={m.user.id}>
-                                    {m.user.firstName} {m.user.lastName}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <button
-                              className="flex items-center gap-2"
-                              onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}
-                            >
-                              {(() => {
-                                const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
-                                const avatar = getAvatarData(assignedName);
-                                return (
-                                  <div
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                                    style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
-                                  >
-                                    {avatar.initials}
-                                  </div>
-                                );
-                              })()}
-                              <span className="text-sm truncate">{st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : '-')}</span>
-                            </button>
-                          )}
-                        </div>
-                        {/* Due date */}
-                        <div className="col-span-2 text-sm">
-                          {subtaskEditing[st.id]?.dueDate ? (
-                            <input
-                              type="date"
-                              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                              defaultValue={st.dueDate ? st.dueDate.split('T')[0] : ''}
-                              onBlur={() => toggleSubtaskEdit(st.id, 'dueDate', false)}
-                              onChange={(e) => {
-                                const val = e.currentTarget.value || undefined;
-                                toggleSubtaskEdit(st.id, 'dueDate', false);
-                                if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
-                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                }
-                              }}
-                            />
-                          ) : (
-                            <button className="text-muted-foreground" onClick={() => toggleSubtaskEdit(st.id, 'dueDate', true)}>
-                              {formatDate(st.dueDate)}
-                            </button>
-                          )}
-                        </div>
-                        {/* Actions */}
-                        <div className="col-span-1 flex justify-end">
-                          <button
-                            aria-label="Delete subtask"
-                            onClick={() => {
-                              dispatch(deleteTaskAsync(st.id)).unwrap()
-                                .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                            }}
-                            className="opacity-70 group-hover:opacity-100 mx-auto"
-                            title="Delete"
-                          >
-                              <TrashBinTrash weight="Bold" color="red" size={20}/>
-                          </button>
-                        </div>
-                      </div>
-                      {/* Mobile card */}
-                      <div className="md:hidden flex items-start justify-between gap-2 py-3 border-b">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => navigate(`/tasks/${st.id}`)} className="font-medium text-left flex-1">
                               {st.title}
                             </button>
-                            <button aria-label="Edit title" onClick={() => toggleSubtaskEdit(st.id, 'title', true)} className="opacity-60 hover:opacity-100">
-                              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4"/></svg>
+                            <button
+                              aria-label="Edit title"
+                              className="opacity-60 hover:opacity-100"
+                              onClick={() => toggleSubtaskEdit(st.id, 'title', true)}
+                            >
+                              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4" /></svg>
                             </button>
                           </div>
+                          {/* Title inline edit */}
                           {subtaskEditing[st.id]?.title && (
-                            <input
-                              className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm mt-1"
-                              defaultValue={st.title}
-                              onBlur={(e) => {
-                                const val = e.currentTarget.value.trim();
-                                toggleSubtaskEdit(st.id, 'title', false);
-                                if (val && val !== st.title) {
-                                  dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
-                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                }
-                              }}
-                              autoFocus
-                            />
+                            <div className="col-span-12 mb-2">
+                              <input
+                                className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                                defaultValue={st.title}
+                                onBlur={(e) => {
+                                  const val = e.currentTarget.value.trim();
+                                  toggleSubtaskEdit(st.id, 'title', false);
+                                  if (val && val !== st.title) {
+                                    dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            </div>
                           )}
-                          <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
+                          <div className="col-span-2">
                             {subtaskEditing[st.id]?.status ? (
                               <Select
                                 value={st.status || 'TODO'}
@@ -760,10 +607,15 @@ const TaskView: React.FC = () => {
                                 </SelectContent>
                               </Select>
                             ) : (
-                              <button className={cn("px-2 py-1 rounded-md", statusColor[st.status || 'TODO'])} onClick={() => toggleSubtaskEdit(st.id, 'status', true)}>
+                              <button
+                                className={cn("px-2 py-1 rounded-md text-xs", statusColor[st.status || 'TODO'])}
+                                onClick={() => toggleSubtaskEdit(st.id, 'status', true)}
+                              >
                                 {statusLabel[st.status || 'TODO']}
                               </button>
                             )}
+                          </div>
+                          <div className="col-span-1 flex items-center gap-2">
                             {subtaskEditing[st.id]?.priority ? (
                               <Select
                                 value={st.priority || 'MEDIUM'}
@@ -788,7 +640,7 @@ const TaskView: React.FC = () => {
                             ) : (
                               <button
                                 className={cn(
-                                  'px-2 py-1 rounded-md',
+                                  'flex items-center gap-1 px-2 py-1 rounded-md text-xs',
                                   st.priority === 'URGENT' ? 'bg-red-100 text-red-700' : st.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : st.priority === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
                                 )}
                                 onClick={() => toggleSubtaskEdit(st.id, 'priority', true)}
@@ -797,6 +649,67 @@ const TaskView: React.FC = () => {
                                 {renderPriorityIcon(st.priority)}
                               </button>
                             )}
+                          </div>
+                          {/* Assigned member */}
+                          <div className="col-span-2">
+                            {subtaskEditing[st.id]?.assignee ? (
+                              <Select
+                                value={st.member?.id || 'unassigned'}
+                                onValueChange={(val) => {
+                                  const memberId = val === 'unassigned' ? undefined : val;
+                                  const selected = members.find((m: any) => m.user.id === memberId);
+                                  const updatedMember = selected
+                                    ? {
+                                      id: selected.user.id,
+                                      firstName: selected.user.firstName,
+                                      lastName: selected.user.lastName,
+                                      email: selected.user.email,
+                                    }
+                                    : undefined;
+                                  const updatedAssignee = selected
+                                    ? `${selected.user.firstName} ${selected.user.lastName}`
+                                    : undefined;
+                                  dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
+                                    .unwrap()
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                  toggleSubtaskEdit(st.id, 'assignee', false);
+                                }}
+                              >
+                                <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
+                                  <SelectValue placeholder="Assign member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {members.map((m: any) => (
+                                    <SelectItem key={m.user.id} value={m.user.id}>
+                                      {m.user.firstName} {m.user.lastName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <button
+                                className="flex items-center gap-2"
+                                onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}
+                              >
+                                {(() => {
+                                  const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
+                                  const avatar = getAvatarData(assignedName);
+                                  return (
+                                    <div
+                                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                                      style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
+                                    >
+                                      {avatar.initials}
+                                    </div>
+                                  );
+                                })()}
+                                <span className="text-sm truncate">{st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : '-')}</span>
+                              </button>
+                            )}
+                          </div>
+                          {/* Due date */}
+                          <div className="col-span-2 text-sm">
                             {subtaskEditing[st.id]?.dueDate ? (
                               <input
                                 type="date"
@@ -814,86 +727,213 @@ const TaskView: React.FC = () => {
                               />
                             ) : (
                               <button className="text-muted-foreground" onClick={() => toggleSubtaskEdit(st.id, 'dueDate', true)}>
-                                Due: {formatDate(st.dueDate)}
+                                {formatDate(st.dueDate)}
                               </button>
                             )}
-                            {subtaskEditing[st.id]?.assignee ? (
-                              <Select
-                                value={st.member?.id || 'unassigned'}
-                                onValueChange={(val) => {
-                                  const memberId = val === 'unassigned' ? undefined : val;
-                                  const selected = members.find((m: any) => m.user.id === memberId);
-                                  const updatedMember = selected
-                                    ? {
+                          </div>
+                          {/* Actions */}
+                          <div className="col-span-1 flex justify-end">
+                            <button
+                              aria-label="Delete subtask"
+                              onClick={() => {
+                                dispatch(deleteTaskAsync(st.id)).unwrap()
+                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                              }}
+                              className="opacity-70 group-hover:opacity-100 mx-auto"
+                              title="Delete"
+                            >
+                              <TrashBinTrash weight="Bold" color="red" size={20} />
+                            </button>
+                          </div>
+                        </div>
+                        {/* Mobile card */}
+                        <div className="md:hidden flex items-start justify-between gap-2 py-3 border-b">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => navigate(`/tasks/${st.id}`)}
+                                className="font-medium text-left flex-1 truncate"
+                                title={st.title}
+                              >
+                                {st.title}
+                              </button>
+                              <button aria-label="Edit title" onClick={() => toggleSubtaskEdit(st.id, 'title', true)} className="opacity-60 hover:opacity-100">
+                                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4" /></svg>
+                              </button>
+                            </div>
+                            {subtaskEditing[st.id]?.title && (
+                              <input
+                                className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm mt-1"
+                                defaultValue={st.title}
+                                onBlur={(e) => {
+                                  const val = e.currentTarget.value.trim();
+                                  toggleSubtaskEdit(st.id, 'title', false);
+                                  if (val && val !== st.title) {
+                                    dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            )}
+                            <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
+                              {subtaskEditing[st.id]?.status ? (
+                                <Select
+                                  value={st.status || 'TODO'}
+                                  onValueChange={(val) => {
+                                    if (val !== (st.status || 'TODO')) {
+                                      dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
+                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                    }
+                                    toggleSubtaskEdit(st.id, 'status', false);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="TODO">Not Started</SelectItem>
+                                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                    <SelectItem value="DONE">Completed</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <button className={cn("px-2 py-1 rounded-md", statusColor[st.status || 'TODO'])} onClick={() => toggleSubtaskEdit(st.id, 'status', true)}>
+                                  {statusLabel[st.status || 'TODO']}
+                                </button>
+                              )}
+                              {subtaskEditing[st.id]?.priority ? (
+                                <Select
+                                  value={st.priority || 'MEDIUM'}
+                                  onValueChange={(val) => {
+                                    if (val !== (st.priority || 'MEDIUM')) {
+                                      dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
+                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                    }
+                                    toggleSubtaskEdit(st.id, 'priority', false);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="LOW"><span className="inline-flex items-center gap-1">{renderPriorityIcon('LOW')}<span>Low</span></span></SelectItem>
+                                    <SelectItem value="MEDIUM"><span className="inline-flex items-center gap-1">{renderPriorityIcon('MEDIUM')}<span>Medium</span></span></SelectItem>
+                                    <SelectItem value="HIGH"><span className="inline-flex items-center gap-1">{renderPriorityIcon('HIGH')}<span>High</span></span></SelectItem>
+                                    <SelectItem value="URGENT"><span className="inline-flex items-center gap-1">{renderPriorityIcon('URGENT')}<span>Urgent</span></span></SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <button
+                                  className={cn(
+                                    'px-2 py-1 rounded-md',
+                                    st.priority === 'URGENT' ? 'bg-red-100 text-red-700' : st.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : st.priority === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
+                                  )}
+                                  onClick={() => toggleSubtaskEdit(st.id, 'priority', true)}
+                                  title={st.priority || 'MEDIUM'}
+                                >
+                                  {renderPriorityIcon(st.priority)}
+                                </button>
+                              )}
+                              {subtaskEditing[st.id]?.dueDate ? (
+                                <input
+                                  type="date"
+                                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                  defaultValue={st.dueDate ? st.dueDate.split('T')[0] : ''}
+                                  onBlur={() => toggleSubtaskEdit(st.id, 'dueDate', false)}
+                                  onChange={(e) => {
+                                    const val = e.currentTarget.value || undefined;
+                                    toggleSubtaskEdit(st.id, 'dueDate', false);
+                                    if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
+                                      dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
+                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <button className="text-muted-foreground" onClick={() => toggleSubtaskEdit(st.id, 'dueDate', true)}>
+                                  Due: {formatDate(st.dueDate)}
+                                </button>
+                              )}
+                              {subtaskEditing[st.id]?.assignee ? (
+                                <Select
+                                  value={st.member?.id || 'unassigned'}
+                                  onValueChange={(val) => {
+                                    const memberId = val === 'unassigned' ? undefined : val;
+                                    const selected = members.find((m: any) => m.user.id === memberId);
+                                    const updatedMember = selected
+                                      ? {
                                         id: selected.user.id,
                                         firstName: selected.user.firstName,
                                         lastName: selected.user.lastName,
                                         email: selected.user.email,
                                       }
-                                    : undefined;
-                                  const updatedAssignee = selected
-                                    ? `${selected.user.firstName} ${selected.user.lastName}`
-                                    : undefined;
-                                dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
-                                  .unwrap()
-                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                  toggleSubtaskEdit(st.id, 'assignee', false);
-                                }}
-                              >
-                                <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
-                                  <SelectValue placeholder="Assign member" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                                  {members.map((m: any) => (
-                                    <SelectItem key={m.user.id} value={m.user.id}>
-                                      {m.user.firstName} {m.user.lastName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              (() => {
-                                const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
-                                const avatar = getAvatarData(assignedName);
-                                return (
-                                  <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
-                                    <div
-                                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
-                                      style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
-                                    >
-                                      {avatar.initials}
-                                    </div>
-                                    <span className="text-muted-foreground">{assignedName || '-'}</span>
-                                  </button>
-                                );
-                              })()
-                            )}
+                                      : undefined;
+                                    const updatedAssignee = selected
+                                      ? `${selected.user.firstName} ${selected.user.lastName}`
+                                      : undefined;
+                                    dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
+                                      .unwrap()
+                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                    toggleSubtaskEdit(st.id, 'assignee', false);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
+                                    <SelectValue placeholder="Assign member" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {members.map((m: any) => (
+                                      <SelectItem key={m.user.id} value={m.user.id}>
+                                        {m.user.firstName} {m.user.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                (() => {
+                                  const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
+                                  const avatar = getAvatarData(assignedName);
+                                  return (
+                                    <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
+                                      <div
+                                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
+                                        style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
+                                      >
+                                        {avatar.initials}
+                                      </div>
+                                      <span className="text-muted-foreground">{assignedName || '-'}</span>
+                                    </button>
+                                  );
+                                })()
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <Button
-                          aria-label="Delete subtask"
-                          onClick={() => {
+                          <Button
+                            aria-label="Delete subtask"
+                            onClick={() => {
                               dispatch(deleteTaskAsync(st.id)).unwrap()
                                 .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                          }}
-                          className="opacity-70 group-hover:opacity-100"
-                          title="Delete"
-                        >
-                          <TrashBinTrash weight="Bold" size={20} color="red"/>
-                        </Button>
+                            }}
+                            className="opacity-70 group-hover:opacity-100"
+                            title="Delete"
+                          >
+                            <TrashBinTrash weight="Bold" size={20} color="red" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="pt-3">
-                  <ActionButton
-                    variant="primary"
-                    onClick={() => setIsAddSubtaskOpen(true)}
-                    leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
-                    text="Add Subtask"
-                  />
-                </div>
+                    ))}
+                  </div>
+                  <div className="pt-3">
+                    {canAddSubtask && (
+                      <ActionButton
+                        variant="primary"
+                        onClick={() => setIsAddSubtaskOpen(true)}
+                        leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
+                        text="Add Subtask"
+                      />
+                    )}
+                  </div>
                 </>
               )}
             </GlassCard>
@@ -945,7 +985,7 @@ const TaskView: React.FC = () => {
                                       title="Edit comment"
                                       onClick={() => setEditingComments((prev) => ({ ...prev, [c.id]: { text: c.content, saving: false } }))}
                                     >
-                                      <Pen2 weight="Outline" color="blue" size={20}/>
+                                      <Pen2 weight="Outline" color="blue" size={20} />
                                     </button>
                                   )}
                                   {currentUser?.id && String(c?.fromUser?.id ?? c?.author?.id) === String(currentUser?.id) && (
@@ -1002,23 +1042,23 @@ const TaskView: React.FC = () => {
                               <div className="mt-2 flex items-center gap-3">
                                 <button
                                   className={cn("inline-flex items-center gap-1 text-xs", reacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
-                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'thumbs_up')}
+                                  onClick={() => hasPermission('tasks', 'update') && toggleReaction(c.id, 'thumbs_up')}
                                 >
                                   <solar.Like.Like className="size-4" weight={reacted('thumbs_up') ? 'Bold' : 'Linear'} /> {count('thumbs_up') || ''}
                                 </button>
                                 <button
                                   className={cn("inline-flex items-center gap-1 text-xs", reacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
-                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'heart')}
+                                  onClick={() => hasPermission('tasks', 'update') && toggleReaction(c.id, 'heart')}
                                 >
                                   <solar.Like.Heart className="size-4" weight={reacted('heart') ? 'Bold' : 'Linear'} /> {count('heart') || ''}
                                 </button>
                                 <button
                                   className={cn("inline-flex items-center gap-1 text-xs", reacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
-                                  onClick={() => hasPermission('tasks','update') && toggleReaction(c.id, 'laugh')}
+                                  onClick={() => hasPermission('tasks', 'update') && toggleReaction(c.id, 'laugh')}
                                 >
                                   <solar.Faces.SmileCircle className="size-4" weight={reacted('laugh') ? 'Bold' : 'Linear'} /> {count('laugh') || ''}
                                 </button>
-                                {hasPermission('tasks','update') && (
+                                {hasPermission('tasks', 'update') && (
                                   <button
                                     className="text-xs text-primary hover:underline"
                                     onClick={() => setReplyDrafts((prev) => ({ ...prev, [c.id]: prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }))}
@@ -1036,7 +1076,7 @@ const TaskView: React.FC = () => {
                                       type="text"
                                       placeholder="Write a reply"
                                       className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                      disabled={!hasPermission('tasks','update')}
+                                      disabled={!hasPermission('tasks', 'update')}
                                       value={replyDrafts[c.id].text}
                                       onChange={(e) => {
                                         const text = e.target.value;
@@ -1054,9 +1094,9 @@ const TaskView: React.FC = () => {
                                     />
                                     <Button
                                       size="sm"
-                                      disabled={!replyDrafts[c.id].text.trim() || replyDrafts[c.id].posting || !hasPermission('tasks','update')}
+                                      disabled={!replyDrafts[c.id].text.trim() || replyDrafts[c.id].posting || !hasPermission('tasks', 'update')}
                                       onClick={async () => {
-                                        if (!id || !hasPermission('tasks','update')) return;
+                                        if (!id || !hasPermission('tasks', 'update')) return;
                                         setReplyDrafts((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: true } }));
                                         try {
                                           await dispatch(createTaskCommentAsync({ taskId: id, content: replyDrafts[c.id].text.trim(), parentId: c.id, mentionUserIds: replyDrafts[c.id].mentions })).unwrap();
@@ -1138,7 +1178,7 @@ const TaskView: React.FC = () => {
                                                 title="Edit reply"
                                                 onClick={() => setEditingComments((prev) => ({ ...prev, [rc.id]: { text: rc.content, saving: false } }))}
                                               >
-                                                <Pen2 weight="Outline" color="blue" size={20}/>
+                                                <Pen2 weight="Outline" color="blue" size={20} />
                                               </button>
                                             )}
                                             {rOwn && (
@@ -1194,23 +1234,23 @@ const TaskView: React.FC = () => {
                                         <div className="mt-2 flex items-center gap-3">
                                           <button
                                             className={cn("inline-flex items-center gap-1 text-xs", rReacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
-                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'thumbs_up')}
+                                            onClick={() => hasPermission('tasks', 'update') && toggleReaction(rc.id, 'thumbs_up')}
                                           >
                                             <solar.Like.Like className="size-4" weight={rReacted('thumbs_up') ? 'Bold' : 'Linear'} /> {rCount('thumbs_up') || ''}
                                           </button>
                                           <button
                                             className={cn("inline-flex items-center gap-1 text-xs", rReacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
-                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'heart')}
+                                            onClick={() => hasPermission('tasks', 'update') && toggleReaction(rc.id, 'heart')}
                                           >
                                             <solar.Like.Heart className="size-4" weight={rReacted('heart') ? 'Bold' : 'Linear'} /> {rCount('heart') || ''}
                                           </button>
                                           <button
                                             className={cn("inline-flex items-center gap-1 text-xs", rReacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
-                                            onClick={() => hasPermission('tasks','update') && toggleReaction(rc.id, 'laugh')}
+                                            onClick={() => hasPermission('tasks', 'update') && toggleReaction(rc.id, 'laugh')}
                                           >
                                             <solar.Faces.SmileCircle className="size-4" weight={rReacted('laugh') ? 'Bold' : 'Linear'} /> {rCount('laugh') || ''}
                                           </button>
-                                          {hasPermission('tasks','update') && (
+                                          {hasPermission('tasks', 'update') && (
                                             <button
                                               className="text-xs text-primary hover:underline"
                                               onClick={() => setReplyDrafts((prev) => ({ ...prev, [rc.id]: prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' } }))}
@@ -1227,7 +1267,7 @@ const TaskView: React.FC = () => {
                                                 type="text"
                                                 placeholder="Write a reply"
                                                 className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                                disabled={!hasPermission('tasks','update')}
+                                                disabled={!hasPermission('tasks', 'update')}
                                                 value={replyDrafts[rc.id].text}
                                                 onChange={(e) => {
                                                   const text = e.target.value;
@@ -1245,9 +1285,9 @@ const TaskView: React.FC = () => {
                                               />
                                               <Button
                                                 size="sm"
-                                                disabled={!replyDrafts[rc.id].text.trim() || replyDrafts[rc.id].posting || !hasPermission('tasks','update')}
+                                                disabled={!replyDrafts[rc.id].text.trim() || replyDrafts[rc.id].posting || !hasPermission('tasks', 'update')}
                                                 onClick={async () => {
-                                                  if (!id || !hasPermission('tasks','update')) return;
+                                                  if (!id || !hasPermission('tasks', 'update')) return;
                                                   setReplyDrafts((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: true } }));
                                                   try {
                                                     await dispatch(createTaskCommentAsync({ taskId: id, content: replyDrafts[rc.id].text.trim(), parentId: rc.id, mentionUserIds: replyDrafts[rc.id].mentions })).unwrap();
@@ -1329,7 +1369,7 @@ const TaskView: React.FC = () => {
                                                             title="Edit reply"
                                                             onClick={() => setEditingComments((prev) => ({ ...prev, [rrc.id]: { text: rrc.content, saving: false } }))}
                                                           >
-                                                            <Pen2 weight="Outline" color="blue" size={16}/>
+                                                            <Pen2 weight="Outline" color="blue" size={16} />
                                                           </button>
                                                         )}
                                                         {rrOwn && (
@@ -1384,19 +1424,19 @@ const TaskView: React.FC = () => {
                                                     <div className="mt-2 flex items-center gap-3">
                                                       <button
                                                         className={cn("inline-flex items-center gap-1 text-xs", rrReacted('thumbs_up') ? 'text-blue-600' : 'text-muted-foreground')}
-                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'thumbs_up')}
+                                                        onClick={() => hasPermission('tasks', 'update') && toggleReaction(rrc.id, 'thumbs_up')}
                                                       >
                                                         <solar.Like.Like className="size-4" weight={rrReacted('thumbs_up') ? 'Bold' : 'Linear'} /> {rrCount('thumbs_up') || ''}
                                                       </button>
                                                       <button
                                                         className={cn("inline-flex items-center gap-1 text-xs", rrReacted('heart') ? 'text-red-600' : 'text-muted-foreground')}
-                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'heart')}
+                                                        onClick={() => hasPermission('tasks', 'update') && toggleReaction(rrc.id, 'heart')}
                                                       >
                                                         <solar.Like.Heart className="size-4" weight={rrReacted('heart') ? 'Bold' : 'Linear'} /> {rrCount('heart') || ''}
                                                       </button>
                                                       <button
                                                         className={cn("inline-flex items-center gap-1 text-xs", rrReacted('laugh') ? 'text-amber-600' : 'text-muted-foreground')}
-                                                        onClick={() => hasPermission('tasks','update') && toggleReaction(rrc.id, 'laugh')}
+                                                        onClick={() => hasPermission('tasks', 'update') && toggleReaction(rrc.id, 'laugh')}
                                                       >
                                                         <solar.Faces.SmileCircle className="size-4" weight={rrReacted('laugh') ? 'Bold' : 'Linear'} /> {rrCount('laugh') || ''}
                                                       </button>
@@ -1426,9 +1466,9 @@ const TaskView: React.FC = () => {
                     className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    disabled={!hasPermission('tasks','update')}
+                    disabled={!hasPermission('tasks', 'update')}
                   />
-                  <Button size="sm" onClick={handlePostComment} disabled={!newComment.trim() || postingComment || !hasPermission('tasks','update')}>
+                  <Button size="sm" onClick={handlePostComment} disabled={!newComment.trim() || postingComment || !hasPermission('tasks', 'update')}>
                     {postingComment ? "Posting..." : "Post"}
                   </Button>
                 </div>
@@ -1469,11 +1509,9 @@ const TaskView: React.FC = () => {
                 </InfoRow>
                 {task?.parentId && (
                   <InfoRow label="Parent Task">
-                    {parentTask ? (
-                      <Link to={`/tasks/${parentTask.id}`} className="text-primary hover:underline">{parentTask.title}</Link>
-                    ) : (
-                      <span className="text-muted-foreground">Loading...</span>
-                    )}
+                    <Link to={`/tasks/${task.parentId}`} className="text-primary hover:underline">
+                      {task.parent?.title || parentTitle || 'Open Parent'}
+                    </Link>
                   </InfoRow>
                 )}
                 <InfoRow label="Assigned">
@@ -1504,7 +1542,7 @@ const TaskView: React.FC = () => {
                       </select>
                     </div>
                   ) : (
-                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks','update') && setEditingAssignee(true)}>
+                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks', 'update') && setEditingAssignee(true)}>
                       <span>{assignedName || '-'}</span>
                     </button>
                   )}
@@ -1542,7 +1580,7 @@ const TaskView: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks','update') && setEditingDueDate(true)}>
+                    <button className="flex items-center gap-2" onClick={() => hasPermission('tasks', 'update') && setEditingDueDate(true)}>
                       <solar.Time.ClockCircle className="size-4 text-muted-foreground" />
                       <span>{formatDate(task?.dueDate)}</span>
                     </button>
@@ -1576,7 +1614,7 @@ const TaskView: React.FC = () => {
                         'px-2 py-1 rounded-md',
                         (task?.priority || 'MEDIUM') === 'URGENT' ? 'bg-red-100 text-red-700' : (task?.priority || 'MEDIUM') === 'HIGH' ? 'bg-orange-100 text-orange-700' : (task?.priority || 'MEDIUM') === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
                       )}
-                      onClick={() => hasPermission('tasks','update') && setEditingPriority(true)}
+                      onClick={() => hasPermission('tasks', 'update') && setEditingPriority(true)}
                       title={task?.priority || 'MEDIUM'}
                     >
                       {task?.priority}
@@ -1591,7 +1629,7 @@ const TaskView: React.FC = () => {
       </div>
 
       {/* Add Sub-task dialog */}
-      {task && (
+      {task && canAddSubtask && (
         <AddTaskDialog
           open={isAddSubtaskOpen}
           onOpenChange={(open) => setIsAddSubtaskOpen(open)}
@@ -1599,7 +1637,7 @@ const TaskView: React.FC = () => {
           fromProject
           initialStatus="TODO"
           parentId={task.id}
-  onSuccess={() => { setIsAddSubtaskOpen(false); if (id) dispatch(fetchSubtasksByParent(id)); }}
+          onSuccess={() => { setIsAddSubtaskOpen(false); if (id) dispatch(fetchSubtasksByParent(id)); }}
         />
       )}
     </PageContainer>

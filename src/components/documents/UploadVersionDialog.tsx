@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Upload } from 'lucide-react';
 import { Document } from '@/redux/slices/documentsSlice';
 
 interface UploadVersionDialogProps {
@@ -42,12 +41,12 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState<FormData>({
     file: null,
     versionNotes: '',
   });
-  
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +87,7 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!document || !validateForm()) {
       return;
     }
@@ -102,7 +101,7 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
       }));
 
       if (uploadDocumentVersion.rejected.match(result)) {
-        const errorMessage = result.payload as string || 'Failed to create document version';
+        const errorMessage = result.payload as string;
         toast({
           title: 'Error',
           description: errorMessage,
@@ -110,13 +109,6 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
         });
         return;
       }
-
-      // Success - show success message from backend if available
-      const successMessage = 'Document version created successfully';
-      toast({
-        title: 'Success',
-        description: successMessage,
-      });
 
       // Close dialog and call callback
       onOpenChange(false);
@@ -144,13 +136,58 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
             Create a version of {document?.name || 'Document'}
           </DialogTitle>
           <DialogDescription>
-            Upload a version of this document
+            Upload a new version of this document
           </DialogDescription>
         </DialogHeader>
-        
+
+        {/* Current Version Info */}
+        {document && document.files && document.files.length > 0 && (
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <h4 className="text-sm font-medium text-gray-900">Current Version</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Version:</span>
+                <span className="ml-2 font-medium">v{document.files[0].version || 1}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">File Type:</span>
+                <span className="ml-2 font-medium uppercase">{document.files[0].fileType || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Size:</span>
+                <span className="ml-2 font-medium">
+                  {document.files[0].fileSize
+                    ? `${Math.round(document.files[0].fileSize / 1024)} KB`
+                    : 'N/A'
+                  }
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">Uploaded:</span>
+                <span className="ml-2 font-medium">
+                  {document.files[0].createdAt
+                    ? new Date(document.files[0].createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                    : 'N/A'
+                  }
+                </span>
+              </div>
+
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">New Version</h4>
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="file">File *</Label>
+            <Label htmlFor="file">New File *</Label>
             <div className="flex items-center space-x-2">
               <Input
                 id="file"
@@ -159,7 +196,6 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
                 className={errors.file ? 'border-red-500' : ''}
                 disabled={loading}
               />
-              <Upload className="h-4 w-4 text-muted-foreground" />
             </div>
             {errors.file && (
               <p className="text-sm text-red-500">{errors.file}</p>
@@ -172,10 +208,17 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="versionNotes">Version Notes</Label>
+            <Label htmlFor="versionNotes">
+              Version Notes
+              {document && document.files && document.files.length > 0 && (
+                <span className="text-sm text-gray-500 font-normal">
+                  (for v{(document.files[0].version || 1) + 1})
+                </span>
+              )}
+            </Label>
             <Textarea
               id="versionNotes"
-              placeholder="Optional notes about this version..."
+              placeholder="Describe what changed in this version..."
               value={formData.versionNotes}
               onChange={handleVersionNotesChange}
               className={errors.versionNotes ? 'border-red-500' : ''}

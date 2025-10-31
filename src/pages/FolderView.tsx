@@ -124,7 +124,7 @@ const formatDate = (dateString: string): string => {
 // Utility function for formatting file type
 const formatFileType = (type: string): string => {
   if (!type) return 'Unknown';
-  
+
   const typeMap: { [key: string]: string } = {
     'pdf': 'PDF Document',
     'docx': 'Word Document',
@@ -141,7 +141,7 @@ const formatFileType = (type: string): string => {
     'rar': 'RAR Archive',
     'txt': 'Text File'
   };
-  
+
   return typeMap[type.toLowerCase()] || type.toUpperCase() + ' File';
 };
 
@@ -149,7 +149,7 @@ const formatFileType = (type: string): string => {
 const fileTypeCategories = [
   "All",
   "PDF",
-  "DOCX", 
+  "DOCX",
   "XLSX",
   "PPTX",
   "JPG",
@@ -174,7 +174,7 @@ const FolderView: React.FC = () => {
   const selectedFolder = useAppSelector((state) => state.folders.selectedFolder);
   const currentPath = useAppSelector((state) => state.folders.currentPath);
   const folderPath = useAppSelector(selectFolderPath);
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -196,7 +196,7 @@ const FolderView: React.FC = () => {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [versionUploadModal, setVersionUploadModal] = useState<{ isOpen: boolean; document: Document | null }>({ isOpen: false, document: null });
-  
+
   // Filter states
   const [selectedTask, setSelectedTask] = useState<string>('All');
   const [selectedFileType, setSelectedFileType] = useState<string>('All');
@@ -210,7 +210,11 @@ const FolderView: React.FC = () => {
   };
 
   const formatFileSize = (bytes: number | string): string => {
+    console.log("bytes", bytes);
+    
     const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
+    console.log("Size",size);
+    
     if (size === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -227,7 +231,7 @@ const FolderView: React.FC = () => {
     try {
       await dispatch(updateDocument({
         id: renameDocumentModal.document.id,
-        documentData: { 
+        documentData: {
           name: newDocumentName.trim(),
           accessType: renameDocumentModal.document.accessType,
           userIds: renameDocumentModal.document.userAccess?.map(user => user.userId) || []
@@ -238,18 +242,18 @@ const FolderView: React.FC = () => {
         title: "Success",
         description: "Document renamed successfully.",
       });
-      
+
       // Refresh documents after rename
       if (folderId) {
         dispatch(fetchDocumentsByFolder(folderId));
       }
-      
+
       // Refresh folder tree to update document count and structure
       const projectId = getProjectId();
       if (projectId) {
         dispatch(fetchFolderTree(projectId));
       }
-      
+
       setRenameDocumentModal({ isOpen: false, document: null });
       setNewDocumentName('');
     } catch (error) {
@@ -266,7 +270,7 @@ const FolderView: React.FC = () => {
     setRenameDocumentModal({ isOpen: false, document: null });
     setNewDocumentName('');
   };
-  
+
   // Helper function to find a folder in the tree structure
   const findFolderInTree = (tree: FolderType[], targetId: string): FolderType | null => {
     for (const folder of tree) {
@@ -295,11 +299,11 @@ const FolderView: React.FC = () => {
   const currentFolder = useMemo(() => {
     return findFolderInTree(folderTree, folderId || '') || selectedFolder || folders.find(f => f.id === folderId);
   }, [folderTree, folderId, selectedFolder, folders]);
-  
+
   const folderDocuments = useMemo(() => {
     return currentFolder?.documents || documents.filter(doc => doc.folderId === folderId);
   }, [currentFolder, documents, folderId]);
-  
+
   const subFolders = useMemo(() => {
     return currentFolder?.children || folders.filter(f => f.parentId === folderId);
   }, [currentFolder, folders, folderId]);
@@ -310,7 +314,7 @@ const FolderView: React.FC = () => {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(doc => 
+      filtered = filtered.filter(doc =>
         doc.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -334,19 +338,19 @@ const FolderView: React.FC = () => {
   // Filtered folders based on search
   const filteredFolders = useMemo(() => {
     if (!searchTerm) return subFolders;
-    
-    return subFolders.filter(folder => 
+
+    return subFolders.filter(folder =>
       folder.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [subFolders, searchTerm]);
-  
+
   // Add a separate loading state for initial folder data
   const [initialLoading, setInitialLoading] = useState(true);
-  
+
   useEffect(() => {
     if (folderId) {
       setInitialLoading(true);
-      
+
       // Always fetch folder by ID first to get project ID, then fetch tree
       dispatch(fetchFolderById(folderId)).then((action) => {
         if (action.payload && typeof action.payload === 'object' && 'projectId' in action.payload) {
@@ -362,7 +366,7 @@ const FolderView: React.FC = () => {
           setInitialLoading(false);
         }
       });
-      
+
       // Fetch projects only if not already loaded
       if (projects.length === 0) {
         dispatch(fetchProjects());
@@ -379,19 +383,19 @@ const FolderView: React.FC = () => {
 
   // Fetch tasks for the current folder's project
   useEffect(() => {
-    const projectId = getProjectId();    
+    const projectId = getProjectId();
     if (projectId) {
       dispatch(fetchTasksByProject(projectId));
     }
   }, [dispatch, getProjectId, folderId]);
-  
+
   // Fetch folder path for accurate breadcrumbs
   useEffect(() => {
     if (folderId) {
       dispatch(fetchFolderPath(folderId));
     }
   }, [dispatch, folderId]);
-  
+
   useEffect(() => {
     if (editingFolderId && editInputRef.current) {
       editInputRef.current.focus();
@@ -412,7 +416,7 @@ const FolderView: React.FC = () => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [contextMenu.isOpen]);
-  
+
   const handleCreateFolder = () => {
     setNewFolderName('');
     setShowCreateFolderModal(true);
@@ -427,21 +431,21 @@ const FolderView: React.FC = () => {
       });
       return;
     }
-    
+
     try {
       const newFolder = {
         name: newFolderName.trim(),
         projectId: currentFolder.projectId,
         parentId: folderId || null
       };
-      
+
       await dispatch(createFolder(newFolder)).unwrap();
-      
+
       // Refresh folder tree after successful creation
       if (currentFolder.projectId) {
         dispatch(fetchFolderTree(currentFolder.projectId));
       }
-      
+
       setShowCreateFolderModal(false);
       setNewFolderName('');
       // Success message will be handled by backend API
@@ -459,22 +463,22 @@ const FolderView: React.FC = () => {
     setShowCreateFolderModal(false);
     setNewFolderName('');
   };
-  
+
   const handleUpdateFolder = async (id: string, name: string) => {
     if (!name.trim()) return;
-    
+
     try {
-      await dispatch(updateFolderAsync({ 
-        id, 
-        folderData: { name: name.trim() } 
+      await dispatch(updateFolderAsync({
+        id,
+        folderData: { name: name.trim() }
       })).unwrap();
-      
+
       // Refresh folder tree after successful update
       const projectId = getProjectId();
       if (projectId) {
         dispatch(fetchFolderTree(projectId));
       }
-      
+
       setEditingFolderId(null);
       setEditingFolderName('');
       // Success message will be handled by backend API
@@ -487,17 +491,17 @@ const FolderView: React.FC = () => {
       });
     }
   };
-  
+
   const handleDeleteFolder = async (id: string, cascade: boolean = false) => {
     try {
       await dispatch(deleteFolderAsync({ id, cascade })).unwrap();
-      
+
       // Refresh folder tree after successful deletion
       const projectId = getProjectId();
       if (projectId) {
         dispatch(fetchFolderTree(projectId));
       }
-      
+
       // Success message will be handled by backend API
       setDeleteFolderModal({ isOpen: false, folder: null });
     } catch (error) {
@@ -513,14 +517,14 @@ const FolderView: React.FC = () => {
   const openDeleteFolderModal = (folder: FolderType) => {
     setDeleteFolderModal({ isOpen: true, folder });
   };
-  
 
-  
+
+
   const handleFolderClick = (folder: FolderType) => {
     // Navigate to the folder - the tree data will be available from the parent component
     navigate(`/documents/folder/${folder.id}`);
   };
-  
+
   const handleBackClick = () => {
     if (currentFolder?.parentId) {
       navigate(`/documents/folder/${currentFolder.parentId}`);
@@ -528,17 +532,17 @@ const FolderView: React.FC = () => {
       navigate('/documents');
     }
   };
-  
+
   const startEditingFolder = (folder: FolderType) => {
     setEditingFolderId(folder.id);
     setEditingFolderName(folder.name);
   };
-  
+
   const cancelEditingFolder = () => {
     setEditingFolderId(null);
     setEditingFolderName('');
   };
-  
+
   const handleKeyPress = (e: React.KeyboardEvent, folderId: string) => {
     if (e.key === 'Enter') {
       handleUpdateFolder(folderId, editingFolderName);
@@ -580,7 +584,7 @@ const FolderView: React.FC = () => {
     }
     closeContextMenu();
   };
-  
+
   const getFileIcon = (type: string | undefined | null) => {
     if (!type) {
       return <File className="h-4 w-4" />;
@@ -623,7 +627,7 @@ const FolderView: React.FC = () => {
 
     try {
       const result = await dispatch(downloadDocument(document.id));
-      
+
       if (downloadDocument.fulfilled.match(result)) {
         toast({
           title: 'Success',
@@ -654,12 +658,12 @@ const FolderView: React.FC = () => {
         title: "Success",
         description: "Document deleted successfully.",
       });
-      
+
       // Refresh documents after deletion
       if (folderId) {
         dispatch(fetchDocumentsByFolder(folderId));
       }
-      
+
       // Refresh folder tree to update document count and structure
       const projectId = getProjectId();
       if (projectId) {
@@ -688,13 +692,13 @@ const FolderView: React.FC = () => {
   };
 
 
-  
+
   const breadcrumbs = useMemo(() => {
     if (folderPath && folderPath.parts && folderPath.parts.length > 0 && folderTree) {
       // Helper function to find folder ID by path in tree
       const findFolderByPath = (folders: FolderType[], targetPath: string[]): FolderType | null => {
         if (targetPath.length === 0) return null;
-        
+
         for (const folder of folders) {
           if (folder.name === targetPath[0]) {
             if (targetPath.length === 1) {
@@ -706,13 +710,13 @@ const FolderView: React.FC = () => {
         }
         return null;
       };
-      
+
       // Convert path parts to breadcrumb objects, including the current folder
       const pathParts = folderPath.parts;
       return pathParts.map((name, index) => {
         const partialPath = pathParts.slice(0, index + 1);
         const folder = findFolderByPath(folderTree, partialPath);
-        
+
         return {
           id: folder?.id || `breadcrumb-${index}`,
           name: name,
@@ -731,19 +735,19 @@ const FolderView: React.FC = () => {
         };
       });
     }
-    
+
     // Fallback to tree structure for breadcrumbs if path API data is not available
     const buildBreadcrumbsFromTree = (folderId: string): FolderType[] => {
       const breadcrumbs: FolderType[] = [];
-      
+
       const findFolderPath = (folders: FolderType[], targetId: string, path: FolderType[] = []): FolderType[] | null => {
         for (const folder of folders) {
           const currentPath = [...path, folder];
-          
+
           if (folder.id === targetId) {
             return currentPath;
           }
-          
+
           if (folder.children && folder.children.length > 0) {
             const result = findFolderPath(folder.children, targetId, currentPath);
             if (result) return result;
@@ -751,24 +755,24 @@ const FolderView: React.FC = () => {
         }
         return null;
       };
-      
+
       if (folderTree && folderTree.length > 0) {
         const path = findFolderPath(folderTree, folderId);
         if (path) {
           return path.slice(0, -1); // Exclude the current folder from breadcrumbs
         }
       }
-      
+
       return breadcrumbs;
     };
-    
+
     if (folderTree && currentFolder) {
       return buildBreadcrumbsFromTree(currentFolder.id);
     }
-    
+
     return [];
   }, [folderPath, folderTree, currentFolder]);
-  
+
   // Show loading during initial folder fetch or when documents are loading
   if (initialLoading || documentsLoading || (foldersLoading && !currentFolder)) {
     return (
@@ -777,7 +781,7 @@ const FolderView: React.FC = () => {
       </div>
     );
   }
-  
+
   // If we have a folderId but no currentFolder and we're not loading, 
   // it means the folder doesn't exist
   if (folderId && !currentFolder && !initialLoading && !treeLoading) {
@@ -787,7 +791,7 @@ const FolderView: React.FC = () => {
       </div>
     );
   }
-  
+
   // If we don't have currentFolder yet but we're not in an error state, show loading
   if (!currentFolder && (initialLoading || treeLoading)) {
     return (
@@ -796,7 +800,7 @@ const FolderView: React.FC = () => {
       </div>
     );
   }
-  
+
   return (
     <PageContainer>
       <div className="space-y-8 w-full max-w-full overflow-hidden">
@@ -846,31 +850,30 @@ const FolderView: React.FC = () => {
 
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in animation-delay-[0.1s]">
-          <span 
+          <span
             className="font-medium text-foreground cursor-pointer hover:text-primary"
             onClick={() => navigate('/documents')}
           >
             Documents
           </span>
-          {breadcrumbs.map((folder, index) => (
-            <React.Fragment key={folder.id}>
-              <ChevronRight size={14} />
-              <span 
-                className={cn(
-                  index === breadcrumbs.length - 1 
-                    ? 'text-foreground font-medium cursor-default' 
-                    : 'cursor-pointer hover:text-foreground hover:underline'
-                )}
-                onClick={() => {
-                  if (index !== breadcrumbs.length - 1) {
-                    navigate(`/documents/folder/${folder.id}`);
-                  }
-                }}
-              >
-                {folder.name}
-              </span>
-            </React.Fragment>
-          ))}
+          {breadcrumbs.map((folder, index) => [
+            <ChevronRight key={`chevron-${folder.id}`} size={14} />,
+            <span
+              key={`span-${folder.id}`}
+              className={cn(
+                index === breadcrumbs.length - 1
+                  ? 'text-foreground font-medium cursor-default'
+                  : 'cursor-pointer hover:text-foreground hover:underline'
+              )}
+              onClick={() => {
+                if (index !== breadcrumbs.length - 1) {
+                  navigate(`/documents/folder/${folder.id}`);
+                }
+              }}
+            >
+              {folder.name}
+            </span>
+          ]).flat()}
         </div>
         {/* Search and Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.15s]">
@@ -884,7 +887,7 @@ const FolderView: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           {/* Task Filter */}
           <select
             value={selectedTask}
@@ -898,7 +901,7 @@ const FolderView: React.FC = () => {
               </option>
             ))}
           </select>
-          
+
           {/* File Type Filter */}
           <select
             value={selectedFileType}
@@ -925,9 +928,9 @@ const FolderView: React.FC = () => {
               {
                 id: 'fileType',
                 label: 'File Types',
-                options: fileTypeCategories.map(type => ({ 
-                  value: type, 
-                  label: type === "All" ? "All Types" : type 
+                options: fileTypeCategories.map(type => ({
+                  value: type,
+                  label: type === "All" ? "All Types" : type
                 }))
               }
             ]}
@@ -944,15 +947,15 @@ const FolderView: React.FC = () => {
             }}
             className="flex-shrink-0"
           />
-          
+
           {/* View Mode Toggle */}
           <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
             <button
               onClick={() => setViewMode("grid")}
               className={cn(
                 "px-3 py-2 text-sm transition-colors",
-                viewMode === "grid" 
-                  ? "bg-primary text-primary-foreground" 
+                viewMode === "grid"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted"
               )}
             >
@@ -962,15 +965,15 @@ const FolderView: React.FC = () => {
               onClick={() => setViewMode("list")}
               className={cn(
                 "px-3 py-2 text-sm transition-colors",
-                viewMode === "list" 
-                  ? "bg-primary text-primary-foreground" 
+                viewMode === "list"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted"
               )}
             >
               <List size={16} />
             </button>
           </div>
-          
+
           {/* Clear Filters Button */}
           {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
             <MotionButton
@@ -996,94 +999,94 @@ const FolderView: React.FC = () => {
               <div>
                 <h2 className="text-lg font-medium mb-4 text-foreground">Folders</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredFolders.map((folder, index) => (
-                  <div 
-                    key={folder.id}
-                    className={cn(
-                      "relative flex flex-col p-3 cursor-pointer group",
-                      "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
-                      "border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
-                      "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
-                    )}
-                    style={{ 
-                      animationDelay: `${0.05 * index}s`, 
-                      animationFillMode: "forwards" 
-                    }}
-                    onClick={() => handleFolderClick(folder)}
-                  >
-                    <div className="flex items-center justify-between h-full">
+                  {filteredFolders.map((folder, index) => (
+                    <div
+                      key={folder.id}
+                      className={cn(
+                        "relative flex flex-col p-3 cursor-pointer group",
+                        "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
+                        "border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
+                        "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
+                      )}
+                      style={{
+                        animationDelay: `${0.05 * index}s`,
+                        animationFillMode: "forwards"
+                      }}
+                      onClick={() => handleFolderClick(folder)}
+                    >
+                      <div className="flex items-center justify-between h-full">
                         <div className="flex items-center flex-1 min-w-0 pr-2">
-                        <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
-                          <Folder className="text-blue-600" size={18} />
+                          <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
+                            <Folder className="text-blue-600" size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {editingFolderId === folder.id ? (
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editingFolderName}
+                                onChange={(e) => setEditingFolderName(e.target.value)}
+                                onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
+                                onKeyDown={(e) => handleKeyPress(e, folder.id)}
+                                className="w-full bg-white border border-blue-300 rounded px-2 py-1 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <p className="font-medium truncate text-sm">{folder.name}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          {editingFolderId === folder.id ? (
-                            <input
-                              ref={editInputRef}
-                              type="text"
-                              value={editingFolderName}
-                              onChange={(e) => setEditingFolderName(e.target.value)}
-                              onBlur={() => handleUpdateFolder(folder.id, editingFolderName)}
-                              onKeyDown={(e) => handleKeyPress(e, folder.id)}
-                              className="w-full bg-white border border-blue-300 rounded px-2 py-1 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          ) : (
-                            <p className="font-medium truncate text-sm">{folder.name}</p>
-                          )}
-                        </div>
-                      </div>
-                      
+
                         {(hasPermission('folders', 'update') || hasPermission('folders', 'delete')) && (
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          {hasPermission('folders', 'update') && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startEditingFolder(folder);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Edit3 className="mr-2 h-4 w-4" />
-                            Rename
-                          </DropdownMenuItem>)}
-                          {hasPermission('folders', 'delete') && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDeleteFolderModal(folder);
-                              }}
-                              className="cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>)}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              {hasPermission('folders', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditingFolder(folder);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Rename
+                                </DropdownMenuItem>)}
+                              {hasPermission('folders', 'delete') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openDeleteFolderModal(folder);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>)}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          
+            )}
+
             {/* Documents */}
             {filteredDocuments.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredDocuments.map((doc, index) => (
-                    <div 
+                    <div
                       key={doc.id}
                       className={cn(
                         "relative cursor-pointer group opacity-0 animate-scale-in",
@@ -1091,9 +1094,9 @@ const FolderView: React.FC = () => {
                         "transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden",
                         "flex flex-col p-3 h-24 w-full"
                       )}
-                      style={{ 
-                        animationDelay: `${0.05 * (filteredFolders.length + index)}s`, 
-                        animationFillMode: "forwards" 
+                      style={{
+                        animationDelay: `${0.05 * (filteredFolders.length + index)}s`,
+                        animationFillMode: "forwards"
                       }}
                       onClick={() => {
                         setSelectedDocument(doc);
@@ -1112,12 +1115,24 @@ const FolderView: React.FC = () => {
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar size={12} />
-                                <span>{formatDate(doc.createdAt)}</span>
+                                <span>{formatDate(doc.files[0]?.updatedAt ? new Date(doc.files[0].updatedAt).toISOString() : doc.updatedAt)}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <File size={12} />
                                 <span className="uppercase font-medium">{doc?.files?.[0]?.fileType || 'N/A'}</span>
                               </div>
+                              {doc.files[0].fileSize && (
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">{formatFileSize(doc.files[0].fileSize)}</span>
+                                </div>
+                              )}
+                              {doc?.files?.[0]?.version && doc.files[0].version > 1 && (
+                                <div className="flex items-center gap-1">
+                                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                    v{doc.files[0].version}
+                                  </span>
+                                </div>
+                              )}
                               {doc.accessType && (
                                 <div className="flex items-center gap-1">
                                   {doc.accessType === 'SELECTED_USERS' ? (
@@ -1134,10 +1149,10 @@ const FolderView: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button 
+                            <button
                               className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -1163,9 +1178,9 @@ const FolderView: React.FC = () => {
                                 }}
                                 className="cursor-pointer"
                               >
-                              <Edit3 className="mr-2 h-4 w-4" />
-                              Rename
-                            </DropdownMenuItem>)}
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Rename
+                              </DropdownMenuItem>)}
                             {hasPermission('documents', 'update') && (
                               <DropdownMenuItem
                                 onClick={(e) => {
@@ -1190,8 +1205,8 @@ const FolderView: React.FC = () => {
                                 Delete
                               </DropdownMenuItem>
                             )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
@@ -1217,7 +1232,7 @@ const FolderView: React.FC = () => {
                             <Plus size={18} className="mr-2" /> New Folder
                           </MotionButton>
                         )}
-                        {hasPermission('documents','create') && (
+                        {hasPermission('documents', 'create') && (
                           <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
                             <Upload size={18} className="mr-2" /> Upload Files
                           </MotionButton>
@@ -1227,7 +1242,7 @@ const FolderView: React.FC = () => {
                   </GlassCard>
                 );
               }
-              
+
               return (
                 <GlassCard className="p-6">
                   <div className="space-y-2">
@@ -1239,7 +1254,7 @@ const FolderView: React.FC = () => {
                       <div className="col-span-2">Modified</div>
                       {(hasPermission('folders', 'update') || hasPermission('folders', 'delete')) && <div className="col-span-1">Actions</div>}
                     </div>
-                    
+
                     {/* Folders */}
                     {filteredFolders.map((folder) => (
                       <div
@@ -1295,9 +1310,9 @@ const FolderView: React.FC = () => {
                                   }}
                                   className="cursor-pointer"
                                 >
-                                <Edit3 className="mr-2 h-4 w-4" />
-                                Rename
-                              </DropdownMenuItem>)}
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Rename
+                                </DropdownMenuItem>)}
                               {hasPermission('folders', 'delete') && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -1306,9 +1321,9 @@ const FolderView: React.FC = () => {
                                   }}
                                   className="cursor-pointer text-destructive focus:text-destructive"
                                 >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1344,12 +1359,25 @@ const FolderView: React.FC = () => {
                         </div>
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
                           <div>
-                            <div>{formatFileType(document.files[0].fileType || '')}</div>
-                            <div className="text-xs">{formatFileSize(document.files?.[0]?.fileSize || 0)}</div>
+                            <div className="flex items-center gap-2">
+                              <span>{formatFileType(document.files[0].fileType || '')}</span>
+                              {document.files[0].version > 1 && (
+                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                  v{document.files[0].version}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs">{formatFileSize(document.files[0].fileSize || 0)}</div>
                           </div>
                         </div>
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
-                          {formatDate(document.createdAt)}
+                          <div>
+                            <div>{formatDate(document.files?.[0]?.updatedAt ? new Date(document.files[0].updatedAt).toISOString() : document.updatedAt)}</div>
+                            <div className="text-xs">
+                              {document.files?.[0]?.createdAt ? 'File uploaded' : 'Document created'} 
+                              {/* //here */}
+                            </div>
+                          </div>
                         </div>
                         <div className="col-span-1 flex items-center gap-1">
                           <button
@@ -1394,9 +1422,9 @@ const FolderView: React.FC = () => {
                               }}
                               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-destructive"
                               title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>)}
+                            >
+                              <Trash2 size={14} />
+                            </button>)}
                         </div>
                       </div>
                     ))}
@@ -1406,7 +1434,7 @@ const FolderView: React.FC = () => {
             })()}
           </div>
         )}
-        
+
         {/* Create Folder Modal */}
         {showCreateFolderModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -1544,12 +1572,12 @@ const FolderView: React.FC = () => {
             // Close sidebar immediately after deletion
             setShowDocumentPreview(false);
             setSelectedDocument(null);
-            
+
             // Refresh documents after deletion
             if (folderId) {
               dispatch(fetchDocumentsByFolder(folderId));
             }
-            
+
             // Refresh folder tree to update document count and structure
             const projectId = getProjectId();
             if (projectId) {
@@ -1571,7 +1599,7 @@ const FolderView: React.FC = () => {
             if (folderId) {
               dispatch(fetchDocumentsByFolder(folderId));
             }
-            
+
             const projectId = getProjectId();
             if (projectId) {
               dispatch(fetchFolderTree(projectId));

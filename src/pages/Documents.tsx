@@ -869,7 +869,7 @@ const Documents = () => {
                   )}
                   
                   {/* Documents Section */}
-                  {currentDocuments.length > 0 && (
+                  {/* {currentDocuments.length > 0 && (
                     <div>
                       <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
@@ -947,7 +947,7 @@ const Documents = () => {
                         ))}
                       </div>
                     </div>
-                  )}
+                  )} */}
                 </>
               );
             })()}
@@ -1081,7 +1081,7 @@ const Documents = () => {
                           </div>
                         </div>
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
-                          {formatDate(document.createdAt)}
+                          {formatDate(document.updatedAt)}
                         </div>
                         <div className="col-span-1 flex items-center justify-center">
                           <DropdownMenu>

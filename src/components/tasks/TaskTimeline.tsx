@@ -55,13 +55,21 @@ const TaskTimeline: React.FC = () => {
     return `#${lr.toString(16).padStart(2,'0')}${lg.toString(16).padStart(2,'0')}${lb.toString(16).padStart(2,'0')}`;
   };
 
-  // Fetch subtasks for all parent tasks via Redux slice
+  // Fetch subtasks only for parent tasks that don't have them loaded yet
+  const parentTasks = useMemo(() => tasks.filter(task => !task.parentId), [tasks]);
+  const missingParentIds = useMemo(() => {
+    return parentTasks
+      .map((t) => t.id)
+      .filter((id) => !(id in subtasksByParent));
+  }, [parentTasks, subtasksByParent]);
+
   useEffect(() => {
-    const parentTasks = tasks.filter(task => !task.parentId);
-    parentTasks.forEach((task) => {
-      dispatch(fetchSubtasksByParent(task.id));
-    });
-  }, [tasks, dispatch]);
+    if (missingParentIds.length > 0) {
+      missingParentIds.forEach((parentId) => {
+        dispatch(fetchSubtasksByParent(parentId));
+      });
+    }
+  }, [missingParentIds, dispatch]);
 
   // Filter and transform parent tasks for timeline using createdAt/dueDate only
   const timelineTasks = useMemo(() => {

@@ -442,9 +442,9 @@ const MemberManagement: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {rolesLoading ? (
-                        <SelectItem value="">Loading roles...</SelectItem>
+                        <SelectItem value="loading" disabled>Loading roles...</SelectItem>
                       ) : roles.length === 0 ? (
-                        <SelectItem value="">No roles available</SelectItem>
+                        <SelectItem value="no_roles" disabled>No roles available</SelectItem>
                       ) : (
                         roles.map((role) => (
                           <SelectItem key={role.id} value={role.id}>

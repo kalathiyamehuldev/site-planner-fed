@@ -37,8 +37,10 @@ const RolesPage: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchRoles());
-  }, [dispatch, hasPermission, isSuperAdmin]);
+    if (!roles || roles.length === 0) {
+      dispatch(fetchRoles());
+    }
+  }, [dispatch]);
 
   const handleCreateRole = () => {
     navigate('/roles/create');

@@ -36,6 +36,10 @@ export interface ApiTask {
     id: string;
     name: string;
   };
+  parent?: {
+    id: string;
+    title: string;
+  };
 }
 
 export interface CreateTaskData {
@@ -85,6 +89,10 @@ export interface Task {
     name: string;
   };
   parentId?: string; // added for parent linking
+  parent?: {
+    id: string;
+    title: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +131,7 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   member: apiTask.member,
   project: apiTask.project,
   parentId: apiTask.parentId, // map parentId
+  parent: apiTask.parent ? { id: apiTask.parent.id, title: apiTask.parent.title } : undefined,
   createdAt: apiTask.createdAt,
   updatedAt: apiTask.updatedAt,
 });
@@ -156,6 +165,36 @@ export const fetchAllTasksByCompany = createAsyncThunk(
   }
 );
 
+// Fetch only parent tasks (for Tasks page, TaskView, TaskTimeline)
+export const fetchParentTasksByCompany = createAsyncThunk(
+  'tasks/fetchParentTasksByCompany',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get('/tasks?parentId=null');
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to fetch parent tasks';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
+      }
+
+      toast.success(message || 'Parent tasks fetched successfully');
+      // Handle both paginated and array responses
+      const items = Array.isArray((data as any)?.items)
+        ? (data as any).items
+        : Array.isArray(data as any)
+          ? (data as any)
+          : [];
+      return items.map(transformApiTask);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to fetch parent tasks';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
 export const fetchTasksByProject = createAsyncThunk(
   'tasks/fetchTasksByProject',
   async (projectId: string, { rejectWithValue }) => {
@@ -173,6 +212,30 @@ export const fetchTasksByProject = createAsyncThunk(
       }
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to fetch project tasks';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
+// Fetch only parent tasks by project (for Tasks page, TaskView, TaskTimeline)
+export const fetchParentTasksByProject = createAsyncThunk(
+  'tasks/fetchParentTasksByProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/tasks/project/${projectId}?parentId=null`);
+      const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
+
+      if (status === 'success' && data) {
+        toast.success(message || 'Parent project tasks fetched successfully');
+        return data.map(transformApiTask);
+      } else {
+        const errMsg = error || message || 'Failed to fetch parent project tasks';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
+      }
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to fetch parent project tasks';
       toast.error(errMsg);
       return rejectWithValue(errMsg);
     }
@@ -459,15 +522,29 @@ export const removeTaskCommentReactionAsync = createAsyncThunk(
 );
 
 // Fetch subtasks by parent ID (company is derived from JWT on backend)
+// Module-scoped guard to dedupe concurrent fetches across components
+const inflightSubtaskFetches = new Set<string>();
+
 export const fetchSubtasksByParent = createAsyncThunk(
   'tasks/fetchSubtasksByParent',
-  async (parentId: string, { rejectWithValue }) => {
+  async (parentId: string, { rejectWithValue, getState }) => {
     try {
+      const state = getState() as RootState;
+      const alreadyLoaded = parentId in state.tasks.subtasksByParentId;
+      if (alreadyLoaded || inflightSubtaskFetches.has(parentId)) {
+        // Return cached subtasks to avoid network call
+        const cached = state.tasks.subtasksByParentId[parentId] || [];
+        return { parentId, subtasks: cached } as { parentId: string; subtasks: Task[] };
+      }
+
+      inflightSubtaskFetches.add(parentId);
+
       const response = await api.get(`/tasks/parent/${parentId}`);
       const { status, data, message, error } = response as unknown as ApiResponse<any>;
 
       if (status === 'error') {
         const errMsg = error || message || 'Failed to fetch subtasks';
+        inflightSubtaskFetches.delete(parentId);
         toast.error(errMsg);
         return rejectWithValue({ parentId, error: errMsg });
       }
@@ -479,13 +556,24 @@ export const fetchSubtasksByParent = createAsyncThunk(
           : [];
 
       const mapped = items.map(transformApiTask);
+      inflightSubtaskFetches.delete(parentId);
       toast.success(message || 'Subtasks fetched successfully');
       return { parentId, subtasks: mapped } as { parentId: string; subtasks: Task[] };
     } catch (error: any) {
+      inflightSubtaskFetches.delete(parentId);
       const errMsg = error?.message || 'Failed to fetch subtasks';
       toast.error(errMsg);
       return rejectWithValue({ parentId, error: errMsg });
     }
+  },
+  {
+    // Skip dispatch entirely if already loaded or in-flight in Redux state
+    condition: (parentId, { getState }) => {
+      const state = getState() as RootState;
+      const alreadyLoaded = parentId in state.tasks.subtasksByParentId;
+      const inFlight = !!state.tasks.inflightSubtaskParentIds?.[parentId];
+      return !alreadyLoaded && !inFlight;
+    },
   }
 );
 
@@ -505,6 +593,7 @@ interface TasksState {
   // Subtasks state
   subtasksByParentId: Record<string, Task[]>;
   subtasksLoading: boolean;
+  inflightSubtaskParentIds: Record<string, boolean>;
 }
 
 const initialState: TasksState = {
@@ -523,6 +612,7 @@ const initialState: TasksState = {
   // Subtasks initial state
   subtasksByParentId: {},
   subtasksLoading: false,
+  inflightSubtaskParentIds: {},
 };
 
 export const tasksSlice = createSlice({
@@ -567,6 +657,32 @@ export const tasksSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+      // Fetch parent tasks by company
+      .addCase(fetchParentTasksByCompany.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchParentTasksByCompany.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tasks = action.payload;
+      })
+      .addCase(fetchParentTasksByCompany.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch parent tasks by project
+      .addCase(fetchParentTasksByProject.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchParentTasksByProject.fulfilled, (state, action) => {
+        state.loading = false;
+        state.projectTasks = action.payload;
+      })
+      .addCase(fetchParentTasksByProject.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
       // Fetch task by ID
       .addCase(fetchTaskById.pending, (state) => {
         state.loading = true;
@@ -594,6 +710,14 @@ export const tasksSlice = createSlice({
         state.loading = false;
         state.tasks.push(action.payload);
         state.total += 1;
+        // If the created task is a subtask, immediately insert it under its parent
+        const parentId = action.payload.parentId;
+        if (parentId) {
+          const existing = state.subtasksByParentId[parentId] || [];
+          state.subtasksByParentId[parentId] = [...existing, action.payload];
+          // Ensure in-flight flag is reset for this parent if it was set
+          state.inflightSubtaskParentIds[parentId] = false;
+        }
         // Don't push to projectTasks - let the component refetch via fetchTasksByProject
       })
       .addCase(createTaskAsync.rejected, (state, action) => {
@@ -626,11 +750,19 @@ export const tasksSlice = createSlice({
       })
       .addCase(deleteTaskAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.tasks = state.tasks.filter(task => task.id !== action.payload);
-        if (state.selectedTask?.id === action.payload) {
+        const deletedId = action.payload as string;
+        state.tasks = state.tasks.filter(task => task.id !== deletedId);
+        if (state.selectedTask?.id === deletedId) {
           state.selectedTask = null;
         }
         state.total -= 1;
+        // Also remove from any cached subtasks lists so UI updates without refetch
+        Object.keys(state.subtasksByParentId).forEach((pid) => {
+          const existing = state.subtasksByParentId[pid] || [];
+          const filtered = existing.filter(t => t.id !== deletedId);
+          // Assign back even if unchanged to be explicit; empty array is considered loaded
+          state.subtasksByParentId[pid] = filtered;
+        });
       })
       .addCase(deleteTaskAsync.rejected, (state, action) => {
         state.loading = false;
@@ -761,16 +893,21 @@ export const tasksSlice = createSlice({
         state.commentsError = payload?.error || (action.error.message ?? 'Failed to remove reaction');
       })
       // Subtasks reducers
-      .addCase(fetchSubtasksByParent.pending, (state) => {
+      .addCase(fetchSubtasksByParent.pending, (state, action) => {
         state.subtasksLoading = true;
+        const parentId = action.meta.arg as string;
+        state.inflightSubtaskParentIds[parentId] = true;
       })
       .addCase(fetchSubtasksByParent.fulfilled, (state, action) => {
         state.subtasksLoading = false;
         const { parentId, subtasks } = action.payload as { parentId: string; subtasks: Task[] };
         state.subtasksByParentId[parentId] = subtasks;
+        state.inflightSubtaskParentIds[parentId] = false;
       })
-      .addCase(fetchSubtasksByParent.rejected, (state) => {
+      .addCase(fetchSubtasksByParent.rejected, (state, action) => {
         state.subtasksLoading = false;
+        const parentId = (action.meta?.arg as string) ?? undefined;
+        if (parentId) state.inflightSubtaskParentIds[parentId] = false;
       });
   },
 });
