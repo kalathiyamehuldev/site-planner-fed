@@ -75,8 +75,11 @@ import {
 } from "@/redux/slices/timeTrackingSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import {
-  fetchAllTasksByCompany,
-  selectAllTasks,
+  fetchParentTasksByCompany,
+  fetchParentTasksByProject,
+  selectParentTasks,
+  selectParentProjectTasks,
+  Task,
 } from "@/redux/slices/tasksSlice";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -99,21 +102,13 @@ const TimeTracking = () => {
   const isTimerRunning = useAppSelector(selectIsTimerRunning);
   const runningTimeEntry = useAppSelector(selectRunningTimeEntry);
   const projects = useAppSelector(selectAllProjects);
-  const tasks = useAppSelector(selectAllTasks);
+  const tasks: Task[] = useAppSelector(selectParentTasks);
+  const projectTasks: Task[] = useAppSelector(selectParentProjectTasks);
   const currentUser = useAppSelector((state) => state.auth.user);
   const loading = useAppSelector(selectTimeTrackingLoading);
   const error = useAppSelector(selectTimeTrackingError);
   const pagination = useAppSelector(selectTimeTrackingPagination);
   const {hasPermission} = usePermission();
-  // Debug logging
-  console.log('TimeTracking Debug:', {
-    timeEntriesCount: timeEntries.length,
-    timeEntries,
-    loading,
-    error,
-    currentUser,
-    pagination
-  });
 
   // Local state
   const [selectedTimeRange, setSelectedTimeRange] = useState<
@@ -222,9 +217,37 @@ const TimeTracking = () => {
     const dateRange = getDateRange();
     dispatch(fetchTimeEntries(dateRange));
     dispatch(fetchProjects());
-    dispatch(fetchAllTasksByCompany());
+    dispatch(fetchParentTasksByCompany());
     dispatch(fetchTimeEntrySummary(dateRange));
   }, [dispatch]);
+
+  // Fetch project tasks when timer form project changes
+  useEffect(() => {
+    if (timerFormData.projectId) {
+      dispatch(fetchParentTasksByProject(timerFormData.projectId));
+    }
+  }, [timerFormData.projectId, dispatch]);
+
+  // Fetch project tasks when new time entry form project changes
+  useEffect(() => {
+    if (newTimeEntryFormData.projectId) {
+      dispatch(fetchParentTasksByProject(newTimeEntryFormData.projectId));
+    }
+  }, [newTimeEntryFormData.projectId, dispatch]);
+
+  // Fetch project tasks when edit form project changes
+  useEffect(() => {
+    if (editFormData.projectId) {
+      dispatch(fetchParentTasksByProject(editFormData.projectId));
+    }
+  }, [editFormData.projectId, dispatch]);
+
+  // Fetch project tasks when new time entry (legacy form) project changes
+  useEffect(() => {
+    if (newTimeEntry.projectId) {
+      dispatch(fetchParentTasksByProject(newTimeEntry.projectId));
+    }
+  }, [newTimeEntry.projectId, dispatch]);
   
   // Fetch data when time range changes
   useEffect(() => {
@@ -1410,6 +1433,7 @@ console.log("timeEntryData",timeEntryData);
                       setNewTimeEntry((prev) => ({
                         ...prev,
                         projectId: e.target.value || undefined,
+                        taskId: undefined,
                       }))
                     }
                   >
@@ -1443,17 +1467,11 @@ console.log("timeEntryData",timeEntryData);
                     }
                   >
                     <option value="">Select Task</option>
-                    {tasks
-                      .filter(
-                        (task) =>
-                          !newTimeEntry.projectId ||
-                          task.project?.id === newTimeEntry.projectId
-                      )
-                      .map((task) => (
-                        <option key={task.id} value={task.id}>
-                          {task.title}
-                        </option>
-                      ))}
+                    {projectTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.title}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
@@ -1552,7 +1570,7 @@ console.log("timeEntryData",timeEntryData);
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Hourly Rate ($)
+                  Hourly Rate (AED)
                 </label>
                 <input
                   type="number"
@@ -1630,7 +1648,10 @@ console.log("timeEntryData",timeEntryData);
               <Label htmlFor="edit-project">Project</Label>
               <Select
                 value={editFormData.projectId || ''}
-                onValueChange={(value) => handleEditFormChange('projectId', value)}
+                onValueChange={(value) => {
+                  handleEditFormChange('projectId', value);
+                  handleEditFormChange('taskId', '');
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select project" />
@@ -1655,13 +1676,11 @@ console.log("timeEntryData",timeEntryData);
                   <SelectValue placeholder="Select task" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tasks
-                    .filter((task) => !editFormData.projectId || task.project?.id === editFormData.projectId)
-                    .map((task) => (
-                      <SelectItem key={task.id} value={task.id}>
-                        {task.title}
-                      </SelectItem>
-                    ))}
+                  {projectTasks.map((task) => (
+                    <SelectItem key={task.id} value={task.id}>
+                      {task.title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1755,7 +1774,7 @@ console.log("timeEntryData",timeEntryData);
               <Label htmlFor="timer-project">Project</Label>
               <Select
                 value={timerFormData.projectId || ''}
-                onValueChange={(value) => setTimerFormData(prev => ({ ...prev, projectId: value }))}
+                onValueChange={(value) => setTimerFormData(prev => ({ ...prev, projectId: value, taskId: undefined }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a project" />
@@ -1780,9 +1799,7 @@ console.log("timeEntryData",timeEntryData);
                   <SelectValue placeholder="Select a task" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tasks
-                    .filter(task => !timerFormData.projectId || task.project?.id === timerFormData.projectId)
-                    .map((task) => (
+                  {projectTasks.map((task) => (
                     <SelectItem key={task.id} value={task.id}>
                       {task.title}
                     </SelectItem>
@@ -2049,9 +2066,7 @@ console.log("timeEntryData",timeEntryData);
                   <SelectValue placeholder="Select a task" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tasks
-                    .filter(task => !newTimeEntryFormData.projectId || task.project?.id === newTimeEntryFormData.projectId)
-                    .map((task) => (
+                  {projectTasks.map((task) => (
                     <SelectItem key={task.id} value={task.id}>
                       {task.title}
                     </SelectItem>

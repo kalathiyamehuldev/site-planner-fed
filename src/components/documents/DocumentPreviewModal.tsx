@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Document, fetchDocumentDetails, updateDocument, deleteDocument, downloadDocument, fetchFilePreview, selectFilePreview, selectPreviewLoading } from '@/redux/slices/documentsSlice';
 import { getProjectMembers, ProjectMember } from '@/redux/slices/projectsSlice';
-import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import { fetchParentTasksByProject, selectParentProjectTasks } from '@/redux/slices/tasksSlice';
 import usePermission from '@/hooks/usePermission';
 import { 
   fetchDocumentComments, 
@@ -91,7 +91,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const projectTasks = useAppSelector(selectProjectTasks);
+  const projectTasks = useAppSelector(selectParentProjectTasks);
   const documentsState = useAppSelector(state => state.documents);
   const filePreview = useAppSelector(selectFilePreview);
   const previewLoading = useAppSelector(selectPreviewLoading);
@@ -199,7 +199,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         
         // Fetch project tasks if document has project info but original document doesn't have projectId
         if (documentData.project?.id && !document?.projectId) {
-          dispatch(fetchTasksByProject(documentData.project.id));
+          dispatch(fetchParentTasksByProject(documentData.project.id));
           dispatch(fetchCommentProjectMembers(documentData.project.id));
         }
         // Fetch file preview if document has a fileId

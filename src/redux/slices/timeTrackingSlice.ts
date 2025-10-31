@@ -189,6 +189,11 @@ const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
   updatedAt: apiTimeEntry.updatedAt,
 });
 
+// Helper function to calculate total hours from time entries
+const calculateTotalHours = (timeEntries: TimeEntry[]): number => {
+  return timeEntries.reduce((total, entry) => total + (entry.duration || 0), 0);
+};
+
 const users = [
   { id: "user1", name: "Alex Jones", hourlyRate: 85 },
   { id: "user2", name: "Sarah Smith", hourlyRate: 75 },
@@ -383,6 +388,7 @@ interface TimeTrackingState {
   };
   selectedEntry: TimeEntry | null;
   summary: TimeEntrySummary | null;
+  totalHours: number; // Store total hours locally
   pagination: {
     total: number;
     page: number;
@@ -406,6 +412,7 @@ const initialState: TimeTrackingState = {
   },
   selectedEntry: null,
   summary: null,
+  totalHours: 0, // Initialize total hours
   pagination: {
     total: 0,
     page: 1,
@@ -456,6 +463,7 @@ export const timeTrackingSlice = createSlice({
       .addCase(fetchTimeEntries.fulfilled, (state, action) => {
         state.loading = false;
         state.timeEntries = action.payload.items;
+        state.totalHours = calculateTotalHours(action.payload.items);
         state.pagination = {
           total: action.payload.total,
           page: action.payload.page,
@@ -475,6 +483,7 @@ export const timeTrackingSlice = createSlice({
       .addCase(createTimeEntry.fulfilled, (state, action) => {
         state.loading = false;
         state.timeEntries.unshift(action.payload);
+        state.totalHours = calculateTotalHours(state.timeEntries);
         state.pagination.total += 1;
       })
       .addCase(createTimeEntry.rejected, (state, action) => {
@@ -491,6 +500,7 @@ export const timeTrackingSlice = createSlice({
         const index = state.timeEntries.findIndex(entry => entry.id === action.payload.id);
         if (index !== -1) {
           state.timeEntries[index] = action.payload;
+          state.totalHours = calculateTotalHours(state.timeEntries);
           if (state.selectedEntry?.id === action.payload.id) {
             state.selectedEntry = action.payload;
           }
@@ -508,6 +518,7 @@ export const timeTrackingSlice = createSlice({
       .addCase(deleteTimeEntry.fulfilled, (state, action) => {
         state.loading = false;
         state.timeEntries = state.timeEntries.filter(entry => entry.id !== action.payload);
+        state.totalHours = calculateTotalHours(state.timeEntries);
         if (state.selectedEntry?.id === action.payload) {
           state.selectedEntry = null;
         }
@@ -552,6 +563,7 @@ export const timeTrackingSlice = createSlice({
         };
         // Add the completed time entry to the list
         state.timeEntries.unshift(action.payload);
+        state.totalHours = calculateTotalHours(state.timeEntries);
         state.pagination.total += 1;
       })
       .addCase(stopTimer.rejected, (state, action) => {
@@ -572,6 +584,7 @@ export const timeTrackingSlice = createSlice({
         const index = state.timeEntries.findIndex(entry => entry.id === action.payload.id);
         if (index !== -1) {
           state.timeEntries[index] = action.payload;
+          state.totalHours = calculateTotalHours(state.timeEntries);
           if (state.selectedEntry?.id === action.payload.id) {
             state.selectedEntry = action.payload;
           }
@@ -612,5 +625,6 @@ export const selectTimeTrackingFilters = (state: RootState) => state.timeTrackin
 export const selectTimeEntrySummary = (state: RootState) => state.timeTracking.summary;
 export const selectRunningTimeEntry = (state: RootState) => state.timeTracking.activeTimer.timeEntry;
 export const selectIsTimerRunning = (state: RootState) => state.timeTracking.activeTimer.isRunning;
+export const selectTotalHours = (state: RootState) => state.timeTracking.totalHours;
 
 export default timeTrackingSlice.reducer;

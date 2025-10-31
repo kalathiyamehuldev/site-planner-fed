@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { selectUser } from '@/redux/slices/authSlice';
 import { 
   getProjectMembers, 
   selectProjectMembers, 
@@ -34,6 +35,7 @@ export const UserSelectionComponent: React.FC<UserSelectionComponentProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector(selectUser);
 
   // ✅ always fall back to an empty array so cmdk never receives undefined
   const projectMembers =
@@ -107,23 +109,29 @@ export const UserSelectionComponent: React.FC<UserSelectionComponentProps> = ({
 
       {selectedUserIds.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
-          {selectedUserIds.map((userId) => {
-            const member = projectMembers.find((m) => m.user.id === userId);
-            return (
-              <Badge key={userId} variant="secondary" className="px-2 py-1">
-                {member
-                  ? `${member.user.firstName} ${member.user.lastName}`
-                  : 'Unknown User'}
-                <button
-                  className="ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={(e) => handleRemoveUser(userId, e)}
-                  disabled={disabled}
-                >
-                  ×
-                </button>
-              </Badge>
-            );
-          })}
+          {selectedUserIds
+            // hide badge for logged-in user
+            .filter((userId) => userId !== currentUser?.id)
+            .map((userId) => {
+              const member = projectMembers.find((m) => m.user.id === userId);
+              // if member not found and it's the current user, skip rendering
+              if (!member && userId === currentUser?.id) return null;
+              const label = member
+                ? `${member.user.firstName} ${member.user.lastName}`
+                : 'Unknown User';
+              return (
+                <Badge key={userId} variant="secondary" className="px-2 py-1">
+                  {label}
+                  <button
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => handleRemoveUser(userId, e)}
+                    disabled={disabled}
+                  >
+                    ×
+                  </button>
+                </Badge>
+              );
+            })}
         </div>
       )}
     </div>

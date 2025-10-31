@@ -251,7 +251,7 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange,
 
             {/* Budget */}
             <div className="space-y-2">
-              <Label htmlFor="budget">Budget ($)</Label>
+              <Label htmlFor="budget">Budget (AED)</Label>
               <Input
                 id="budget"
                 type="number"

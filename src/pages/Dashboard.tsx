@@ -32,8 +32,8 @@ import { useNavigate } from "react-router-dom";
 import usePermission from "@/hooks/usePermission";
 import solar from "@solar-icons/react";
 import { 
-  fetchTimeEntrySummary, 
-  selectTimeEntrySummary 
+  fetchTimeEntries,
+  selectTotalHours 
 } from "@/redux/slices/timeTrackingSlice";
 import { formatDuration as formatHoursDuration } from "@/lib/timeUtils";
 
@@ -43,7 +43,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
-  const timeSummary = useAppSelector(selectTimeEntrySummary);
+  const totalHours = useAppSelector(selectTotalHours);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const { hasPermission, isSuperAdmin } = usePermission();
@@ -54,7 +54,13 @@ const Dashboard = () => {
   useEffect(() => {
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
-    dispatch(fetchTimeEntrySummary({}));
+    dispatch(fetchTimeEntries({})); // Fetch time entries to populate totalHours
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchProjects());
+    dispatch(fetchAllTasksByCompany());
+    dispatch(fetchTimeEntries({})); // Fetch time entries to populate totalHours
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
@@ -236,7 +242,7 @@ const Dashboard = () => {
             <StatCard
               icon={solar.Time.ClockCircle}
               label="Tasked Hours"
-              value={formatHoursDuration(timeSummary?.totalHours || 0)}
+              value={formatHoursDuration(totalHours)}
               trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.3s]"
               iconBgColor="#ff6b6b"

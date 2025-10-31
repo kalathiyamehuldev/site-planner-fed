@@ -919,7 +919,13 @@ export const {
 } = tasksSlice.actions;
 
 export const selectAllTasks = (state: RootState) => state.tasks.tasks;
+// Selector for parent tasks only from all company tasks - used for time tracking
+export const selectParentTasks = (state: RootState) => 
+  state.tasks.tasks.filter(task => !task.parentId);
 export const selectProjectTasks = (state: RootState) => state.tasks.projectTasks;
+// Selector for parent tasks only (tasks without parentId) - used for document task selection
+export const selectParentProjectTasks = (state: RootState) => 
+  state.tasks.projectTasks.filter(task => !task.parentId);
 export const selectSelectedTask = (state: RootState) => state.tasks.selectedTask;
 export const selectTaskById = (id: string) => (state: RootState) => 
   state.tasks.tasks.find(task => task.id === id);

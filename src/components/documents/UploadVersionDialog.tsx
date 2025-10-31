@@ -93,35 +93,31 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
     }
 
     setLoading(true);
-    try {
-      const result = await dispatch(uploadDocumentVersion({
-        id: document.id,
-        file: formData.file!,
-        versionNotes: formData.versionNotes || undefined,
-      }));
 
-      if (uploadDocumentVersion.rejected.match(result)) {
-        const errorMessage = result.payload as string;
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-        return;
-      }
+    const result = await dispatch(uploadDocumentVersion({
+      id: document.id,
+      file: formData.file!,
+      versionNotes: formData.versionNotes || undefined,
+    }));
 
+    if (uploadDocumentVersion.rejected.match(result)) {
+      const errorMessage = result.payload as string;
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } else if (uploadDocumentVersion.fulfilled.match(result)) {
+      toast({
+        title: 'Success',
+        description: 'Document version uploaded successfully',
+      });
       // Close dialog and call callback
       onOpenChange(false);
       onVersionUploaded?.();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create document version',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
   const handleCancel = () => {

@@ -18,7 +18,8 @@ import {
   uploadDocumentVersion
 } from '@/redux/slices/documentsSlice';
 import { getProjectMembers } from '@/redux/slices/projectsSlice';
-import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import { fetchParentTasksByProject, selectParentProjectTasks } from '@/redux/slices/tasksSlice';
+import { selectUser } from '@/redux/slices/authSlice';
 import usePermission from '@/hooks/usePermission';
 import {
   fetchDocumentComments,
@@ -38,12 +39,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
 import {
   Select,
   SelectContent,
@@ -58,7 +54,6 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import DeleteDocumentModal from '@/components/documents/DeleteDocumentModal';
 import {
-  MoreVertical,
   Edit3,
   Trash2,
   Copy,
@@ -114,7 +109,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const projectTasks = useAppSelector(selectProjectTasks);
+  const parentProjectTasks = useAppSelector(selectParentProjectTasks);
   const documentsState = useAppSelector(state => state.documents);
   const filePreview = useAppSelector(selectFilePreview);
   const previewLoading = useAppSelector(selectPreviewLoading);
@@ -122,6 +117,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const documentDetailsLoading = useAppSelector(selectDocumentDetailsLoading);
   const documentVersions = useAppSelector(selectDocumentVersions);
   const versionsLoading = useAppSelector(selectVersionsLoading);
+  const currentUser = useAppSelector(selectUser);
 
   // Initialize data when sidebar opens
   useEffect(() => {
@@ -141,6 +137,16 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
       // Fetch full document details for authoritative state
       dispatch(fetchDocumentDetails(document.id));
+
+      // Fetch parent tasks for the project
+      if (document.projectId) {
+        dispatch(fetchParentTasksByProject(document.projectId));
+      }
+
+      // Fetch project members for mentions
+      if (document.projectId) {
+        dispatch(fetchCommentProjectMembers(document.projectId));
+      }
     }
   }, [isOpen, document?.id, dispatch]);
   // Comments selectors
@@ -162,6 +168,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isVersionUploadOpen, setIsVersionUploadOpen] = useState(false);
+  const [isEditingTask, setIsEditingTask] = useState(false);
 
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -224,15 +231,19 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   };
 
   // Update local state when documentDetails from Redux changes
-
   useEffect(() => {
     if (documentDetails) {
       setDescription(documentDetails.description || '');
       setSelectedTaskId(documentDetails.taskId || '');
       setAccessType(documentDetails.accessType);
       setSelectedUserIds(documentDetails.userAccess?.map(access => access.userId) || []);
+      
+      // Fetch parent tasks for the project
+      if (documentDetails.projectId) {
+        dispatch(fetchParentTasksByProject(documentDetails.projectId));
+      }
     }
-  }, [documentDetails]);
+  }, [documentDetails, dispatch]);
 
   // Update local state when document prop changes (for name updates after rename)
   useEffect(() => {
@@ -565,7 +576,9 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
     setIsSubmittingReply(true);
     try {
-      const mentionedUserIds = replyMentionedUser ? [replyMentionedUser] : [];
+      // Extract all mentioned users from the reply content
+      const extractedUsers = extractMentionedUsers(replyContent);
+      const mentionedUserIds = extractedUsers.map(user => user.id);
 
       await dispatch(createComment({
         content: replyContent.trim(),
@@ -675,9 +688,12 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
     setCurrentTextarea(null);
   };
 
-  const filteredMembers = commentProjectMembers.filter(member =>
-    `${member.firstName} ${member.lastName}`.toLowerCase().includes(mentionQuery.toLowerCase())
-  );
+  const filteredMembers = commentProjectMembers.filter(member => {
+    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
+    const matchesQuery = fullName.includes(mentionQuery.toLowerCase());
+    const isNotCurrentUser = !currentUser || member.id !== currentUser.id;
+    return matchesQuery && isNotCurrentUser;
+  });
 
   const toggleReplyCollapse = (commentId: string) => {
     const newCollapsed = new Set(collapsedReplies);
@@ -692,13 +708,96 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const getUserInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  // Helper function to build comment hierarchy from flat structure
+  const buildCommentHierarchy = (flatComments: Comment[]): Comment[] => {
+    
+    // Check if comments already have replies populated (nested structure from API)
+    const hasNestedReplies = flatComments.some(comment => comment.replies && comment.replies.length > 0);
+    
+    // Count total comments vs comments that would be in nested structure
+    const topLevelComments = flatComments.filter(comment => !comment.parentId);
+    const replyComments = flatComments.filter(comment => comment.parentId);
+    
+    if (hasNestedReplies) {
+      // Count replies in nested structure
+      let nestedReplyCount = 0;
+      const countNestedReplies = (comments: Comment[]) => {
+        comments.forEach(comment => {
+          if (comment.replies && comment.replies.length > 0) {
+            nestedReplyCount += comment.replies.length;
+            countNestedReplies(comment.replies);
+          }
+        });
+      };
+      countNestedReplies(topLevelComments);
+      
+      // If nested structure is complete, use it; otherwise build from flat structure
+      if (nestedReplyCount >= replyComments.length) {
+        return topLevelComments;
+      }
+    }
+    
+    const commentMap = new Map<string, Comment>();
+    const rootComments: Comment[] = [];
+
+    // First pass: create a map of all comments and initialize replies array
+    flatComments.forEach(comment => {
+      commentMap.set(comment.id, { ...comment, replies: [] });
+    });
+
+    // Second pass: build the hierarchy
+    flatComments.forEach(comment => {
+      const commentWithReplies = commentMap.get(comment.id)!;
+      
+      if (comment.parentId) {
+        // This is a reply, add it to its parent's replies array
+        const parent = commentMap.get(comment.parentId);
+        if (parent) {
+          parent.replies = parent.replies || [];
+          parent.replies.push(commentWithReplies);
+        } else {
+          // Add orphaned replies to root level as fallback
+          rootComments.push(commentWithReplies);
+        }
+      } else {
+        // This is a root comment
+        rootComments.push(commentWithReplies);
+      }
+    });
+
+    // Sort root comments by creation date (newest first)
+    rootComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Sort replies within each comment by creation date (oldest first for replies)
+    const sortReplies = (comment: Comment) => {
+      if (comment.replies && comment.replies.length > 0) {
+        comment.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        comment.replies.forEach(sortReplies); // Recursively sort nested replies
+      }
+    };
+
+    rootComments.forEach(sortReplies);
+
+    // Debug: Print the complete hierarchy structure
+    const printHierarchy = (comments: Comment[], level = 0) => {
+      comments.forEach(comment => {
+        const indent = '  '.repeat(level);
+        if (comment.replies && comment.replies.length > 0) {
+          printHierarchy(comment.replies, level + 1);
+        }
+      });
+    };
+    printHierarchy(rootComments);
+    return rootComments;
+  };
   const renderComment = (comment: Comment, depth: number = 0) => {
     const isEditing = editingCommentId === comment.id;
     const isReplying = replyingToCommentId === comment.id;
-    const maxDepth = 3; // Limit nesting depth
+    const maxDepth = 5; // Allow deeper nesting for better hierarchy
 
     return (
-      <div key={comment.id} className={`space-y-2 ${depth > 0 ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
+      <div key={comment.id} className={`space-y-2 ${depth > 0 ? `ml-6 border-l-2 ${depth === 1 ? 'border-blue-200' : depth === 2 ? 'border-green-200' : 'border-gray-200'} pl-4` : ''}`}>
         <div className="flex items-start space-x-3">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="text-xs">
@@ -713,29 +812,51 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               <span className="text-xs text-gray-500">
                 {format(new Date(comment.createdAt), 'MMM dd, HH:mm')}
               </span>
-              {/* {depth > 0 && (
+              {depth > 0 && (
                 <Badge variant="outline" className="text-xs px-1 py-0">
                   Reply
                 </Badge>
-              )} */}
+              )}
             </div>
 
             {/* Comment Content */}
             {isEditing ? (
               <div className="space-y-2 relative">
-                <Textarea
-                  value={editingContent}
-                  onChange={(e) => handleTextareaChange(e.target.value, 'edit')}
-                  className="min-h-[60px] text-sm"
-                  placeholder="Edit your comment... (use @ to mention)"
-                />
+                <div className="relative">
+                  <Textarea
+                    value={editingContent}
+                    onChange={(e) => handleTextareaChange(e.target.value, 'edit')}
+                    className="min-h-[60px] text-sm"
+                    placeholder="Edit your comment... (use @ to mention)"
+                  />
+                  {showMentionDropdown && currentTextarea === 'edit' && (
+                    <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredMembers.length > 0 ? (
+                        filteredMembers.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => handleMentionSelect(member)}
+                          >
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{member.firstName} {member.lastName}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     size="sm"
                     onClick={() => handleSaveEdit(comment.id)}
                     disabled={isUpdatingComment || !editingContent.trim()}
                   >
-                    {isUpdatingComment ? 'Saving...' : 'Save'}
+                    {isUpdatingComment ? 'Saving..' : 'Save'}
                   </Button>
                   <Button
                     size="sm"
@@ -764,8 +885,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
               </div>
             )}
 
-            {/* Action Buttons */}
-            {!isEditing && (
+            {/* Action Buttons - Only show for comments by current user */}
+            {!isEditing && currentUser && comment.fromUser.id === currentUser.id && (
               <div className="flex items-center space-x-2 mt-2">
                 {depth < maxDepth && (
                   <Button
@@ -785,39 +906,64 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 >
                   <Edit3 className="h-3 w-3 mr-1" />
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-                    >
-                      <MoreVertical className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className="text-red-600 focus:text-red-600"
-                      disabled={isDeletingComment === comment.id}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      {isDeletingComment === comment.id ? 'Deleting...' : 'Delete'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => handleDeleteComment(comment.id)}
+                  disabled={isDeletingComment === comment.id}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  {/* {isDeletingComment === comment.id ? 'Deleting...' : 'Delete'} */}
+                </Button>
+              </div>
+            )}
+            
+            {/* Reply button for all users */}
+            {!isEditing && depth < maxDepth && (!currentUser || comment.fromUser.id !== currentUser.id) && (
+              <div className="flex items-center space-x-2 mt-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => handleStartReply(comment.id)}
+                >
+                  <Reply className="h-3 w-3 mr-1" />
+                </Button>
               </div>
             )}
 
             {/* Reply Form */}
             {isReplying && (
               <div className="mt-3 space-y-2 p-3 bg-gray-50 rounded-lg relative">
-                <Textarea
-                  value={replyContent}
-                  onChange={(e) => handleTextareaChange(e.target.value, 'reply')}
-                  placeholder="Write a reply... (use @ to mention)"
-                  className="min-h-[60px] text-sm"
-                />
+                <div className="relative">
+                  <Textarea
+                    value={replyContent}
+                    onChange={(e) => handleTextareaChange(e.target.value, 'reply')}
+                    placeholder="Write a reply... (use @ to mention)"
+                    className="min-h-[60px] text-sm"
+                  />
+                  {showMentionDropdown && currentTextarea === 'reply' && (
+                    <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredMembers.length > 0 ? (
+                        filteredMembers.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => handleMentionSelect(member)}
+                          >
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{member.firstName} {member.lastName}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     size="sm"
@@ -841,25 +987,34 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
         </div>
 
         {/* Render nested replies */}
-        {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
+        {comment.replies && comment.replies.length > 0 && (
           <div className="mt-2">
-            <div className="flex items-center space-x-2 mb-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
-                onClick={() => toggleReplyCollapse(comment.id)}
-              >
-                {collapsedReplies.has(comment.id) ? (
-                  <><ChevronDown className="h-3 w-3 mr-1" />Show {comment.replies.length} replies</>
-                ) : (
-                  <><ChevronUp className="h-3 w-3 mr-1" />Hide replies</>
-                )}
-              </Button>
-            </div>
+            {(() => {
+              return null;
+            })()}
+            {comment.replies.length > 1 && (
+              <div className="flex items-center space-x-2 mb-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => toggleReplyCollapse(comment.id)}
+                >
+                  {collapsedReplies.has(comment.id) ? (
+                    <><ChevronDown className="h-3 w-3 mr-1" />Show {comment.replies.length} replies</>
+                  ) : (
+                    <><ChevronUp className="h-3 w-3 mr-1" />Hide replies</>
+                  )}
+                </Button>
+              </div>
+            )}
             {!collapsedReplies.has(comment.id) && (
               <div>
-                {comment.replies.map((reply) => renderComment(reply, depth + 1))}
+                {(() => {
+                  return comment.replies.map((reply) => {
+                    return renderComment(reply, depth + 1);
+                  });
+                })()}
               </div>
             )}
           </div>
@@ -904,7 +1059,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
     // Use preview URL from API if available
     if (filePreview) {
-      const fileType = (filePreview.fileType || document?.files[0].fileType || '').toLowerCase();
+      const fileType = (filePreview.fileType || document?.files?.[0]?.fileType || '').toLowerCase();
 
       if (fileType.includes('pdf')) {
         return (
@@ -1134,7 +1289,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                 }
               }}>
                 <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
-                  {document.url && document.files[0].fileType?.toLowerCase().includes('image') ? (
+                  {document.url && document.files?.[0]?.fileType?.toLowerCase().includes('image') ? (
                     <img
                       src={document.url}
                       alt={document.name}
@@ -1361,24 +1516,162 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     onChange={setSelectedUserIds}
                     projectId={documentDetails?.projectId || document?.projectId || ''}
                   />
+                  
+                  {/* Show selected users */}
+                  {documentDetails?.userAccess && documentDetails.userAccess.length > 0 && (() => {
+                    const filtered = documentDetails.userAccess.filter((access) => {
+                      const currentId = currentUser?.id;
+                      const currentEmail = (currentUser as any)?.email;
+                      
+                      // Check if this access entry is for the current user
+                      const isCurrent = (access.userId && currentId && access.userId === currentId)
+                        || (access.user?.id && currentId && access.user.id === currentId)
+                        || (access.user?.email && currentEmail && access.user.email === currentEmail);
+                      
+                      // Only include if it's not the current user and has valid user data
+                      const hasValidUser = access.user && (access.user.firstName || access.user.lastName || access.user.name);
+                      return !isCurrent && hasValidUser;
+                    });
+                    
+                    if (filtered.length === 0) return null;
+                    
+                    return (
+                      <div className="mt-3">
+                        <Label className="text-xs font-medium text-blue-800 mb-2 block">Current Access:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {filtered.map((access) => {
+                            const label = access.user
+                              ? ((access.user.firstName && access.user.lastName)
+                                  ? `${access.user.firstName} ${access.user.lastName}`
+                                  : (access.user.firstName || access.user.lastName || access.user.name || access.user.email || 'Unknown User'))
+                              : 'Unknown User';
+                            
+                            return (
+                              <Badge key={access.userId} variant="secondary" className="text-xs">
+                                {label}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
 
             {/* Task association */}
-            {(document.taskId || documentDetails?.taskId) && (
-              <div className="p-4 border-b">
-                <h4 className="font-medium mb-3 text-gray-900">Associated Task</h4>
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Associated Task</h4>
+                {!isEditingTask ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingTask(true)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                ) : (
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <p className="text-sm font-medium text-blue-900">
-                      {projectTasks.find(task => task.id === (document.taskId || documentDetails?.taskId))?.title || 'Unknown Task'}
-                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingTask(false);
+                        // Reset to the current task ID from document details or document
+                        const currentTaskId = documentDetails?.taskId || document.taskId || '';
+                        setSelectedTaskId(currentTaskId);
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        handleSaveTaskAssociation();
+                        setIsEditingTask(false);
+                      }}
+                      disabled={isUpdating}
+                      className="h-8 px-3"
+                    >
+                      {isUpdating ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
+                      ) : (
+                        <span className="text-sm">Save</span>
+                      )}
+                    </Button>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+
+              {isEditingTask ? (
+                <Select
+                  value={selectedTaskId || "no-task"}
+                  onValueChange={(value) => {
+                    setSelectedTaskId(value === "no-task" ? "" : value);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a task..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-task">No task</SelectItem>
+                    {parentProjectTasks && parentProjectTasks.length > 0 ? (
+                      parentProjectTasks.map((task) => (
+                        <SelectItem key={task.id} value={task.id}>
+                          <div className="flex items-center gap-2">
+                            {/* <div className={cn(
+                              "w-2 h-2 rounded-full",
+                              task.priority === 'URGENT' ? 'bg-red-500' :
+                              task.priority === 'HIGH' ? 'bg-orange-500' :
+                              task.priority === 'MEDIUM' ? 'bg-yellow-500' : 'bg-green-500'
+                            )}></div> */}
+                            <span className="truncate">{task.title}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-tasks-available" disabled>
+                        No tasks available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div 
+                  className="bg-blue-50 p-3 rounded-lg border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                  onDoubleClick={() => setIsEditingTask(true)}
+                >
+                  {(document.taskId || documentDetails?.taskId) ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <p className="text-sm font-medium text-blue-900">
+                        {(() => {
+                          const taskId = document.taskId || documentDetails?.taskId;
+                          const task = parentProjectTasks.find(task => task.id === taskId);
+                          if (task) {
+                            return task.title;
+                          } else if (parentProjectTasks.length === 0) {
+                            return 'Loading task...';
+                          } else {
+                            return 'Task not found';
+                          }
+                        })()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <p className="text-sm text-gray-600 italic">No task associated. Double-click to assign.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Comments section */}
             <Card className="flex-1 flex flex-col min-h-0">
@@ -1472,7 +1765,15 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {comments.filter(comment => !comment.parentId).map((comment) => renderComment(comment))}
+                          {(() => {
+                            const hierarchicalComments = buildCommentHierarchy(comments);
+                            // Fallback: if no root comments found, show all comments
+                            if (hierarchicalComments.length === 0 && comments.length > 0) {
+                              return comments.map((comment) => renderComment(comment));
+                            }
+                            
+                            return hierarchicalComments.map((comment) => renderComment(comment));
+                          })()}
                         </div>
                       )}
                     </div>

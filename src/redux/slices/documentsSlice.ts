@@ -46,6 +46,8 @@ export interface ApiDocument {
       id: string;
       name: string;
       email: string;
+      firstName?: string;
+      lastName?: string;
     };
   }[];
   project?: {
@@ -113,6 +115,8 @@ export interface Document {
       id: string;
       name: string;
       email: string;
+      firstName?: string;
+      lastName?: string;
     };
   }[];
 }
@@ -161,11 +165,25 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
   // Get the latest file (first in array since backend orders by version desc)
   const latestFile = apiDoc.files && apiDoc.files.length > 0 ? apiDoc.files[0] : null;
   
+  // Create a fallback file object if no files are present but we have basic file info
+  const fallbackFile = !latestFile && (apiDoc.fileType || apiDoc.fileUrl) ? {
+    id: `fallback-${apiDoc.id}`,
+    fileName: fileName,
+    fileUrl: apiDoc.fileUrl || '#',
+    fileType: apiDoc.fileType || 'unknown',
+    fileSize: 0, // We don't have size info in this case
+    version: 1,
+    createdAt: new Date(apiDoc.createdAt)
+  } : null;
+
+  const effectiveFile = latestFile || fallbackFile;
+  const filesArray = apiDoc.files && apiDoc.files.length > 0 ? apiDoc.files : (fallbackFile ? [fallbackFile] : []);
+
   return {
     id: apiDoc.id,
     name: fileName,
-    type: latestFile ? latestFile.fileType?.toUpperCase() : 'FILE',
-    size: latestFile ? `${Math.round(latestFile.fileSize / 1024)} KB` : '0 KB',
+    type: effectiveFile ? effectiveFile.fileType?.toUpperCase() : 'FILE',
+    size: effectiveFile && effectiveFile.fileSize > 0 ? `${Math.round(effectiveFile.fileSize / 1024)} KB` : '0 KB',
     date: new Date(apiDoc.createdAt).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -179,19 +197,19 @@ const transformApiDocument = (apiDoc: ApiDocument): Document => {
     folder: apiDoc.folder?.name || '',
     userId: '', // Will be populated from user data
     user: '', // Will be populated from user data
-    category: getCategoryFromFileType(apiDoc.fileType || ''),
+    category: getCategoryFromFileType(apiDoc.fileType || effectiveFile?.fileType || ''),
     description: apiDoc.description || '',
     tags: [],
     thumbnail: null,
-    url: latestFile?.fileUrl || apiDoc.fileUrl || '#',
-    version: latestFile?.version || 1,
+    url: effectiveFile?.fileUrl || apiDoc.fileUrl || '#',
+    version: effectiveFile?.version || 1,
     isShared: false,
     createdAt: apiDoc.createdAt,
     updatedAt: apiDoc.updatedAt,
-    fileId: latestFile?.id, // Extract file ID for download
+    fileId: effectiveFile?.id, // Extract file ID for download
     accessType: apiDoc.accessType,
     userAccess: apiDoc.userAccess,
-    files: apiDoc.files || []
+    files: filesArray
   };
 };
 
@@ -262,11 +280,11 @@ export const fetchDocumentDetails = createAsyncThunk(
   'documents/fetchDocumentDetails',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/documents/${id}`);
-      console.log("3");
+      const response: ApiResponse = await api.get(`/documents/${id}`);
+
       
-      if (response.data.status === 'error') {
-        return rejectWithValue(response.data.error || response.data.message || 'Failed to fetch document details');
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to fetch document details');
       }
       
       return response.data;
@@ -321,32 +339,24 @@ export const createDocument = createAsyncThunk(
         return rejectWithValue('No document data received');
       }
       
-      // Check if the response indicates a conflict
-      if (response.data.conflict) {
-        console.log('Conflict detected in API response:', response.data);
-        console.log('Existing document from API:', response.data.existingDocument);
+      // Check if the response indicates a conflict (this would be in response.data for conflict responses)
+      if (response.data && typeof response.data === 'object' && 'conflict' in response.data) {
         const conflictData = {
           conflict: true,
           existingDocument: response.data.existingDocument,
           message: response.data.message || 'Document name conflict detected'
         };
-        console.log('Conflict data to be rejected:', conflictData);
         return rejectWithValue(conflictData);
       }
       
-      // For successful creation, the document is directly in response.data
-      console.log('Successful document creation, response.data:', response.data);
-      
       // Add validation to ensure we have valid document data
       if (!response.data || typeof response.data !== 'object') {
-        console.error('Invalid response data structure:', response.data);
         return rejectWithValue('Invalid document data received from API');
       }
       
       // Check if response.data has the required fields for a document
       const resdocumentData = response.data as any;
       if (!resdocumentData.id || !resdocumentData.name) {
-        console.error('Missing required document fields:', resdocumentData);
         return rejectWithValue('Invalid document data received from API');
       }
       
@@ -556,16 +566,16 @@ export const replaceDocument = createAsyncThunk(
         formData.append('notes', notes);
       }
 
-      const response = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/replace`, formData, {
+      const response: ApiResponse<ApiDocument> = await api.post(`/documents/${id}/replace`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      if (response.data.status === 'success' && response.data.data) {
-        return transformApiDocument(response.data.data);
+      if (response.status === 'success' && response.data) {
+        return transformApiDocument(response.data);
       } else {
-        return rejectWithValue(response.data.message || 'Failed to replace document');
+        return rejectWithValue(response.message || 'Failed to replace document');
       }
     } catch (error: any) {
       console.error('Error replacing document:', error);
@@ -584,13 +594,12 @@ export const uploadDocumentVersion = createAsyncThunk(
         formData.append('versionNotes', versionNotes);
       }
 
-      const axiosRes = await api.post<ApiResponse<ApiDocument>>(`/documents/${id}/versions`, formData, {
+      const apiRes: ApiResponse<ApiDocument> = await api.post(`/documents/${id}/versions`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      const apiRes = axiosRes.data;
       if (apiRes.status === 'success' && apiRes.data) {
         return transformApiDocument(apiRes.data);
       }

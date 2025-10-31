@@ -12,7 +12,7 @@ import {
   fetchDocumentDetails
 } from '@/redux/slices/documentsSlice';
 import { fetchProjects, selectAllProjects } from '@/redux/slices/projectsSlice';
-import { fetchTasksByProject, selectProjectTasks } from '@/redux/slices/tasksSlice';
+import { fetchParentTasksByProject, selectParentProjectTasks } from '@/redux/slices/tasksSlice';
 import {
   fetchFolders,
   fetchFolderById,
@@ -75,6 +75,7 @@ import { UploadDocumentDialog } from '@/components/documents/UploadDocumentDialo
 import { UploadVersionDialog } from '@/components/documents/UploadVersionDialog';
 import DocumentSidebar from '@/components/documents/DocumentSidebar';
 import usePermission from '@/hooks/usePermission';
+import { formatFileSize, formatFileType } from '@/utils/helper';
 
 // Add CSS animations
 const styles = `
@@ -101,16 +102,6 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleSheet);
 }
 
-// Utility function for formatting file size
-const formatFileSize = (bytes: number | string): string => {
-  const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
-  if (size === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(size) / Math.log(k));
-  return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
 // Utility function for formatting date
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -119,30 +110,6 @@ const formatDate = (dateString: string): string => {
     day: 'numeric',
     year: 'numeric'
   });
-};
-
-// Utility function for formatting file type
-const formatFileType = (type: string): string => {
-  if (!type) return 'Unknown';
-
-  const typeMap: { [key: string]: string } = {
-    'pdf': 'PDF Document',
-    'docx': 'Word Document',
-    'doc': 'Word Document',
-    'xlsx': 'Excel Spreadsheet',
-    'xls': 'Excel Spreadsheet',
-    'pptx': 'PowerPoint Presentation',
-    'ppt': 'PowerPoint Presentation',
-    'jpg': 'JPEG Image',
-    'jpeg': 'JPEG Image',
-    'png': 'PNG Image',
-    'gif': 'GIF Image',
-    'zip': 'ZIP Archive',
-    'rar': 'RAR Archive',
-    'txt': 'Text File'
-  };
-
-  return typeMap[type.toLowerCase()] || type.toUpperCase() + ' File';
 };
 
 // File type categories for filtering
@@ -165,7 +132,7 @@ const FolderView: React.FC = () => {
   const { hasPermission } = usePermission();
   const documents = useAppSelector(selectAllDocuments);
   const projects = useAppSelector(selectAllProjects);
-  const tasks = useAppSelector(selectProjectTasks);
+  const tasks = useAppSelector(selectParentProjectTasks);
   const folders = useAppSelector(selectAllFolders);
   const folderTree = useAppSelector(selectFolderTree);
   const documentsLoading = useAppSelector((state) => state.documents.loading);
@@ -205,22 +172,12 @@ const FolderView: React.FC = () => {
 
   // Helper functions for getting names
   const getTaskName = (document) => {
+    if (!document.taskId) return 'No Task';
     const task = tasks.find(t => t.id === document.taskId);
     return task ? task.title : 'Unknown Task';
   };
 
-  const formatFileSize = (bytes: number | string): string => {
-    console.log("bytes", bytes);
-    
-    const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
-    console.log("Size",size);
-    
-    if (size === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(size) / Math.log(k));
-    return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+
   const getProjectName = (document: Document) => {
     return projects.find(p => p.id === document.projectId)?.title || 'No Project';
   };
@@ -301,7 +258,15 @@ const FolderView: React.FC = () => {
   }, [folderTree, folderId, selectedFolder, folders]);
 
   const folderDocuments = useMemo(() => {
-    return currentFolder?.documents || documents.filter(doc => doc.folderId === folderId);
+    // Always prefer documents from Redux store (which has full data) over folder tree documents (which may have limited data)
+    const reduxDocuments = documents.filter(doc => doc.folderId === folderId);
+
+    // Only use folder tree documents if Redux documents are empty
+    if (reduxDocuments.length > 0) {
+      return reduxDocuments;
+    }
+
+    return currentFolder?.documents || [];
   }, [currentFolder, documents, folderId]);
 
   const subFolders = useMemo(() => {
@@ -321,13 +286,19 @@ const FolderView: React.FC = () => {
 
     // Apply task filter
     if (selectedTask !== 'All') {
-      filtered = filtered.filter(doc => doc.taskId === selectedTask);
+      filtered = filtered.filter(doc => {
+        // Handle case where document has no task assigned
+        if (!doc.taskId && selectedTask === 'no-task') {
+          return true;
+        }
+        return doc.taskId === selectedTask;
+      });
     }
 
     // Apply file type filter
     if (selectedFileType !== 'All') {
       filtered = filtered.filter(doc => {
-        const fileExtension = doc.files[0].fileType.toUpperCase();
+        const fileExtension = doc.files?.[0]?.fileType?.toUpperCase();
         return fileExtension === selectedFileType;
       });
     }
@@ -351,19 +322,29 @@ const FolderView: React.FC = () => {
     if (folderId) {
       setInitialLoading(true);
 
-      // Always fetch folder by ID first to get project ID, then fetch tree
+      // Always fetch folder by ID first to get project ID, then fetch tree and documents
       dispatch(fetchFolderById(folderId)).then((action) => {
         if (action.payload && typeof action.payload === 'object' && 'projectId' in action.payload) {
           const folder = action.payload as FolderType;
           if (folder.projectId) {
-            dispatch(fetchFolderTree(folder.projectId)).then(() => {
+            // Fetch both folder tree and documents in parallel
+            Promise.all([
+              dispatch(fetchFolderTree(folder.projectId)),
+              dispatch(fetchDocumentsByFolder(folderId))
+            ]).then(() => {
               setInitialLoading(false);
             });
           } else {
-            setInitialLoading(false);
+            // Still fetch documents even if no project ID
+            dispatch(fetchDocumentsByFolder(folderId)).then(() => {
+              setInitialLoading(false);
+            });
           }
         } else {
-          setInitialLoading(false);
+          // Fallback: still try to fetch documents
+          dispatch(fetchDocumentsByFolder(folderId)).then(() => {
+            setInitialLoading(false);
+          });
         }
       });
 
@@ -385,7 +366,7 @@ const FolderView: React.FC = () => {
   useEffect(() => {
     const projectId = getProjectId();
     if (projectId) {
-      dispatch(fetchTasksByProject(projectId));
+      dispatch(fetchParentTasksByProject(projectId));
     }
   }, [dispatch, getProjectId, folderId]);
 
@@ -628,14 +609,14 @@ const FolderView: React.FC = () => {
     try {
       const result = await dispatch(downloadDocument(document.id));
 
-      if (downloadDocument.fulfilled.match(result)) {
-        toast({
-          title: 'Success',
-          description: 'Document downloaded successfully',
-        });
-      } else {
-        throw new Error(result.payload as string || 'Download failed');
-      }
+      // if (downloadDocument.fulfilled.match(result)) {
+      //   toast({
+      //     title: 'Success',
+      //     description: 'Document downloaded successfully',
+      //   });
+      // } else {
+      //   throw new Error(result.payload as string || 'Download failed');
+      // }
     } catch (error: any) {
       console.error('Download error:', error);
       toast({
@@ -922,6 +903,7 @@ const FolderView: React.FC = () => {
                 label: 'Tasks',
                 options: [
                   { value: 'All', label: 'All Tasks' },
+                  { value: 'no-task', label: 'No Task Assigned' },
                   ...tasks.map(task => ({ value: task.id, label: task.title }))
                 ]
               },
@@ -998,12 +980,12 @@ const FolderView: React.FC = () => {
             {filteredFolders.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 text-foreground">Folders</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {filteredFolders.map((folder, index) => (
                     <div
                       key={folder.id}
                       className={cn(
-                        "relative flex flex-col p-3 cursor-pointer group",
+                        "relative flex flex-col p-4 cursor-pointer group",
                         "opacity-0 animate-scale-in bg-gray-50 rounded-lg",
                         "border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
                         "h-24 w-full transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden"
@@ -1084,7 +1066,7 @@ const FolderView: React.FC = () => {
             {filteredDocuments.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {filteredDocuments.map((doc, index) => (
                     <div
                       key={doc.id}
@@ -1103,110 +1085,106 @@ const FolderView: React.FC = () => {
                         setShowDocumentPreview(true);
                       }}
                     >
-                      <div className="flex items-center justify-between h-full">
-                        <div className="flex items-center flex-1 min-w-0 pr-2">
-                          <div className="w-10 h-10 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
-                            {getFileIcon(doc.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate text-sm" title={doc.name}>
+                      <div className="flex flex-col h-full">
+                        {/* Header with file icon, name and menu */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center flex-1 min-w-0">
+                            <div className="w-8 h-8 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-2 flex-shrink-0">
+                              {getFileIcon(doc.files?.[0]?.fileType || doc.type)}
+                            </div>
+                            <p className="font-medium truncate text-sm leading-tight" title={doc.name}>
                               {doc.name}
                             </p>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Calendar size={12} />
-                                <span>{formatDate(doc.files[0]?.updatedAt ? new Date(doc.files[0].updatedAt).toISOString() : doc.updatedAt)}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <File size={12} />
-                                <span className="uppercase font-medium">{doc?.files?.[0]?.fileType || 'N/A'}</span>
-                              </div>
-                              {doc.files[0].fileSize && (
-                                <div className="flex items-center gap-1">
-                                  <span className="font-medium">{formatFileSize(doc.files[0].fileSize)}</span>
-                                </div>
-                              )}
-                              {doc?.files?.[0]?.version && doc.files[0].version > 1 && (
-                                <div className="flex items-center gap-1">
-                                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
-                                    v{doc.files[0].version}
-                                  </span>
-                                </div>
-                              )}
-                              {doc.accessType && (
-                                <div className="flex items-center gap-1">
-                                  {doc.accessType === 'SELECTED_USERS' ? (
-                                    <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
-                                      Restricted
-                                    </span>
-                                  ) : (
-                                    <span className="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
-                                      Everyone
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
                           </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200 transition-colors duration-150 flex-shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical size={14} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadDocument(doc);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download
+                              </DropdownMenuItem>
+                              {hasPermission('documents', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDocument(doc);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Rename
+                                </DropdownMenuItem>)}
+                              {hasPermission('documents', 'update') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCreateVersion(doc);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  Create Version
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission('documents', 'delete') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDocumentFile(doc.id);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className="text-gray-400 hover:text-gray-600 p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadDocument(doc);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              Download
-                            </DropdownMenuItem>
-                            {hasPermission('documents', 'update') && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditDocument(doc);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Edit3 className="mr-2 h-4 w-4" />
-                                Rename
-                              </DropdownMenuItem>)}
-                            {hasPermission('documents', 'update') && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCreateVersion(doc);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Upload className="mr-2 h-4 w-4" />
-                                Create Version
-                              </DropdownMenuItem>
+                        {/* File details */}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                          <span className="uppercase font-medium">
+                            {doc?.files?.[0]?.fileType || doc.type || 'FILE'}
+                          </span>
+                          {(doc.files?.[0]?.fileSize || doc.size !== '0 KB') && (
+                            <span className="font-medium">
+                              {doc.files?.[0]?.fileSize ? formatFileSize(doc.files[0].fileSize) : doc.size}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Bottom row with date and badges */}
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(doc.files?.[0]?.updatedAt ? new Date(doc.files[0].updatedAt).toISOString() : doc.updatedAt)}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {((doc?.files?.[0]?.version && doc.files[0].version > 1) || (doc.version && doc.version > 1)) && (
+                              <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                v{doc?.files?.[0]?.version || doc.version || 1}
+                              </span>
                             )}
-                            {hasPermission('documents', 'delete') && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteDocumentFile(doc.id);
-                                }}
-                                className="cursor-pointer text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                            {doc.accessType === 'SELECTED_USERS' && (
+                              <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                                Restricted
+                              </span>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1342,7 +1320,7 @@ const FolderView: React.FC = () => {
                         }}
                       >
                         <div className="col-span-5 flex items-center gap-3 min-w-0">
-                          {getFileIcon(document.files[0].fileType)}
+                          {getFileIcon(document.files?.[0]?.fileType || document.type)}
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate group-hover:text-primary transition-colors">
                               {document.name}
@@ -1360,22 +1338,23 @@ const FolderView: React.FC = () => {
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span>{formatFileType(document.files[0].fileType || '')}</span>
-                              {document.files[0].version > 1 && (
+                              <span>{formatFileType(document.files?.[0]?.fileType || document.type || '')}</span>
+                              {((document.files?.[0]?.version && document.files[0].version > 1) || (document.version && document.version > 1)) && (
                                 <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
-                                  v{document.files[0].version}
+                                  v{document.files?.[0]?.version || document.version || 1}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs">{formatFileSize(document.files[0].fileSize || 0)}</div>
+                            <div className="text-xs">
+                              {document.files?.[0]?.fileSize ? formatFileSize(document.files[0].fileSize) : document.size}
+                            </div>
                           </div>
                         </div>
                         <div className="col-span-2 flex items-center text-sm text-muted-foreground">
                           <div>
                             <div>{formatDate(document.files?.[0]?.updatedAt ? new Date(document.files[0].updatedAt).toISOString() : document.updatedAt)}</div>
                             <div className="text-xs">
-                              {document.files?.[0]?.createdAt ? 'File uploaded' : 'Document created'} 
-                              {/* //here */}
+                              {document.files?.[0]?.createdAt ? 'File uploaded' : 'Document created'}
                             </div>
                           </div>
                         </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import {
-  fetchTasksByProject,
-  selectProjectTasks,
+  fetchParentTasksByProject,
+  selectParentProjectTasks,
 } from '@/redux/slices/tasksSlice';
 import {
   createDocument,
@@ -101,7 +101,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
   try {
     const dispatch = useAppDispatch();
     const { toast } = useToast();
-    const projectTasks = useAppSelector(selectProjectTasks);
+    const projectTasks = useAppSelector(selectParentProjectTasks);
     const project = useAppSelector(selectSelectedProject);
     const projects = useAppSelector(selectAllProjects);
     const documentConflict = useAppSelector(selectDocumentConflict);
@@ -152,7 +152,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       
       const currentProjectId = projectId || formData.projectId;
       if (open && currentProjectId) {
-        dispatch(fetchTasksByProject(currentProjectId));
+        dispatch(fetchParentTasksByProject(currentProjectId));
       }
     }, [open, projectId, formData.projectId, dispatch, hasPermission, resource, toast, onOpenChange]);
 
@@ -662,7 +662,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                       type="file"
                       onChange={handleFileChange}
                       className={formErrors.file ? 'border-red-500' : ''}
-                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.csv,.xml,.webp,.svg,.zip"
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.csv,.xml,.webp,.svg,.zip,.xlsx"
                     />
                     <Upload className="h-4 w-4 text-muted-foreground" />
                   </div>
