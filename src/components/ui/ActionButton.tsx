@@ -14,7 +14,7 @@ interface ActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   size?: ActionButtonSize;
 }
 
-export const ActionButton: React.FC<ActionButtonProps> = ({
+export const ActionButton = React.forwardRef<HTMLButtonElement, ActionButtonProps>(({
   text,
   variant = "primary",
   leftIcon,
@@ -24,7 +24,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   motion = "subtle",
   size = "m",
   ...props
-}) => {
+}, ref) => {
   const hasLeftIcon = !!leftIcon;
   const motionClasses: Record<ActionButtonMotion, string> = {
     subtle: "hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]",
@@ -35,6 +35,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 
   return (
     <button
+      ref={ref}
       className={cn(
         "app-btn transition-all duration-200",
         `app-btn--${size}`,
@@ -52,6 +53,8 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       {rightIcon ? <span className="app-btn__icon-right">{rightIcon}</span> : null}
     </button>
   );
-};
+});
+
+ActionButton.displayName = "ActionButton";
 
 export default ActionButton;

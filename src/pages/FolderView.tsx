@@ -41,6 +41,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -1492,6 +1493,9 @@ const FolderView: React.FC = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Rename Document</DialogTitle>
+                <DialogDescription>
+                  Enter a new name for the document.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>

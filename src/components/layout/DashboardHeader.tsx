@@ -77,18 +77,18 @@ const DashboardHeader = ({
   };
 
   return (
-    // Hide on mobile since AppSidebar provides MobileHeader, show on desktop
-    <div className="hidden md:flex items-center justify-between mb-4 sm:mb-10 w-full">
-      {/* Page Title */}
+    // Show title on all devices, profile only on desktop
+    <div className="flex items-center justify-between mb-4 sm:mb-10 w-full">
+      {/* Page Title - Always visible */}
       <div className="flex items-center gap-1 sm:gap-2 text-gray-500 min-w-0 flex-1">
         <h1 className="typography-common font-semibold leading-[100%] text-gray-900">
           {title}
         </h1>
       </div>
 
-      {/* Right side - User Profile (only show if showProfile is true) */}
+      {/* Right side - User Profile (only show if showProfile is true and on desktop) */}
       {showProfile && (
-        <div className="flex-shrink-0 ml-2">
+        <div className="hidden md:flex flex-shrink-0 ml-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

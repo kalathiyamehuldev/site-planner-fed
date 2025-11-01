@@ -1,5 +1,5 @@
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
@@ -920,12 +920,16 @@ export const {
 
 export const selectAllTasks = (state: RootState) => state.tasks.tasks;
 // Selector for parent tasks only from all company tasks - used for time tracking
-export const selectParentTasks = (state: RootState) => 
-  state.tasks.tasks.filter(task => !task.parentId);
+export const selectParentTasks = createSelector(
+  [(state: RootState) => state.tasks.tasks],
+  (tasks) => tasks.filter(task => !task.parentId)
+);
 export const selectProjectTasks = (state: RootState) => state.tasks.projectTasks;
 // Selector for parent tasks only (tasks without parentId) - used for document task selection
-export const selectParentProjectTasks = (state: RootState) => 
-  state.tasks.projectTasks.filter(task => !task.parentId);
+export const selectParentProjectTasks = createSelector(
+  [(state: RootState) => state.tasks.projectTasks],
+  (projectTasks) => projectTasks.filter(task => !task.parentId)
+);
 export const selectSelectedTask = (state: RootState) => state.tasks.selectedTask;
 export const selectTaskById = (id: string) => (state: RootState) => 
   state.tasks.tasks.find(task => task.id === id);
@@ -944,11 +948,17 @@ export const selectTasksByAssignee = (assigneeId: string) => (state: RootState) 
   state.tasks.tasks.filter(task => task.member?.id === assigneeId);
 
 // Comments selectors
-export const selectCommentsByTaskId = (taskId: string) => (state: RootState) => state.tasks.commentsByTaskId[taskId] || [];
+export const selectCommentsByTaskId = (taskId: string) => createSelector(
+  [(state: RootState) => state.tasks.commentsByTaskId[taskId]],
+  (comments) => comments || []
+);
 export const selectCommentsLoading = (state: RootState) => state.tasks.commentsLoading;
 export const selectCommentsError = (state: RootState) => state.tasks.commentsError;
 // Subtasks selectors
-export const selectSubtasksByParentId = (parentId: string) => (state: RootState) => state.tasks.subtasksByParentId[parentId] || [];
+export const selectSubtasksByParentId = (parentId: string) => createSelector(
+  [(state: RootState) => state.tasks.subtasksByParentId[parentId]],
+  (subtasks) => subtasks || []
+);
 export const selectSubtasksLoading = (state: RootState) => state.tasks.subtasksLoading;
 
 export default tasksSlice.reducer;

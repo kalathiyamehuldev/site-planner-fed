@@ -46,10 +46,10 @@ const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-5/6 sm:max-w-[500px]">
         <DialogHeader>
-          <div className="flex items-center space-x-2">
+          <DialogTitle className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <DialogTitle>Document Name Conflict</DialogTitle>
-          </div>
+            <span>Document Name Conflict</span>
+          </DialogTitle>
           <DialogDescription>
             A document with the name "{documentName}" already exists in this location.
             How would you like to proceed?

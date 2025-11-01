@@ -33,6 +33,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -1622,6 +1623,9 @@ console.log("timeEntryData",timeEntryData);
           <DialogContent className="w-5/6 sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Edit Time Entry</DialogTitle>
+              <DialogDescription>
+                Modify the details of your time entry.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
@@ -1766,6 +1770,9 @@ console.log("timeEntryData",timeEntryData);
         <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Start Timer</DialogTitle>
+            <DialogDescription>
+              Start tracking time for a project or task.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
@@ -1868,6 +1875,9 @@ console.log("timeEntryData",timeEntryData);
         <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Timer Stopped</DialogTitle>
+            <DialogDescription>
+              Choose whether to save or discard this time entry.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
@@ -1922,6 +1932,9 @@ console.log("timeEntryData",timeEntryData);
         <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Stop Timer</DialogTitle>
+            <DialogDescription>
+              Confirm stopping the timer and saving your time entry.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
@@ -1966,6 +1979,9 @@ console.log("timeEntryData",timeEntryData);
         <DialogContent className="w-5/6 sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Time Entry</DialogTitle>
+            <DialogDescription>
+              Create a new time entry for a project and task.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-3 py-3">

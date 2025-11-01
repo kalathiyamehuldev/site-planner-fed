@@ -21,6 +21,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -987,6 +988,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   {document.name}
                 </DialogTitle>
               )}
+              <DialogDescription className="sr-only">
+                Document preview and details
+              </DialogDescription>
               <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
