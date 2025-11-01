@@ -63,7 +63,7 @@ const KanbanBoard = ({
     // { id: "CANCELLED", title: "Cancelled" },
   ];
 
-  // Filter to show only subtasks (tasks with parentId)
+  // Filter to show only subtasks (tasks with parentId) for Kanban view
   const subtasks = tasks.filter(task => task.parentId);
   
   const tasksByStatus = subtasks.reduce((acc: Record<string, any[]>, task) => {
@@ -78,7 +78,12 @@ const KanbanBoard = ({
       <GlassCard className={cn("p-8 text-center", className)}>
         <div className="text-3xl mb-4">✨</div>
         <h3 className="text-xl font-medium mb-2">No subtasks found</h3>
-        <p className="text-muted-foreground">Create subtasks within parent tasks to see them here.</p>
+        <p className="text-muted-foreground">
+          {tasks.length > 0 
+            ? "The filtered tasks don't have subtasks to display in Kanban view." 
+            : "No tasks match the current filters."
+          }
+        </p>
       </GlassCard>
     );
   }

@@ -119,7 +119,7 @@ export const fetchProjects = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Projects fetched successfully');
+      //toast.success(message || 'Projects fetched successfully');
       const items = (data?.items ?? response?.items ?? data ?? []);
       return (items || []).map(transformApiProject);
     } catch (error: any) {
@@ -143,7 +143,7 @@ export const fetchProjectById = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Project fetched successfully');
+      //toast.success(message || 'Project fetched successfully');
       const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
       return transformApiProject(project);
     } catch (error: any) {
@@ -173,7 +173,7 @@ export const createProject = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Project created successfully');
+      //toast.success(message || 'Project created successfully');
       const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
       return transformApiProject(project);
     } catch (error: any) {
@@ -197,7 +197,7 @@ export const updateProjectAsync = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Project updated successfully');
+      //toast.success(message || 'Project updated successfully');
       const project = data?.project ?? response?.data?.project ?? response?.project ?? data;
       return transformApiProject(project);
     } catch (error: any) {
@@ -221,7 +221,7 @@ export const deleteProjectAsync = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Project deleted successfully');
+      //toast.success(message || 'Project deleted successfully');
       return id;
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to delete project';
@@ -245,7 +245,7 @@ export const addMemberToProject = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Member added successfully');
+      //toast.success(message || 'Member added successfully');
       return (data?.projectMember ?? response?.data?.projectMember ?? data);
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to add member to project';
@@ -268,7 +268,7 @@ export const removeMemberFromProject = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Member removed successfully');
+      //toast.success(message || 'Member removed successfully');
       return { projectId, userId };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to remove member from project';
@@ -291,7 +291,7 @@ export const getProjectMembers = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Project members fetched successfully');
+      //toast.success(message || 'Project members fetched successfully');
       return { projectId, members: (data?.members ?? response?.data?.members ?? data ?? []) };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to fetch project members';

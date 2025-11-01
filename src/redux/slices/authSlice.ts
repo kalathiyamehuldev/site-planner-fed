@@ -355,7 +355,7 @@ const authSlice = createSlice({
                     state.needsCompanySelection = false;
                 }
 
-                toast.success('Login successful');
+                //toast.success('Login successful');
             })
             .addCase(fetchUserPermissions.pending, (state) => {
                 state.isLoading = true;
@@ -415,7 +415,7 @@ const authSlice = createSlice({
                 state.selectedCompany = company;
                 localStorage.setItem('selectedCompany', JSON.stringify(company));
               }
-              toast.success('Profile updated successfully');
+              //toast.success('Profile updated successfully');
             })
             .addCase(updateProfile.rejected, (state, action) => {
               state.isLoading = false;
@@ -440,7 +440,7 @@ const authSlice = createSlice({
                 
                 state.needsCompanySelection = action.payload.needsCompanySelection;
                 state.error = null;
-                toast.success('Company registration successful');
+                //toast.success('Company registration successful');
             })
             .addCase(registerCompany.rejected, (state, action) => {
                 state.isLoading = false;
@@ -457,7 +457,7 @@ const authSlice = createSlice({
                 state.selectedCompany = action.payload.selectedCompany || null;
                 state.needsCompanySelection = action.payload.needsCompanySelection;
                 state.error = null;
-                toast.success('Company selected successfully');
+                //toast.success('Company selected successfully');
             })
             .addCase(selectCompany.rejected, (state, action) => {
                 state.isLoading = false;
@@ -471,7 +471,7 @@ const authSlice = createSlice({
             .addCase(forgotPassword.fulfilled, (state) => {
                 state.isLoading = false;
                 state.error = null;
-                toast.success('Password reset instructions sent to your email');
+                //toast.success('Password reset instructions sent to your email');
             })
             .addCase(forgotPassword.rejected, (state, action) => {
                 state.isLoading = false;
@@ -485,7 +485,7 @@ const authSlice = createSlice({
             .addCase(resetPassword.fulfilled, (state) => {
                 state.isLoading = false;
                 state.error = null;
-                toast.success('Password reset successful');
+                //toast.success('Password reset successful');
             })
             .addCase(resetPassword.rejected, (state, action) => {
                 state.isLoading = false;
@@ -499,7 +499,7 @@ const authSlice = createSlice({
                 state.availableCompanies = [];
                 state.needsCompanySelection = false;
                 state.error = null;
-                toast.success('Logout successful');
+                //toast.success('Logout successful');
             })
     }
 });

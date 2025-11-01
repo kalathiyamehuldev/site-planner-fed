@@ -149,7 +149,7 @@ export const fetchAllTasksByCompany = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Tasks fetched successfully');
+      //toast.success(message || 'Tasks fetched successfully');
       // Handle both paginated and array responses
       const items = Array.isArray((data as any)?.items)
         ? (data as any).items
@@ -179,7 +179,7 @@ export const fetchParentTasksByCompany = createAsyncThunk(
         return rejectWithValue(errMsg);
       }
 
-      toast.success(message || 'Parent tasks fetched successfully');
+      //toast.success(message || 'Parent tasks fetched successfully');
       // Handle both paginated and array responses
       const items = Array.isArray((data as any)?.items)
         ? (data as any).items
@@ -203,7 +203,7 @@ export const fetchTasksByProject = createAsyncThunk(
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
 
       if (status === 'success' && data) {
-        toast.success(message || 'Project tasks fetched successfully');
+        //toast.success(message || 'Project tasks fetched successfully');
         return data.map(transformApiTask);
       } else {
         const errMsg = error || message || 'Failed to fetch project tasks';
@@ -227,7 +227,7 @@ export const fetchParentTasksByProject = createAsyncThunk(
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
 
       if (status === 'success' && data) {
-        toast.success(message || 'Parent project tasks fetched successfully');
+        //toast.success(message || 'Parent project tasks fetched successfully');
         return data.map(transformApiTask);
       } else {
         const errMsg = error || message || 'Failed to fetch parent project tasks';
@@ -250,7 +250,7 @@ export const fetchTaskById = createAsyncThunk(
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
 
       if (status === 'success' && data) {
-        toast.success(message || 'Task fetched successfully');
+        //toast.success(message || 'Task fetched successfully');
         return transformApiTask(data);
       } else {
         const errMsg = error || message || 'Failed to fetch task';
@@ -273,7 +273,7 @@ export const createTaskAsync = createAsyncThunk(
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
 
       if (status === 'success' && data) {
-        toast.success(message || 'Task created successfully');
+        //toast.success(message || 'Task created successfully');
         return transformApiTask(data);
       } else {
         const errMsg = error || message || 'Failed to create task';
@@ -296,7 +296,7 @@ export const updateTaskAsync = createAsyncThunk(
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask>;
 
       if (status === 'success' && data) {
-        toast.success(message || 'Task updated successfully');
+        //toast.success(message || 'Task updated successfully');
         return transformApiTask(data);
       } else {
         const errMsg = error || message || 'Failed to update task';
@@ -319,7 +319,7 @@ export const deleteTaskAsync = createAsyncThunk(
       const { status, message, error } = response as unknown as ApiResponse<void>;
 
       if (status === 'success') {
-        toast.success(message || 'Task deleted successfully');
+        //toast.success(message || 'Task deleted successfully');
         return id;
       } else {
         const errMsg = error || message || 'Failed to delete task';
@@ -342,7 +342,7 @@ export const updateTaskStatusAsync = createAsyncThunk(
       const { status: respStatus, data, message, error } = response as unknown as ApiResponse<ApiTask>;
 
       if (respStatus === 'success' && data) {
-        toast.success(message || 'Task status updated successfully');
+        //toast.success(message || 'Task status updated successfully');
         return transformApiTask(data);
       } else {
         const errMsg = error || message || 'Failed to update task status';
@@ -377,7 +377,7 @@ export const fetchTaskCommentsAsync = createAsyncThunk(
           ? (data as any)
           : [];
 
-      toast.success(message || 'Comments fetched successfully');
+      //toast.success(message || 'Comments fetched successfully');
       return { taskId, comments: items as TaskComment[] };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to fetch comments';
@@ -403,7 +403,7 @@ export const createTaskCommentAsync = createAsyncThunk(
         return rejectWithValue({ taskId, error: errMsg });
       }
 
-      toast.success(message || 'Comment posted');
+      //toast.success(message || 'Comment posted');
       return { taskId, comment: data as TaskComment };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to create comment';
@@ -430,7 +430,7 @@ export const updateTaskCommentAsync = createAsyncThunk(
         return rejectWithValue({ taskId, error: errMsg });
       }
 
-      toast.success(message || 'Comment updated');
+      //toast.success(message || 'Comment updated');
       return { taskId, comment: data as TaskComment };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to update comment';
@@ -456,7 +456,7 @@ export const deleteTaskCommentAsync = createAsyncThunk(
         return rejectWithValue({ taskId, error: errMsg });
       }
 
-      toast.success(message || 'Comment deleted');
+      //toast.success(message || 'Comment deleted');
       return { taskId, commentId };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to delete comment';
@@ -482,7 +482,7 @@ export const addTaskCommentReactionAsync = createAsyncThunk(
         return rejectWithValue({ taskId, error: errMsg });
       }
 
-      toast.success(message || 'Reaction added');
+      //toast.success(message || 'Reaction added');
       return { taskId, commentId, reaction: data };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to add reaction';
@@ -511,7 +511,7 @@ export const removeTaskCommentReactionAsync = createAsyncThunk(
       const state = getState() as RootState;
       const userId = (state as any)?.auth?.user?.id;
 
-      toast.success(message || 'Reaction removed');
+      //toast.success(message || 'Reaction removed');
       return { taskId, commentId, type, userId };
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to remove reaction';
@@ -557,7 +557,7 @@ export const fetchSubtasksByParent = createAsyncThunk(
 
       const mapped = items.map(transformApiTask);
       inflightSubtaskFetches.delete(parentId);
-      toast.success(message || 'Subtasks fetched successfully');
+      //toast.success(message || 'Subtasks fetched successfully');
       return { parentId, subtasks: mapped } as { parentId: string; subtasks: Task[] };
     } catch (error: any) {
       inflightSubtaskFetches.delete(parentId);

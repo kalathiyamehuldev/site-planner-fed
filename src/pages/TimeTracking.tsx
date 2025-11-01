@@ -21,6 +21,7 @@ import {
   Hourglass,
   Trash2,
   Pencil,
+  ArrowUpDown,
 } from "lucide-react";
 import { RiArrowUpDownLine } from "@remixicon/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -163,6 +164,7 @@ const TimeTracking = () => {
   // Stop confirmation dialog state
   const [isStopConfirmOpen, setIsStopConfirmOpen] = useState(false);
   const [pendingStopData, setPendingStopData] = useState<any>(null);
+  const [stoppedElapsedTime, setStoppedElapsedTime] = useState<number>(0);
   
   // Custom date range state
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
@@ -220,7 +222,6 @@ const TimeTracking = () => {
     const dateRange = getDateRange();
     dispatch(fetchTimeEntries(dateRange));
     dispatch(fetchProjects());
-    dispatch(fetchParentTasksByCompany());
     dispatch(fetchTimeEntrySummary(dateRange));
   }, [dispatch]);
 
@@ -293,11 +294,14 @@ const TimeTracking = () => {
       .filter((entry) => entry.isBillable)
       .reduce((sum, entry) => sum + (entry.duration || 0), 0);
 
-  const formatElapsedTime = (startTime?: Date | number) => {
+  const formatElapsedTime = (elapsedTimeMs?: number) => {
     let elapsedMs: number;
     
-    if (timerStartTime) {
-      // Always use frontend timer start time when available (for both new and existing timers)
+    if (elapsedTimeMs !== undefined) {
+      // Use provided elapsed time (for stopped timer display)
+      elapsedMs = elapsedTimeMs;
+    } else if (timerStartTime) {
+      // Always use frontend timer start time when available (for running timer)
       elapsedMs = currentTime - timerStartTime;
     } else {
       // No timer running or no start time available
@@ -319,10 +323,8 @@ const TimeTracking = () => {
   // Helper function to format duration from decimal hours to readable format
   const formatDuration = (durationInHours: number) => {
     if (!durationInHours || durationInHours === 0) return "0 minutes";
-    
     const hours = Math.floor(durationInHours);
     const minutes = Math.round((durationInHours - hours) * 60);
-    
     if (hours === 0) {
       return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
     } else if (minutes === 0) {
@@ -449,6 +451,10 @@ const TimeTracking = () => {
     }
 
     try {
+      // Calculate elapsed time before stopping
+      const elapsedMs = timerStartTime ? currentTime - timerStartTime : 0;
+      setStoppedElapsedTime(elapsedMs);
+      
       // Stop the timer first
       const stopData = {
         timeEntryId: runningTimeEntry.id,
@@ -495,6 +501,7 @@ const TimeTracking = () => {
     } finally {
       setIsStopConfirmOpen(false);
       setPendingStopData(null);
+      setStoppedElapsedTime(0);
     }
   };
 
@@ -502,6 +509,7 @@ const TimeTracking = () => {
     if (!pendingStopData?.timeEntryId) {
       setIsStopConfirmOpen(false);
       setPendingStopData(null);
+      setStoppedElapsedTime(0);
       return;
     }
 
@@ -524,6 +532,7 @@ const TimeTracking = () => {
     } finally {
       setIsStopConfirmOpen(false);
       setPendingStopData(null);
+      setStoppedElapsedTime(0);
     }
   };
 
@@ -585,7 +594,6 @@ const TimeTracking = () => {
         hourlyRate: newTimeEntryFormData.hourlyRate,
         status: newTimeEntryFormData.status,
       };
-console.log("timeEntryData",timeEntryData);
 
       await dispatch(createTimeEntry(timeEntryData)).unwrap();
       toast({
@@ -678,8 +686,6 @@ console.log("timeEntryData",timeEntryData);
         projectId: newTimeEntry.projectId,
       };
 
-      console.log("timeEntryData",timeEntryData);
-      
       await dispatch(createTimeEntry(timeEntryData)).unwrap();
       toast({
         title: "Success",
@@ -752,8 +758,8 @@ console.log("timeEntryData",timeEntryData);
       duration: entry.duration || 0,
       isBillable: entry.isBillable || false,
       hourlyRate: entry.hourlyRate || 0,
-      taskId: entry.taskId || '',
-      projectId: entry.projectId || '',
+      taskId: entry.task?.id || '',
+      projectId: entry.project?.id || '',
     });
     setIsEditModalOpen(true);
   };
@@ -792,6 +798,8 @@ console.log("timeEntryData",timeEntryData);
         duration: calculatedDuration,
         isBillable: editFormData.isBillable,
         hourlyRate: editFormData.hourlyRate,
+        projectId: editFormData.projectId,
+        taskId: editFormData.taskId,
       };
 
       await dispatch(updateTimeEntry({ id: editingEntry.id, data: updateData })).unwrap();
@@ -858,12 +866,10 @@ console.log("timeEntryData",timeEntryData);
               {runningTimeEntry ? (
                 <>
                   <div className="text-xl font-medium mb-1">
-                    {runningTimeEntry.description || "No description"}
+                    {runningTimeEntry.task?.title || runningTimeEntry.description || "No description"}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {runningTimeEntry.project?.name ||
-                      runningTimeEntry.task?.title ||
-                      "No project/task"}
+                    {runningTimeEntry.project?.name || "No project/task"}
                   </div>
                 </>
               ) : (
@@ -1944,9 +1950,6 @@ console.log("timeEntryData",timeEntryData);
         <DialogContent className="w-5/6 md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Timer Stopped</DialogTitle>
-            <DialogDescription>
-              Choose whether to save or discard this time entry.
-            </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
@@ -1957,21 +1960,21 @@ console.log("timeEntryData",timeEntryData);
             {pendingStopData && (
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="text-sm">
-                  <span className="font-medium">Duration:</span> {formatElapsedTime()}
+                  <span className="font-medium">Duration:</span> {formatElapsedTime(stoppedElapsedTime)}
                 </div>
                 {pendingStopData.description && (
                   <div className="text-sm">
                     <span className="font-medium">Description:</span> {pendingStopData.description}
                   </div>
                 )}
-                {pendingStopData.project && (
+                {runningTimeEntry?.task && (
                   <div className="text-sm">
-                    <span className="font-medium">Project:</span> {pendingStopData.project.name}
+                    <span className="font-medium">Task:</span> {runningTimeEntry.task.title}
                   </div>
                 )}
-                {pendingStopData.task && (
+                {runningTimeEntry?.project && (
                   <div className="text-sm">
-                    <span className="font-medium">Task:</span> {pendingStopData.task.title}
+                    <span className="font-medium">Project:</span> {runningTimeEntry.project.name}
                   </div>
                 )}
               </div>
@@ -1982,61 +1985,12 @@ console.log("timeEntryData",timeEntryData);
             <ActionButton
               variant="secondary"
               onClick={cancelStopTimer}
-              motion="subtle"
               text="Discard"
             />
             <ActionButton
-              variant="primary"
               onClick={confirmStopTimer}
-              motion="subtle"
+              variant="primary"
               text="Save Entry"
-              className="bg-green-600 hover:bg-green-700"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Stop Timer Confirmation Dialog */}
-      <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
-        <DialogContent className="w-5/6 md:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Stop Timer</DialogTitle>
-            <DialogDescription>
-              Confirm stopping the timer and saving your time entry.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Are you sure you want to stop the timer and save this time entry?
-            </p>
-            
-            {pendingStopData && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                <div className="text-sm">
-                  <span className="font-medium">Task:</span> {pendingStopData.description || 'No description'}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Duration:</span> {formatElapsedTime(pendingStopData.elapsedTime)}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex justify-end gap-2">
-            <ActionButton
-              variant="secondary"
-              onClick={cancelStopTimer}
-              motion="subtle"
-              text="Cancel"
-            />
-            <ActionButton
-              variant="primary"
-              onClick={confirmStopTimer}
-              motion="subtle"
-              text="Stop & Save"
-              leftIcon={<Pause size={16} />}
-              className="bg-red-600 hover:bg-red-700"
             />
           </div>
         </DialogContent>

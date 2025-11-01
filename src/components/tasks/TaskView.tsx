@@ -30,15 +30,26 @@ import {
   stopTimer,
   selectActiveTimer,
   selectIsTimerRunning,
+  selectRunningTimeEntry,
+  deleteTimeEntry,
+  fetchTimeEntries,
+  fetchTimeEntrySummary,
 } from "@/redux/slices/timeTrackingSlice";
 import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ActionButton from "@/components/ui/ActionButton";
 import { getProjectMembers } from "@/redux/slices/projectsSlice";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { selectUser } from "@/redux/slices/authSlice";
 import usePermission from "@/hooks/usePermission";
+import { useToast } from "@/hooks/use-toast";
 
 const statusLabel: Record<string, string> = {
   TODO: "Not Started",
@@ -85,8 +96,10 @@ const TaskView: React.FC = () => {
   const loading = useAppSelector(selectTaskLoading);
   const activeTimer = useAppSelector(selectActiveTimer);
   const isTimerRunning = useAppSelector(selectIsTimerRunning);
+  const runningTimeEntry = useAppSelector(selectRunningTimeEntry);
   const currentUser = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
+  const { toast } = useToast();
 
   const subtasks = useAppSelector(selectSubtasksByParentId(id || ""));
   const subtasksLoading = useAppSelector(selectSubtasksLoading);
@@ -106,6 +119,13 @@ const TaskView: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<Record<string, { text: string; posting: boolean; mentions: string[]; mentionOpen: boolean; mentionQuery: string }>>({});
   const [editingComments, setEditingComments] = useState<Record<string, { text: string; saving: boolean }>>({});
+
+  // Timer state
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  const [isStopConfirmOpen, setIsStopConfirmOpen] = useState(false);
+  const [pendingStopData, setPendingStopData] = useState<any>(null);
+  const [stoppedElapsedTime, setStoppedElapsedTime] = useState<number>(0);
 
   // Restore inline edit toggles and subtask edit tracking
   const [editingDescription, setEditingDescription] = useState(false);
@@ -265,27 +285,182 @@ const TaskView: React.FC = () => {
     return isTimerRunning && activeTimer.taskId === task?.id;
   }, [isTimerRunning, activeTimer, task]);
 
-  const handleStartTimer = () => {
-    if (!task) return;
-    dispatch(
-      startTimer({
-        taskId: task.id,
-        projectId: task.project?.id,
-        description: `Working on: ${task.title}`,
-        isBillable: true,
-        hourlyRate: 40,
-      })
-    );
+  // Set timer start time when running timer is detected
+  useEffect(() => {
+    if (isTimerRunning && runningTimeEntry && !timerStartTime) {
+      // Always start fresh from current time, ignoring backend stored time
+      setTimerStartTime(Date.now());
+    } else if (!isTimerRunning && timerStartTime) {
+      // Clear timer start time when timer is not running
+      setTimerStartTime(null);
+    }
+  }, [isTimerRunning, runningTimeEntry, timerStartTime]);
+  
+  // Live timer update effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning]);
+
+  const formatElapsedTime = (elapsedTimeMs?: number) => {
+    let elapsedMs: number;
+    
+    if (elapsedTimeMs !== undefined) {
+      // Use provided elapsed time (for stopped timer display)
+      elapsedMs = elapsedTimeMs;
+    } else if (timerStartTime) {
+      // Always use frontend timer start time when available (for running timer)
+      elapsedMs = currentTime - timerStartTime;
+    } else {
+      // No timer running or no start time available
+      elapsedMs = 0;
+    }
+    
+    // Ensure non-negative elapsed time
+    elapsedMs = Math.max(0, elapsedMs);
+    
+    const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
+    const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const handleStopTimer = () => {
-    const timeEntryId = activeTimer.timeEntry?.id;
-    if (!timeEntryId) return;
-    dispatch(
-      stopTimer({
-        timeEntryId,
-      })
-    );
+  const handleStartTimer = async () => {
+    if (!task) return;
+    
+    try {
+      // Set timer start time to current moment
+      const startTime = Date.now();
+      setTimerStartTime(startTime);
+      setCurrentTime(startTime);
+      
+      await dispatch(
+        startTimer({
+          taskId: task.id,
+          projectId: task.project?.id,
+          description: `Working on: ${task.title}`,
+          isBillable: true,
+          hourlyRate: 40,
+        })
+      ).unwrap();
+      
+      toast({
+        title: "Timer Started",
+        description: "Time tracking has begun",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start timer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStopTimer = async () => {
+    if (!runningTimeEntry?.id) {
+      toast({
+        title: "Error",
+        description: "No active timer found. Please start a timer first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Calculate elapsed time before stopping
+      const elapsedMs = timerStartTime ? currentTime - timerStartTime : 0;
+      setStoppedElapsedTime(elapsedMs);
+      
+      // Stop the timer first
+      const stopData = {
+        timeEntryId: runningTimeEntry.id,
+        description: runningTimeEntry.description,
+        isBillable: runningTimeEntry.isBillable,
+        hourlyRate: runningTimeEntry.hourlyRate
+      };
+      
+      await dispatch(stopTimer(stopData)).unwrap();
+      
+      // Reset timer start time
+      setTimerStartTime(null);
+      
+      // Store the stop data and show confirmation dialog for saving
+      setPendingStopData(stopData);
+      setIsStopConfirmOpen(true);
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to stop timer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const confirmStopTimer = async () => {
+    if (!pendingStopData) return;
+
+    try {
+      toast({
+        title: "Timer Stopped",
+        description: "Time entry has been saved",
+      });
+      // Refresh time entries to show the completed entry
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save time entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
+      setStoppedElapsedTime(0);
+    }
+  };
+
+  const cancelStopTimer = async () => {
+    if (!pendingStopData?.timeEntryId) {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
+      setStoppedElapsedTime(0);
+      return;
+    }
+
+    try {
+      // Delete the time entry that was created when timer was stopped
+      await dispatch(deleteTimeEntry(pendingStopData.timeEntryId)).unwrap();
+      toast({
+        title: "Time Entry Discarded",
+        description: "The time entry has been discarded",
+      });
+      // Refresh time entries
+      dispatch(fetchTimeEntries({}));
+      dispatch(fetchTimeEntrySummary({}));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to discard time entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStopConfirmOpen(false);
+      setPendingStopData(null);
+      setStoppedElapsedTime(0);
+    }
   };
 
   const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
@@ -385,7 +560,67 @@ const TaskView: React.FC = () => {
                 </div>
               )}
               {/* Mobile-only: status + timer below title */}
-              <div className="md:hidden flex items-center gap-2 mt-3">
+              <div className="md:hidden flex flex-col gap-2 mt-3">
+                <div className="flex items-center gap-2">
+                  {editingHeaderStatus ? (
+                    <Select
+                      value={task?.status || 'TODO'}
+                      onValueChange={(val) => {
+                        if (!task) return;
+                        if (val !== task.status) {
+                          dispatch(updateTaskAsync({ id: task.id, taskData: { status: val as TaskType['status'] } }));
+                        }
+                        setEditingHeaderStatus(false);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TODO">Not Started</SelectItem>
+                        <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                        <SelectItem value="DONE">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <button
+                      className={cn(
+                        "px-2 py-1 rounded-md text-xs",
+                        statusColor[task?.status || 'TODO']
+                      )}
+                      onClick={() => hasPermission('tasks', 'update') && setEditingHeaderStatus(true)}
+                    >
+                      {statusLabel[task?.status || 'TODO']}
+                    </button>
+                  )}
+                  {timerForThisTask ? (
+                    <ActionButton
+                      variant="secondary"
+                      onClick={handleStopTimer}
+                      leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                      text="Stop Timer"
+                    />
+                  ) : (
+                    <ActionButton
+                      variant="secondary"
+                      onClick={handleStartTimer}
+                      leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
+                      text="Start Timer"
+                    />
+                  )}
+                </div>
+                {/* Timer display for mobile */}
+                {timerForThisTask && (
+                  <div className="text-lg font-mono tabular-nums text-primary">
+                    {formatElapsedTime()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right (desktop): status + timer */}
+            <div className="hidden md:flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
                 {editingHeaderStatus ? (
                   <Select
                     value={task?.status || 'TODO'}
@@ -397,7 +632,7 @@ const TaskView: React.FC = () => {
                       setEditingHeaderStatus(false);
                     }}
                   >
-                    <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                    <SelectTrigger className="h-9 px-2 text-sm w-[180px]">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -409,7 +644,7 @@ const TaskView: React.FC = () => {
                 ) : (
                   <button
                     className={cn(
-                      "px-2 py-1 rounded-md text-xs",
+                      "px-2 py-1 rounded-md text-sm",
                       statusColor[task?.status || 'TODO']
                     )}
                     onClick={() => hasPermission('tasks', 'update') && setEditingHeaderStatus(true)}
@@ -419,7 +654,7 @@ const TaskView: React.FC = () => {
                 )}
                 {timerForThisTask ? (
                   <ActionButton
-                    variant="gray"
+                    variant="secondary"
                     onClick={handleStopTimer}
                     leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
                     text="Stop Timer"
@@ -433,55 +668,11 @@ const TaskView: React.FC = () => {
                   />
                 )}
               </div>
-            </div>
-
-            {/* Right (desktop): status + timer */}
-            <div className="hidden md:flex items-center gap-2">
-              {editingHeaderStatus ? (
-                <Select
-                  value={task?.status || 'TODO'}
-                  onValueChange={(val) => {
-                    if (!task) return;
-                    if (val !== task.status) {
-                      dispatch(updateTaskAsync({ id: task.id, taskData: { status: val as TaskType['status'] } }));
-                    }
-                    setEditingHeaderStatus(false);
-                  }}
-                >
-                  <SelectTrigger className="h-9 px-2 text-sm w-[180px]">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="TODO">Not Started</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="DONE">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <button
-                  className={cn(
-                    "px-2 py-1 rounded-md text-sm",
-                    statusColor[task?.status || 'TODO']
-                  )}
-                  onClick={() => hasPermission('tasks', 'update') && setEditingHeaderStatus(true)}
-                >
-                  {statusLabel[task?.status || 'TODO']}
-                </button>
-              )}
-              {timerForThisTask ? (
-                <ActionButton
-                  variant="secondary"
-                  onClick={handleStopTimer}
-                  leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
-                  text="Stop Timer"
-                />
-              ) : (
-                <ActionButton
-                  variant="secondary"
-                  onClick={handleStartTimer}
-                  leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
-                  text="Start Timer"
-                />
+              {/* Timer display for desktop */}
+              {timerForThisTask && (
+                <div className="text-xl font-mono tabular-nums text-primary">
+                  {formatElapsedTime()}
+                </div>
               )}
             </div>
           </div>
@@ -1641,6 +1832,57 @@ const TaskView: React.FC = () => {
           onSuccess={() => { setIsAddSubtaskOpen(false); if (id) dispatch(fetchSubtasksByParent(id)); }}
         />
       )}
+
+      {/* Stop Timer Confirmation Dialog */}
+      <Dialog open={isStopConfirmOpen} onOpenChange={setIsStopConfirmOpen}>
+        <DialogContent className="w-5/6 md:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Timer Stopped</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              The timer has been stopped. Would you like to save or discard this time entry?
+            </p>
+            
+            {pendingStopData && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium">Duration:</span> {formatElapsedTime(stoppedElapsedTime)}
+                </div>
+                {pendingStopData.description && (
+                  <div className="text-sm">
+                    <span className="font-medium">Description:</span> {pendingStopData.description}
+                  </div>
+                )}
+                {task && (
+                  <div className="text-sm">
+                    <span className="font-medium">Task:</span> {task.title}
+                  </div>
+                )}
+                {task?.project && (
+                  <div className="text-sm">
+                    <span className="font-medium">Project:</span> {task.project.name}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <ActionButton
+              variant="secondary"
+              onClick={cancelStopTimer}
+              text="Discard"
+            />
+            <ActionButton
+              onClick={confirmStopTimer}
+              variant="primary"
+              text="Save Entry"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 };

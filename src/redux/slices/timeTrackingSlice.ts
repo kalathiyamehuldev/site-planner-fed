@@ -67,6 +67,8 @@ export interface UpdateTimeEntryData {
   isBillable?: boolean;
   hourlyRate?: number;
   status?: 'TO_DO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
+  projectId?: string;
+  taskId?: string;
 }
 
 export interface TimeEntryFilterParams {

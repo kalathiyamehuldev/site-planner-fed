@@ -80,7 +80,6 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
       // Fetch projects and tags
       dispatch(fetchProjects());
       dispatch(fetchTags());
-      console.log("Contact Modal Contact:", contact);
       
       if (mode === 'edit' && contact) {
         // Find full project objects that match the contact's project IDs or names
@@ -212,7 +211,6 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           ? formData.tagNames.map(name => allTags.find(tag => tag.name === name)?.id).filter(Boolean) as string[]
           : undefined;
 
-          console.log("Contact Modal Contact:", formData);
         const updateData: UpdateContactDto = {
           name: formData.name,
           email: formData.email,

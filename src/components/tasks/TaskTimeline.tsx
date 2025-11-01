@@ -19,8 +19,13 @@ interface TimelineTask {
   color: string;
 }
 
-const TaskTimeline: React.FC = () => {
-  const tasks = useAppSelector(selectAllTasks);
+interface TaskTimelineProps {
+  tasks?: Task[];
+}
+
+const TaskTimeline: React.FC<TaskTimelineProps> = ({ tasks: propTasks }) => {
+  const allTasks = useAppSelector(selectAllTasks);
+  const tasks = propTasks || allTasks;
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const subtasksByParent = useAppSelector((state) => state.tasks.subtasksByParentId);
@@ -74,9 +79,16 @@ const TaskTimeline: React.FC = () => {
   // Filter and transform parent tasks for timeline using createdAt/dueDate only
   const timelineTasks = useMemo(() => {
     const parentTasks = tasks.filter(task => !task.parentId);
+    const subtasks = tasks.filter(task => task.parentId);
 
     return parentTasks.map((task, idx) => {
-      const subtasks = subtasksByParent[task.id] || [];
+      // Get subtasks from both Redux cache and filtered tasks
+      const cachedSubtasks = subtasksByParent[task.id] || [];
+      const filteredSubtasks = subtasks.filter(subtask => subtask.parentId === task.id);
+      
+      // Use filtered subtasks if available, otherwise fall back to cached
+      const taskSubtasks = filteredSubtasks.length > 0 ? filteredSubtasks : cachedSubtasks;
+      
       const startDate = task.createdAt ? parseISO(task.createdAt) : new Date();
       const endDate = task.dueDate ? parseISO(task.dueDate) : startDate;
 
@@ -87,7 +99,7 @@ const TaskTimeline: React.FC = () => {
         endDate,
         status: task.status,
         priority: task.priority,
-        subtasks,
+        subtasks: taskSubtasks,
         color: palette[idx % palette.length],
       } as TimelineTask;
     });
@@ -148,8 +160,8 @@ const TaskTimeline: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <solar.Notes.ArchiveMinimalistic className="w-12 h-12 text-[#9AA5B1] mb-4" />
-        <h3 className="text-lg font-medium text-[#1F2937] mb-2">No Parent Tasks Found</h3>
-        <p className="text-[#4B5563]">Create some parent tasks to see the timeline view.</p>
+        <h3 className="text-lg font-medium text-[#1F2937] mb-2">No Tasks Found</h3>
+        <p className="text-[#4B5563]">No tasks match the current filters or create some tasks to see the timeline view.</p>
       </div>
     );
   }

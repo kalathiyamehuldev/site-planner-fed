@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import TaskTable from "@/components/TaskTable";
@@ -10,16 +10,17 @@ import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User, List, LayoutGrid } from "lucide-react";
 import solar from "@solar-icons/react";
 import ActionButton from "@/components/ui/ActionButton";
+import { isAfter, isBefore, addDays, startOfDay, endOfDay, isSameDay, isWithinInterval } from "date-fns";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
   fetchAllTasksByCompany,
-  fetchParentTasksByCompany,
   setSelectedTask,
   deleteTaskAsync,
   updateTaskStatusAsync,
 } from "@/redux/slices/tasksSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
+import { selectUser } from "@/redux/slices/authSlice";
 // removed useToast import
 import {
   AlertDialog,
@@ -40,6 +41,7 @@ const Tasks = () => {
   // removed useToast usage
   const allTasks = useAppSelector(selectAllTasks);
   const projects = useAppSelector(selectAllProjects);
+  const currentUser = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
 
   const [filter, setFilter] = useState<
@@ -55,11 +57,12 @@ const Tasks = () => {
   const [viewMode, setViewMode] = useState<"list" | "kanban" | "timeline">("kanban");
 
   useEffect(() => {
-    dispatch(fetchParentTasksByCompany());
+    dispatch(fetchAllTasksByCompany());
     dispatch(fetchProjects());
   }, [dispatch]);
 
-  const filteredTasks = allTasks.filter((task) => {
+  // Helper function to check if a task matches the current filter
+  const taskMatchesFilter = (task: any) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -71,20 +74,56 @@ const Tasks = () => {
 
     switch (filter) {
       case "mine":
-        return task.assignee === "Alex Jones"; // For demo purposes
+        return task.member?.id === currentUser?.id;
       case "high-priority":
         return task.priority === "HIGH" || task.priority === "URGENT";
       case "upcoming":
-        return (
-          task.dueDate && (
-            task.dueDate.includes("Tomorrow") ||
-            task.dueDate.includes("This week")
-          )
-        );
+        if (!task.dueDate) return false;
+        const dueDate = new Date(task.dueDate);
+        
+        // Check if date is valid
+        if (isNaN(dueDate.getTime())) return false;
+        
+        const today = new Date();
+        const nextWeek = addDays(today, 7);
+        
+        // Include tasks due today or within the next 7 days (excluding past dates)
+        return isSameDay(dueDate, today) || isWithinInterval(dueDate, {
+          start: addDays(today, 1), // Tomorrow
+          end: nextWeek
+        });
       default:
         return true;
     }
-  });
+  };
+
+  // Enhanced filtering that considers both parent tasks and subtasks
+  const filteredTasks = useMemo(() => {
+    const parentTasks = allTasks.filter(task => !task.parentId);
+    const subtasks = allTasks.filter(task => task.parentId);
+    
+    const result: any[] = [];
+
+    parentTasks.forEach(parentTask => {
+      const parentMatches = taskMatchesFilter(parentTask);
+      const taskSubtasks = subtasks.filter(subtask => subtask.parentId === parentTask.id);
+      const matchingSubtasks = taskSubtasks.filter(subtask => taskMatchesFilter(subtask));
+      
+      // Include parent if either parent matches OR any subtask matches
+      if (parentMatches || matchingSubtasks.length > 0) {
+        result.push(parentTask);
+        
+        // Add all subtasks if parent matches, or only matching subtasks if parent doesn't match
+        if (parentMatches) {
+          result.push(...taskSubtasks);
+        } else {
+          result.push(...matchingSubtasks);
+        }
+      }
+    });
+
+    return result;
+  }, [allTasks, filter, searchTerm, currentUser?.id]);
 
   const FilterButton = ({
     label,
@@ -128,7 +167,7 @@ const Tasks = () => {
     try {
       const result = await dispatch(deleteTaskAsync(deletingTaskId));
       if (deleteTaskAsync.fulfilled.match(result)) {
-        dispatch(fetchParentTasksByCompany());
+        dispatch(fetchAllTasksByCompany());
       } else {
         throw new Error((result.payload as string) || 'Failed to delete task');
       }
@@ -142,7 +181,7 @@ const Tasks = () => {
   const handleEditSuccess = () => {
     setEditingTask(null);
     // Refresh tasks list
-    dispatch(fetchParentTasksByCompany());
+    dispatch(fetchAllTasksByCompany());
   };
 
   const handleNewTaskSuccess = () => {
@@ -150,7 +189,7 @@ const Tasks = () => {
     setNewTaskInitialStatus(null);
     setLockNewTaskStatus(false);
     // Refresh tasks list
-    dispatch(fetchParentTasksByCompany());
+    dispatch(fetchAllTasksByCompany());
   };
 
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
@@ -160,7 +199,7 @@ const Tasks = () => {
         status: newStatus as 'TODO' | 'IN_PROGRESS' | 'DONE'
       }));
       if (updateTaskStatusAsync.fulfilled.match(result)) {
-        dispatch(fetchParentTasksByCompany());
+        dispatch(fetchAllTasksByCompany());
       } else {
         throw new Error((result.payload as string) || 'Failed to update task status');
       }
@@ -248,6 +287,26 @@ const Tasks = () => {
           </div>
         </div>
 
+        {/* Filter Info Banner */}
+        {(filter !== "all" || searchTerm) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 animate-fade-in">
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <Filter size={16} />
+              <span>
+                {searchTerm ? (
+                  <>Showing tasks matching "{searchTerm}"</>
+                ) : (
+                  <>Showing {filter === "mine" ? "your tasks" : filter === "high-priority" ? "high priority tasks" : "upcoming tasks"}</>
+                )}
+                {viewMode === "kanban" 
+                  ? " (Kanban shows only subtasks)" 
+                  : " (includes parent tasks when subtasks match)"
+                }
+              </span>
+            </div>
+          </div>
+        )}
+
         {viewMode === "kanban" ? (
            <KanbanBoard
              tasks={filteredTasks}
@@ -264,7 +323,7 @@ const Tasks = () => {
            />
          ) : viewMode === "timeline" ? (
           <div className="animate-fade-in">
-            <TaskTimeline />
+            <TaskTimeline tasks={filteredTasks} />
           </div>
          ) : (
           <TaskTable

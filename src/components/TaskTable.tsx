@@ -533,7 +533,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   }}
                   onClick={() => onTaskClick?.(task.id)}
                 >
-                  <td className="px-3 max-w-xs">
+                  <td className="px-3">
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-1">
                         {hasSubtasks && (
@@ -554,7 +554,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                             <TooltipTrigger asChild>
                               <Link
                                 to={`/tasks/${task.id}`}
-                                className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal cursor-pointer hover:text-blue-600 transition-colors"
+                                className="text-[#1a2624] text-sm font-bold leading-normal cursor-pointer hover:text-blue-600 transition-colors"
                                 style={{
                                   display: '-webkit-box',
                                   WebkitLineClamp: 1,
@@ -576,7 +576,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none cursor-pointer hidden sm:block"
+                              <div className="text-[#1a2624]/70 text-xs font-normal leading-none cursor-pointer hidden sm:block"
                                 style={{
                                   display: '-webkit-box',
                                   WebkitLineClamp: 1,
@@ -614,7 +614,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight cursor-pointer"
+                            <div className="text-[#1a2624] text-sm font-medium leading-tight cursor-pointer"
                               style={{
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
@@ -645,7 +645,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                               transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
                         )} />
                       </div>
-                      <div className="text-[#1a2624] text-sm font-normal font-['Manrope'] leading-tight">
+                      <div className="text-[#1a2624] text-sm font-normal leading-tight">
                         {transformedTask.priority}
                       </div>
                     </div>
@@ -666,7 +666,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                           </div>
                         );
                       })()}
-                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                      <div className="text-[#1a2624] text-sm font-medium leading-tight truncate">
                         {transformedTask.assignedTo}
                       </div>
                     </div>
@@ -676,7 +676,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       <div className="w-4 h-4 relative overflow-hidden">
                         <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
                       </div>
-                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                      <div className="text-[#1a2624] text-sm font-medium leading-tight truncate">
                         {transformedTask.dueDate}
                       </div>
                     </div>
@@ -686,7 +686,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       <div className="w-4 h-4 relative overflow-hidden">
                         <Clock size={14} className="text-muted-foreground" />
                       </div>
-                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                      <div className="text-[#1a2624] text-sm font-medium leading-tight">
                         {task.estimatedHours || 0} hours
                       </div>
                     </div>
@@ -756,7 +756,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                               <TooltipTrigger asChild>
                                 <Link
                                   to={`/tasks/${subtask.id}`}
-                                  className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-normal cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="text-[#1a2624]/80 text-sm font-medium leading-normal cursor-pointer hover:text-blue-600 transition-colors"
                                   style={{
                                     display: '-webkit-box',
                                     WebkitLineClamp: 1,
@@ -775,7 +775,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                           </TooltipProvider>
                         </div>
                         {!showProject && subtask.description && (
-                          <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none ml-6 hidden sm:block"
+                          <div className="text-[#1a2624]/70 text-xs font-normal leading-none ml-6 hidden sm:block"
                             style={{
                               display: '-webkit-box',
                               WebkitLineClamp: 1,
@@ -793,7 +793,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight cursor-pointer"
+                              <div className="text-[#1a2624]/80 text-sm font-medium leading-tight cursor-pointer"
                                 style={{
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
@@ -824,7 +824,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                                 transformedSubtask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
                           )} />
                         </div>
-                        <div className="text-[#1a2624]/80 text-sm font-normal font-['Manrope'] leading-tight">
+                        <div className="text-[#1a2624]/80 text-sm font-normal leading-tight">
                           {transformedSubtask.priority}
                         </div>
                       </div>
@@ -845,7 +845,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                             </div>
                           );
                         })()}
-                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
+                        <div className="text-[#1a2624]/80 text-sm font-medium leading-tight truncate">
                           {transformedSubtask.assignedTo}
                         </div>
                       </div>
@@ -855,7 +855,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <div className="w-4 h-4 relative overflow-hidden">
                           <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
                         </div>
-                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight truncate">
+                        <div className="text-[#1a2624]/80 text-sm font-medium leading-tight truncate">
                           {transformedSubtask.dueDate}
                         </div>
                       </div>
@@ -865,7 +865,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                         <div className="w-4 h-4 relative overflow-hidden">
                           <Clock size={14} className="text-muted-foreground" />
                         </div>
-                        <div className="text-[#1a2624]/80 text-sm font-medium font-['Manrope'] leading-tight">
+                        <div className="text-[#1a2624]/80 text-sm font-medium leading-tight">
                           {subtask.estimatedHours || 0} hours
                         </div>
                       </div>
