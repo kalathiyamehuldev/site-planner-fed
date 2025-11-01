@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Search, Filter, ArrowRight, Plus } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAllProjects, selectProjectLoading, selectProjectError, fetchProjects, setSelectedProject } from "@/redux/slices/projectsSlice";
+import { fetchAllTasksByCompany, selectAllTasks } from "@/redux/slices/tasksSlice";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectCard from "@/components/ProjectCard";
 import usePermission from "@/hooks/usePermission";
@@ -19,6 +20,7 @@ const Projects = () => {
   const projects = useAppSelector(selectAllProjects);
   const loading = useAppSelector(selectProjectLoading);
   const error = useAppSelector(selectProjectError);
+  const allTasks = useAppSelector(selectAllTasks);
   const { hasPermission, isSuperAdmin } = usePermission();
   const resource = 'projects';
 
@@ -30,6 +32,7 @@ const Projects = () => {
 
   useEffect(() => {
     dispatch(fetchProjects());
+    dispatch(fetchAllTasksByCompany());
   }, [dispatch]);
 
   const filteredProjects = projects.filter((project) => {
@@ -60,6 +63,18 @@ const Projects = () => {
       dispatch(setSelectedProject(projectId));
     }
   };
+
+  // Group tasks by project ID
+  const tasksByProject = allTasks.reduce((acc, task) => {
+    const projectId = task.project?.id;
+    if (projectId) {
+      if (!acc[projectId]) {
+        acc[projectId] = [];
+      }
+      acc[projectId].push(task);
+    }
+    return acc;
+  }, {} as Record<string, typeof allTasks>);
 
   return (
     <PageContainer>
@@ -233,7 +248,7 @@ const Projects = () => {
                       });
                 })()}
                 team={project.team}
-                progress={project.progress}
+                tasks={tasksByProject[project.id] || []}
                 className={cn("opacity-0 animate-scale-in rounded-xl", {
                   "animation-delay-[0.1s]": index % 3 === 0,
                   "animation-delay-[0.2s]": index % 3 === 1,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2, MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
+import { RiArrowUpDownLine } from "@remixicon/react";
 import { Link } from "react-router-dom";
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
   const subtasksByParent = useAppSelector((state) => state.tasks.subtasksByParentId);
   const loadingSubtasks = useAppSelector(selectSubtasksLoading);
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
 
   // Generate avatar initials and color
   const getAvatarData = (name: string) => {
@@ -71,7 +73,58 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
     };
   };
   // Filter parent tasks and fetch subtasks only if not loaded
-  const parentTasks = tasks.filter(task => !task.parentId);
+  let parentTasks = tasks.filter(task => !task.parentId);
+  
+  // Apply sorting
+  if (sortConfig) {
+    parentTasks = [...parentTasks].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      switch (sortConfig.key) {
+        case 'task':
+          aValue = a.title?.toLowerCase() || '';
+          bValue = b.title?.toLowerCase() || '';
+          break;
+        case 'project':
+          aValue = a.project?.name?.toLowerCase() || '';
+          bValue = b.project?.name?.toLowerCase() || '';
+          break;
+        case 'assignee':
+          aValue = (a.assignee || (a.member?.firstName && a.member?.lastName ? `${a.member.firstName} ${a.member.lastName}` : 'N/A')).toLowerCase();
+          bValue = (b.assignee || (b.member?.firstName && b.member?.lastName ? `${b.member.firstName} ${b.member.lastName}` : 'N/A')).toLowerCase();
+          break;
+        case 'dueDate':
+          aValue = a.dueDate || '';
+          bValue = b.dueDate || '';
+          break;
+        case 'status':
+          aValue = a.status?.toLowerCase() || '';
+          bValue = b.status?.toLowerCase() || '';
+          break;
+        case 'priority':
+          aValue = a.priority?.toLowerCase() || '';
+          bValue = b.priority?.toLowerCase() || '';
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+  
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
   const missingParentIds = useMemo(() => {
     return parentTasks
       .map((t) => t.id)
@@ -397,24 +450,60 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
           <thead className="h-12">
             <tr className="border-b border-[#1a2624]/10">
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
-                Task
+                <button
+                  onClick={() => handleSort('task')}
+                  className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Task
+                  <RiArrowUpDownLine size={14} />
+                </button>
               </th>
               {showProject && (
                 <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/8 hidden sm:table-cell">
-                  Project
+                  <button
+                    onClick={() => handleSort('project')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Project
+                    <RiArrowUpDownLine size={14} />
+                  </button>
                 </th>
               )}
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24">
-                Status
+                <button
+                  onClick={() => handleSort('status')}
+                  className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Status
+                  <RiArrowUpDownLine size={14} />
+                </button>
               </th>
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24 hidden md:table-cell">
-                Priority
+                <button
+                  onClick={() => handleSort('priority')}
+                  className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Priority
+                  <RiArrowUpDownLine size={14} />
+                </button>
               </th>
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-28 md:w-32 hidden lg:table-cell">
-                Assigned to
+                <button
+                  onClick={() => handleSort('assignee')}
+                  className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Assigned to
+                  <RiArrowUpDownLine size={14} />
+                </button>
               </th>
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden lg:table-cell">
-                Due Date
+                <button
+                  onClick={() => handleSort('dueDate')}
+                  className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Due Date
+                  <RiArrowUpDownLine size={14} />
+                </button>
               </th>
               <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-12 sm:w-16 md:w-20 hidden xl:table-cell">
                 Hours

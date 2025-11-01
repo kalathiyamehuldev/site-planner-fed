@@ -55,11 +55,10 @@ import {
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 import ActionButton from "@/components/ui/ActionButton";
 import { DocumentsMinimalistic, DownloadMinimalistic } from "@solar-icons/react";
+import { calculateProjectProgress, formatProjectDate } from "@/utils/projectUtils";
+import DocumentSidebar from "@/components/documents/DocumentSidebar";
 
-// Static data for progress (keeping as requested)
-const staticProjectData = {
-  progress: 65,
-};
+// Progress is now calculated from tasks
 
 // Format file type to display simplified version
 const formatFileType = (type: string): string => {
@@ -131,6 +130,8 @@ const ProjectDetails = () => {
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [showDocumentSidebar, setShowDocumentSidebar] = useState(false);
 
   // Handle task creation success - refetch project tasks
   const handleTaskCreated = () => {
@@ -141,6 +142,12 @@ const ProjectDetails = () => {
   };
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Close document sidebar when tab changes
+  useEffect(() => {
+    setShowDocumentSidebar(false);
+    setSelectedDocument(null);
+  }, [activeTab]);
   const dispatch = useAppDispatch();
   // removed useToast usage
   const project = useAppSelector(selectSelectedProject);
@@ -220,25 +227,14 @@ const ProjectDetails = () => {
 
 
 
-  // Create combined project details with API data and static data
+  // Create combined project details with API data and calculated progress
   const projectDetails = project
     ? {
         ...project,
-        progress: staticProjectData.progress, // Use static progress for now
-        dueDate: project.endDate
-          ? new Date(project.endDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })
-          : "",
-          startDate: project.startDate
-          ? new Date(project.startDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })
-          : "",
+        progress: calculateProjectProgress(projectTasks), // Calculate from tasks
+        dueDate: formatProjectDate(project.endDate),
+        // Keep original dates for form editing, add formatted versions for display
+        formattedStartDate: formatProjectDate(project.startDate, (project as any).createdAt), // Use createdAt as fallback
         client: "Jane Cooper", // Keep static for now
       }
     : null;
@@ -327,7 +323,8 @@ const ProjectDetails = () => {
 
         {/* Project Tabs */}
         <Tabs
-          defaultValue="overview"
+          value={activeTab}
+          onValueChange={setActiveTab}
           className="w-full animate-fade-in animation-delay-[0.2s]"
         >
           <TabsList className="mb-6">
@@ -413,7 +410,7 @@ const ProjectDetails = () => {
                       <div className="flex justify-between text-sm">
                         <span>Start Date:</span>
                         <span className="font-medium">
-                          {projectDetails.startDate}
+                          {projectDetails.formattedStartDate}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -546,56 +543,93 @@ const ProjectDetails = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-4 font-medium text-muted-foreground">
-                          Name
-                        </th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">
-                          Type
-                        </th>
-                        {/* <th className="text-left p-4 font-medium text-muted-foreground">
-                          Size
-                        </th> */}
-                        <th className="text-left p-4 font-medium text-muted-foreground">
-                          Date
-                        </th>
-                        <th className="text-right p-4 font-medium text-muted-foreground">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {projectDocuments.map((doc) => (
-                        <tr
-                          key={doc.id}
-                          className="border-b last:border-0 hover:bg-secondary/30 transition-colors"
-                        >
-                          <td className="p-4 flex items-center gap-2">
-                            <FileText size={16} className="text-primary" />
-                            {doc.name}
-                          </td>
-                          <td className="p-4">{formatFileType(doc.type)}</td>
-                          {/* <td className="p-4">-</td> */}
-                          <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
-                          <td className="p-4 text-right">
-                            {hasPermission(documentResource, 'read') && (
-                              <ActionButton
-                                variant="text"
-                                motion="subtle"
-                                className="text-primary"
-                                onClick={() => handleDownloadDocument(doc.url, doc.name)}
-                                // text="Download"
-                                leftIcon={<DownloadMinimalistic weight="Bold"/>}
-                              />
-                            )}
-                          </td>
+                <div className="w-full bg-white rounded-md overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
+                      <thead className="h-12">
+                        <tr className="border-b border-[#1a2624]/10">
+                          <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
+                            Document Name
+                          </th>
+                          <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                            Type
+                          </th>
+                          <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
+                            Date
+                          </th>
+                          <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                            {/* Actions column - empty header */}
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="bg-white">
+                        {projectDocuments.map((doc, index) => (
+                          <tr
+                            key={doc.id}
+                            className="h-16 hover:bg-gray-50/50 transition-colors cursor-pointer animate-fade-in border-b border-[#1a2624]/10"
+                            style={{
+                              animationDelay: `${index * 0.05}s`,
+                              animationFillMode: "forwards",
+                            }}
+                            onClick={() => {
+                              setSelectedDocument(doc);
+                              setShowDocumentSidebar(true);
+                            }}
+                          >
+                            <td className="px-3 max-w-xs">
+                              <div className="flex items-center gap-2">
+                                <FileText size={16} className="text-primary flex-shrink-0" />
+                                <div className="flex flex-col gap-0.5 min-w-0">
+                                  <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal cursor-pointer hover:text-blue-600 transition-colors truncate">
+                                    {doc.name}
+                                  </div>
+                                  {doc.description && (
+                                    <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none hidden sm:block truncate">
+                                      {doc.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 hidden md:table-cell">
+                              <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                                {formatFileType(doc.type)}
+                              </div>
+                            </td>
+                            <td className="px-3 hidden lg:table-cell">
+                              <div className="flex items-center gap-2">
+                                <Calendar size={12} className="text-muted-foreground" />
+                                <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                                  {new Date(doc.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3">
+                              <div className="flex items-center justify-center">
+                                {hasPermission(documentResource, 'read') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownloadDocument(doc.url, doc.name);
+                                    }}
+                                    className="w-6 h-6 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                                  >
+                                    <DownloadMinimalistic size={16} />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </GlassCard>
@@ -684,6 +718,37 @@ const ProjectDetails = () => {
         projectId={id}
         onDocumentUploaded={() => {
           // Documents will be automatically refreshed by the dialog
+        }}
+      />
+      {/* Document Sidebar */}
+      <DocumentSidebar
+        document={selectedDocument}
+        isOpen={showDocumentSidebar}
+        onClose={() => {
+          setShowDocumentSidebar(false);
+          setSelectedDocument(null);
+        }}
+        onDelete={(documentId) => {
+          // Close sidebar and refresh documents
+          setShowDocumentSidebar(false);
+          setSelectedDocument(null);
+          if (id) {
+            dispatch(fetchDocumentsByProject(id));
+          }
+        }}
+        onEdit={(document) => {
+          // Handle document edit if needed
+          console.log('Edit document:', document);
+        }}
+        onMove={(document) => {
+          // Handle document move if needed
+          console.log('Move document:', document);
+        }}
+        onRefresh={() => {
+          // Refresh documents
+          if (id) {
+            dispatch(fetchDocumentsByProject(id));
+          }
         }}
       />
     </PageContainer>

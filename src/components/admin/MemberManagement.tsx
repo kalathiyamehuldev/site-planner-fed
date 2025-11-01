@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { RiArrowUpDownLine } from '@remixicon/react';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
 import {
@@ -88,6 +89,7 @@ const MemberManagement: React.FC = () => {
     projectIds: [],
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -285,13 +287,60 @@ const MemberManagement: React.FC = () => {
     }
   };
 
-  const filteredMembers = membersList.filter(
+  let filteredMembers = membersList.filter(
     (member) =>
       member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.role.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  // Apply sorting
+  if (sortConfig) {
+    filteredMembers = [...filteredMembers].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      switch (sortConfig.key) {
+        case 'name':
+          aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'phone':
+          aValue = a.phone?.toLowerCase() || '';
+          bValue = b.phone?.toLowerCase() || '';
+          break;
+        case 'role':
+          aValue = a.role.name.toLowerCase();
+          bValue = b.role.name.toLowerCase();
+          break;
+        case 'status':
+          aValue = a.isActive ? 'active' : 'inactive';
+          bValue = b.isActive ? 'active' : 'inactive';
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+  
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   return (
     <div className="space-y-4">
@@ -493,60 +542,114 @@ const MemberManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="w-full bg-white rounded-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground">Name</th>
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden sm:table-cell">Email</th>
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden md:table-cell">Phone</th>
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground">Role</th>
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden lg:table-cell">Projects</th>
-                <th className="text-left p-2 sm:p-4 font-medium sm:text-muted-foreground hidden sm:table-cell">Status</th>
-                {(hasPermission('users','update') || hasPermission('users','delete')) && (
-                  <th className="text-right p-2 sm:p-4 font-medium sm:text-muted-foreground">Actions</th>
-                )}
+          <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
+            <thead className="h-12">
+              <tr className="border-b border-[#1a2624]/10">
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
+                  <button
+                    onClick={() => handleSort('name')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Name
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/4 hidden sm:table-cell">
+                  <button
+                    onClick={() => handleSort('email')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Email
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                  <button
+                    onClick={() => handleSort('phone')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Phone
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24">
+                  <button
+                    onClick={() => handleSort('role')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Role
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
+                  Projects
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24 hidden sm:table-cell">
+                  <button
+                    onClick={() => handleSort('status')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Status
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                  {/* Actions column - empty header */}
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white">
             {loading ? (
               <tr>
-                <td colSpan={8} className="text-center py-8">
-                  Loading members...
+                <td colSpan={7} className="text-center py-8">
+                  <div className="text-lg">Loading members...</div>
                 </td>
               </tr>
             ) : filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8">
-                  No members found
+                <td colSpan={7} className="text-center py-8">
+                  <div className="text-lg text-muted-foreground">No members found</div>
                 </td>
               </tr>
             ) : (
               filteredMembers.map((member, index) => (
                 <tr
                   key={member.id}
-                  className="border-b last:border-0 hover:bg-secondary/30 transition-colors animate-fade-in"
+                  className="h-16 hover:bg-gray-50/50 transition-colors animate-fade-in border-b border-[#1a2624]/10"
                   style={{
                     animationDelay: `${index * 0.05}s`,
                     animationFillMode: "forwards",
                   }}
                 >
-                  <td className="p-2 sm:p-4">
-                    <span className="font-medium">{member.firstName} {member.lastName}</span>
-                    <div className=" text-muted-foreground sm:hidden mt-1">{member.email}</div>
+                  <td className="px-3 max-w-xs">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
+                        {member.firstName} {member.lastName}
+                      </div>
+                      {/* Mobile: Show email under name */}
+                      <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none sm:hidden truncate">
+                        {member.email}
+                      </div>
+                    </div>
                   </td>
-                  <td className="p-2 sm:p-4 hidden sm:table-cell">
-                    <span className="">{member.email}</span>
+                  <td className="px-3 max-w-xs hidden sm:table-cell">
+                    <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                      {member.email}
+                    </div>
                   </td>
-                  <td className="p-2 sm:p-4 hidden md:table-cell">
-                    <span className="">{member.phone || '-'}</span>
+                  <td className="px-3 hidden md:table-cell">
+                    <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                      {member.phone || '-'}
+                    </div>
                   </td>
-                  <td className="p-2 sm:p-4">
-                    <span className="">{member.role.name}</span>
+                  <td className="px-3">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      {member.role.name}
+                    </span>
                   </td>
-
-                  <td className="p-2 sm:p-4 hidden lg:table-cell">
+                  <td className="px-3 hidden lg:table-cell">
                     {member.projectMembers && member.projectMembers.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {member.projectMembers.map((pm, idx) => (
@@ -556,11 +659,11 @@ const MemberManagement: React.FC = () => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">No projects</span>
+                      <span className="text-[#1a2624]/70 text-sm font-normal font-['Manrope']">No projects</span>
                     )}
                   </td>
-                  <td className="p-2 sm:p-4 hidden sm:table-cell">
-                    <span className={`px-2 py-1 rounded-full ${
+                  <td className="px-3 hidden sm:table-cell">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       member.isActive 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
@@ -568,16 +671,16 @@ const MemberManagement: React.FC = () => {
                       {member.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="p-2 sm:p-4 text-right">
-                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                  <td className="px-3">
+                    <div className="flex items-center justify-center gap-1">
                       {hasPermission('users','update') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(member)}
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="w-6 h-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded"
                         >
-                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Edit size={16} />
                         </Button>
                       )}
                       {hasPermission('users','delete') && (
@@ -585,9 +688,9 @@ const MemberManagement: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(member)}
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Trash2 size={16} />
                         </Button>
                       )}
                     </div>

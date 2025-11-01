@@ -4,10 +4,9 @@ import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import { Calendar, Users, ArrowRight } from "lucide-react";
-import { useAppDispatch } from "@/redux/hooks";
-import { deleteProjectAsync } from "@/redux/slices/projectsSlice";
-import { useToast } from "@/hooks/use-toast";
+
 import usePermission from "@/hooks/usePermission";
+import { calculateProjectProgress } from "@/utils/projectUtils";
 
 interface ProjectCardProps {
   id: string;
@@ -16,7 +15,8 @@ interface ProjectCardProps {
   status: "Active" | "Not Started" | "In Progress" | "On Hold" | "Completed" | "Hold";
   dueDate: string;
   team: string[];
-  progress: number;
+  progress?: number; // Make optional since we'll calculate it
+  tasks?: any[]; // Add tasks for progress calculation
   className?: string;
   style?: React.CSSProperties;
   onDelete?: (id: string) => void;
@@ -29,13 +29,14 @@ const ProjectCard = ({
   status,
   dueDate,
   team,
-  progress,
+  progress: providedProgress,
+  tasks = [],
   className,
   style,
   onDelete,
 }: ProjectCardProps) => {
-  const dispatch = useAppDispatch();
-  const { toast } = useToast();
+  // Calculate progress from tasks if not provided
+  const progress = providedProgress ?? calculateProjectProgress(tasks);
   const { hasPermission, isSuperAdmin } = usePermission();
 
   // Generate avatar initials and color

@@ -56,12 +56,6 @@ const Dashboard = () => {
     dispatch(fetchTimeEntries({})); // Fetch time entries to populate totalHours
   }, [dispatch]);
 
-  useEffect(() => {
-    dispatch(fetchProjects());
-    dispatch(fetchAllTasksByCompany());
-    dispatch(fetchTimeEntries({})); // Fetch time entries to populate totalHours
-  }, [dispatch]);
-
   // Get recent projects (3 most recent)
   const recentProjects = [...allProjects]
     .sort((a, b) => {
@@ -69,6 +63,18 @@ const Dashboard = () => {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     })
     .slice(0, 3);
+
+  // Group tasks by project ID
+  const tasksByProject = allTasks.reduce((acc, task) => {
+    const projectId = task.project?.id;
+    if (projectId) {
+      if (!acc[projectId]) {
+        acc[projectId] = [];
+      }
+      acc[projectId].push(task);
+    }
+    return acc;
+  }, {} as Record<string, typeof allTasks>);
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
@@ -276,7 +282,23 @@ const Dashboard = () => {
                 {recentProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    {...project}
+                    id={project.id}
+                    title={project.title}
+                    client={project.client}
+                    status={project.status}
+                    dueDate={(() => {
+                      if (!project.endDate) return "No Due Date";
+                      const d = new Date(project.endDate);
+                      return isNaN(d.getTime())
+                        ? "No Due Date"
+                        : d.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          });
+                    })()}
+                    team={project.team}
+                    tasks={tasksByProject[project.id] || []}
                   />
                 ))}
               </div>

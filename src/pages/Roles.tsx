@@ -129,13 +129,13 @@ const RolesPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">
             <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-              size={18}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10 pointer-events-none"
+              size={16}
             />
-            <Input
+            <input
               type="text"
               placeholder="Search roles..."
-              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

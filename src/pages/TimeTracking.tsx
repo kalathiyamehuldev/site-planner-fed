@@ -22,6 +22,7 @@ import {
   Trash2,
   Pencil,
 } from "lucide-react";
+import { RiArrowUpDownLine } from "@remixicon/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -112,6 +113,7 @@ const TimeTracking = () => {
   const {hasPermission} = usePermission();
 
   // Local state
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState<
     "all" | "today" | "week" | "month" | "custom"
   >("all");
@@ -331,7 +333,7 @@ const TimeTracking = () => {
   };
 
   // Filter time entries
-  const filteredEntries = timeEntries.filter((entry) => {
+  let filteredEntries = timeEntries.filter((entry) => {
     switch (filter) {
       case "billable":
         return entry.isBillable;
@@ -343,6 +345,49 @@ const TimeTracking = () => {
         return true;
     }
   });
+  
+  // Apply sorting
+  if (sortConfig) {
+    filteredEntries = [...filteredEntries].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      switch (sortConfig.key) {
+        case 'date':
+          aValue = a.date || '';
+          bValue = b.date || '';
+          break;
+        case 'project':
+          aValue = a.project?.name?.toLowerCase() || '';
+          bValue = b.project?.name?.toLowerCase() || '';
+          break;
+        case 'task':
+          aValue = a.task?.title?.toLowerCase() || '';
+          bValue = b.task?.title?.toLowerCase() || '';
+          break;
+        case 'user':
+          aValue = a.user ? `${a.user.firstName} ${a.user.lastName}`.toLowerCase() : '';
+          bValue = b.user ? `${b.user.firstName} ${b.user.lastName}`.toLowerCase() : '';
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+  
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
 
 
@@ -1064,16 +1109,40 @@ console.log("timeEntryData",timeEntryData);
                     <thead>
                       <tr className="bg-muted/30">
                         <th className="text-left p-4 font-medium text-muted-foreground w-20 sm:w-24 md:w-28">
-                          Date
+                          <button
+                            onClick={() => handleSort('date')}
+                            className="text-left p-0 font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
+                          >
+                            Date
+                            <RiArrowUpDownLine size={14} />
+                          </button>
                         </th>
                         <th className="text-left p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
-                          Project
+                          <button
+                            onClick={() => handleSort('project')}
+                            className="text-left p-0 font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
+                          >
+                            Project
+                            <RiArrowUpDownLine size={14} />
+                          </button>
                         </th>
                         <th className="text-left p-4 font-medium text-muted-foreground w-full sm:w-1/3 md:w-1/4 lg:w-1/5">
-                          Task
+                          <button
+                            onClick={() => handleSort('task')}
+                            className="text-left p-0 font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
+                          >
+                            Task
+                            <RiArrowUpDownLine size={14} />
+                          </button>
                         </th>
                         <th className="text-left p-4 font-medium text-muted-foreground w-24 sm:w-28 md:w-32">
-                          User
+                          <button
+                            onClick={() => handleSort('user')}
+                            className="text-left p-0 font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
+                          >
+                            User
+                            <RiArrowUpDownLine size={14} />
+                          </button>
                         </th>
                         <th className="text-right p-4 font-medium text-muted-foreground w-16 sm:w-18 md:w-20">
                           Hours

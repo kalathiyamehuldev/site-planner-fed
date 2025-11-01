@@ -71,6 +71,40 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange,
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
+  // Helper function to format date for input field (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string | undefined | null): string => {
+    if (!dateString || dateString.trim() === '') return '';
+    
+    try {
+      // Handle different date formats
+      let date: Date;
+      
+      // If it's already in YYYY-MM-DD format, use it directly
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      
+      // Try to parse the date
+      date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return '';
+      }
+      
+      // Format as YYYY-MM-DD for date input
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return '';
+    }
+  };
+
   // Initialize form data when dialog opens or edit project changes
   useEffect(() => {
     if (open && mode === 'edit' && editProject) {
@@ -90,8 +124,8 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange,
         name: editProject.title || '',
         description: editProject.description || '',
         status: getFormStatus(editProject.status),
-        startDate: editProject.startDate || '',
-        endDate: editProject.endDate || '',
+        startDate: formatDateForInput(editProject.startDate),
+        endDate: formatDateForInput(editProject.endDate),
         budget: editProject.budget ? editProject.budget.toString() : '',
       });
     } else if (open && mode === 'create') {

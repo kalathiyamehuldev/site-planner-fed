@@ -93,6 +93,7 @@ const transformApiProject = (apiProject: ApiProject) => ({
   budget: apiProject.budget || 0,
   startDate: apiProject.startDate || '',
   endDate: apiProject.endDate || '',
+  createdAt: apiProject.createdAt,
 });
 
 export type Project = ReturnType<typeof transformApiProject>;

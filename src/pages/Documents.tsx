@@ -1091,7 +1091,7 @@ const Documents = () => {
                                 <MoreHorizontal size={16} />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="start" side="left" sideOffset={5} className="w-48">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1148,8 +1148,8 @@ const Documents = () => {
             <div 
               className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]"
               style={{
-                left: contextMenu.x,
-                top: contextMenu.y,
+                left: Math.min(contextMenu.x, window.innerWidth - 180),
+                top: Math.min(contextMenu.y, window.innerHeight - 200),
               }}
             >
               {hasPermission('folders', 'update') && (

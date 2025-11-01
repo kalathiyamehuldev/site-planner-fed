@@ -1024,7 +1024,7 @@ const FolderView: React.FC = () => {
                                 <MoreVertical size={16} />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="start" side="left" sideOffset={5} className="w-48">
                               {hasPermission('folders', 'update') && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -1100,7 +1100,7 @@ const FolderView: React.FC = () => {
                                 <MoreVertical size={14} />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="start" side="left" sideOffset={5} className="w-48">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1270,7 +1270,7 @@ const FolderView: React.FC = () => {
                                 <MoreHorizontal size={16} />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="start" side="left" sideOffset={5} className="w-48">
                               {hasPermission('folders', 'update') && (
                                 <DropdownMenuItem
                                   onClick={(e) => {

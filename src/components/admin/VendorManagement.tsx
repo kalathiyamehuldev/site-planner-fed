@@ -27,6 +27,7 @@ import {
   selectProjectLoading,
 } from '@/redux/slices/projectsSlice';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { RiArrowUpDownLine } from '@remixicon/react';
 import TagSelector from '@/components/ui/tag-selector';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
@@ -82,6 +83,7 @@ const VendorManagement: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const { toast } = useToast();
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -309,13 +311,56 @@ const VendorManagement: React.FC = () => {
     }
   };
 
-  const filteredVendors = vendors.filter(
+  let filteredVendors = vendors.filter(
     (vendor) =>
       `${vendor.firstName} ${vendor.lastName}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       vendor.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  // Apply sorting
+  if (sortConfig) {
+    filteredVendors = [...filteredVendors].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      switch (sortConfig.key) {
+        case 'name':
+          aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'phone':
+          aValue = a.phone?.toLowerCase() || '';
+          bValue = b.phone?.toLowerCase() || '';
+          break;
+        case 'status':
+          aValue = a.isActive ? 'active' : 'inactive';
+          bValue = b.isActive ? 'active' : 'inactive';
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+  
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   return (
     <div className="space-y-4">
@@ -500,54 +545,103 @@ const VendorManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden">
+      <div className="w-full bg-white rounded-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Name</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Email</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Phone</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground  lg:table-cell">Projects</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground md:table-cell">Tags</th>
-                <th className="text-left p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">Status</th>
-                {hasPermission('users', 'update') && <th className="text-right p-2 sm:p-4 font-medium text-xs sm:text-sm text-muted-foreground">Actions</th>}
+          <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
+            <thead className="h-12">
+              <tr className="border-b border-[#1a2624]/10">
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
+                  <button
+                    onClick={() => handleSort('name')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Name
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/4 hidden sm:table-cell">
+                  <button
+                    onClick={() => handleSort('email')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Email
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                  <button
+                    onClick={() => handleSort('phone')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Phone
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
+                  Projects
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                  Tags
+                </th>
+                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24 hidden sm:table-cell">
+                  <button
+                    onClick={() => handleSort('status')}
+                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Status
+                    <RiArrowUpDownLine size={14} />
+                  </button>
+                </th>
+                <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                  {/* Actions column - empty header */}
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white">
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-8">
-                  Loading vendors...
+                <td colSpan={7} className="text-center py-8">
+                  <div className="text-lg">Loading vendors...</div>
                 </td>
               </tr>
             ) : filteredVendors.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-8">
-                  No vendors found
+                <td colSpan={7} className="text-center py-8">
+                  <div className="text-lg text-muted-foreground">No vendors found</div>
                 </td>
               </tr>
             ) : (
               filteredVendors.map((vendor, index) => (
                 <tr
                   key={vendor.id}
-                  className="border-b last:border-0 hover:bg-secondary/30 transition-colors animate-fade-in"
+                  className="h-16 hover:bg-gray-50/50 transition-colors animate-fade-in border-b border-[#1a2624]/10"
                   style={{
                     animationDelay: `${index * 0.05}s`,
                     animationFillMode: "forwards",
                   }}
                 >
-                  <td className="p-2 sm:p-4">
-                    <span className="font-medium text-xs sm:text-sm">{vendor.firstName} {vendor.lastName}</span>
-                    <div className="text-xs text-muted-foreground sm:hidden mt-1">{vendor.email}</div>
+                  <td className="px-3 max-w-xs">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
+                        {vendor.firstName} {vendor.lastName}
+                      </div>
+                      {/* Mobile: Show email under name */}
+                      <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none sm:hidden truncate">
+                        {vendor.email}
+                      </div>
+                    </div>
                   </td>
-                  <td className="p-2 sm:p-4 hidden sm:table-cell">
-                    <span className="text-xs sm:text-sm">{vendor.email}</span>
+                  <td className="px-3 max-w-xs hidden sm:table-cell">
+                    <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                      {vendor.email}
+                    </div>
                   </td>
-                  <td className="p-2 sm:p-4 hidden md:table-cell">
-                    <span className="text-xs sm:text-sm">{vendor.phone || '-'}</span>
+                  <td className="px-3 hidden md:table-cell">
+                    <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                      {vendor.phone || '-'}
+                    </div>
                   </td>
-                  <td className="p-4">
+                  <td className="px-3 hidden lg:table-cell">
                     <div className="text-sm">
                       {vendor.projects && vendor.projects.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -558,22 +652,22 @@ const VendorManagement: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-[#1a2624]/70 text-sm font-normal font-['Manrope']">-</span>
                       )}
                     </div>
                   </td>
-                  <td className="p-4 md:table-cell">
+                  <td className="px-3 hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {vendor.tags?.map((tag) => (
-                        <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        <span key={tag} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                           {tag}
                         </span>
                       ))}
-                      {!vendor.tags?.length && <span className="text-sm text-muted-foreground">-</span>}
+                      {!vendor.tags?.length && <span className="text-[#1a2624]/70 text-sm font-normal font-['Manrope']">-</span>}
                     </div>
                   </td>
-                  <td className="p-4 hidden sm:table-cell">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
+                  <td className="px-3 hidden sm:table-cell">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       vendor.isActive 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
@@ -581,16 +675,16 @@ const VendorManagement: React.FC = () => {
                       {vendor.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-3">
+                    <div className="flex items-center justify-center gap-1">
                       {hasPermission('users', 'update') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(vendor)}
-                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="w-6 h-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit size={16} />
                         </Button>
                       )}
                       {hasPermission('users', 'delete') && (
@@ -598,9 +692,9 @@ const VendorManagement: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(vendor.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 size={16} />
                         </Button>
                       )}
                     </div>

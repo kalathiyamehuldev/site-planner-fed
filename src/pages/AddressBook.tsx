@@ -362,7 +362,7 @@ const AddressBook = () => {
 
       {/* Tag Filter */}
       {showTagFilter && (
-        <div className="animate-fade-in animation-delay-[0.1s]">
+        <div className="animate-fade-in animation-delay-[0.1s] mt-6">
           <GlassCard className="p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium">Filter by Tags</h3>
