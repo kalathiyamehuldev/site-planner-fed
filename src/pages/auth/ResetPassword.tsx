@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppDispatch } from '@/redux/hooks';
 import { resetPassword } from '@/redux/slices/authSlice';
 import { ResetPasswordDto } from '@/common/types/auth.types';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import {
   Form,
@@ -112,9 +112,7 @@ const ResetPassword = () => {
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Reset Password
-              </Button>
+              <ActionButton variant="primary" motion="subtle" className="w-full" text="Reset Password" />
             </form>
           </Form>
         </CardContent>

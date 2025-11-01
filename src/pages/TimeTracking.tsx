@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
+import ActionButton from "@/components/ui/ActionButton";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -90,7 +91,6 @@ import {
 } from "@/components/ui/tooltip";
 import { convertToDecimalDuration } from "@/lib/timeUtils";
 import usePermission from "@/hooks/usePermission";
-import ActionButton from "@/components/ui/ActionButton";
 
 const TimeTracking = () => {
   const dispatch = useAppDispatch();
@@ -1744,19 +1744,18 @@ console.log("timeEntryData",timeEntryData);
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <MotionButton
-              variant="outline"
+            <ActionButton
+              variant="secondary"
               onClick={() => setIsEditModalOpen(false)}
               motion="subtle"
-            >
-              Cancel
-            </MotionButton>
-            <MotionButton
+              text="Cancel"
+            />
+            <ActionButton
+              variant="primary"
               onClick={handleUpdateTimeEntry}
               motion="subtle"
-            >
-              Update Entry
-            </MotionButton>
+              text="Update Entry"
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -1845,21 +1844,20 @@ console.log("timeEntryData",timeEntryData);
           </div>
           
           <div className="flex justify-end gap-2">
-            <MotionButton
-              variant="outline"
+            <ActionButton
+              variant="secondary"
               onClick={() => setIsTimerModalOpen(false)}
               motion="subtle"
-            >
-              Cancel
-            </MotionButton>
-            <MotionButton
+              text="Cancel"
+            />
+            <ActionButton
+              variant="primary"
               onClick={handleStartTimerSubmit}
               motion="subtle"
+              text="Start Timer"
+              leftIcon={<Play size={16} />}
               className="bg-green-600 hover:bg-green-700"
-            >
-              <Play size={16} className="mr-2" />
-              Start Timer
-            </MotionButton>
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -1902,20 +1900,19 @@ console.log("timeEntryData",timeEntryData);
           </div>
           
           <div className="flex justify-end gap-2">
-            <MotionButton
-              variant="outline"
+            <ActionButton
+              variant="secondary"
               onClick={cancelStopTimer}
               motion="subtle"
-            >
-              Discard
-            </MotionButton>
-            <MotionButton
+              text="Discard"
+            />
+            <ActionButton
+              variant="primary"
               onClick={confirmStopTimer}
               motion="subtle"
+              text="Save Entry"
               className="bg-green-600 hover:bg-green-700"
-            >
-              Save Entry
-            </MotionButton>
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -1945,21 +1942,20 @@ console.log("timeEntryData",timeEntryData);
           </div>
           
           <div className="flex justify-end gap-2">
-            <MotionButton
-              variant="outline"
+            <ActionButton
+              variant="secondary"
               onClick={cancelStopTimer}
               motion="subtle"
-            >
-              Cancel
-            </MotionButton>
-            <MotionButton
+              text="Cancel"
+            />
+            <ActionButton
+              variant="primary"
               onClick={confirmStopTimer}
               motion="subtle"
+              text="Stop & Save"
+              leftIcon={<Pause size={16} />}
               className="bg-red-600 hover:bg-red-700"
-            >
-              <Pause size={16} className="mr-2" />
-              Stop & Save
-            </MotionButton>
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -2090,19 +2086,18 @@ console.log("timeEntryData",timeEntryData);
           </div>
           
           <div className="flex justify-end gap-2">
-            <MotionButton
-              variant="outline"
+            <ActionButton
+              variant="secondary"
               onClick={() => setIsNewTimeEntryModalOpen(false)}
               motion="subtle"
-            >
-              Cancel
-            </MotionButton>
-            <MotionButton
+              text="Cancel"
+            />
+            <ActionButton
+              variant="primary"
               onClick={handleNewTimeEntrySubmit}
               motion="subtle"
-            >
-              Save Entry
-            </MotionButton>
+              text="Save Entry"
+            />
           </div>
         </DialogContent>
       </Dialog>

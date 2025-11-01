@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { Search, Filter, ArrowRight, Plus } from "lucide-react";
@@ -186,13 +185,12 @@ const Projects = () => {
         {error && (
           <div className="text-center py-12">
             <p className="text-red-500 mb-4">{error}</p>
-            <MotionButton
+            <ActionButton
               onClick={() => dispatch(fetchProjects())}
-              variant="outline"
+              variant="secondary"
               motion="subtle"
-            >
-              Try Again
-            </MotionButton>
+              text="Try Again"
+            />
           </div>
         )}
 

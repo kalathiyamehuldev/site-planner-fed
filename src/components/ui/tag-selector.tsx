@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
 import { fetchTags, createTag, Tag } from '@/redux/slices/adminSlice';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Plus, X } from 'lucide-react';
 import {
@@ -199,12 +199,16 @@ const TagSelector: React.FC<TagSelectorProps> = ({
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateTag}>
-              Create Tag
-            </Button>
+            <ActionButton 
+              variant="secondary" 
+              onClick={() => setShowCreateDialog(false)}
+              text="Cancel"
+            />
+            <ActionButton 
+              variant="primary"
+              onClick={handleCreateTag}
+              text="Create Tag"
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

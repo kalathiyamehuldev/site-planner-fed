@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { AlertTriangle, User } from 'lucide-react';
 import { Member } from '@/redux/slices/adminSlice';
 import usePermission from '@/hooks/usePermission';
@@ -75,22 +75,21 @@ const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
+        <DialogFooter className="flex-col sm:flex-row gap-1">
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={() => onOpenChange(false)}
             disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
+            text="Cancel"
+          />
+          <ActionButton
+            variant="danger"
+            motion="subtle"
             onClick={onConfirm}
             disabled={loading}
-            className="w-full sm:w-auto"
-          >
-            {loading ? 'Deleting...' : 'Delete Member'}
-          </Button>
+            text={loading ? 'Deleting...' : 'Delete Member'}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

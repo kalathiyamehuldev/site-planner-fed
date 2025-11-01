@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { AlertTriangle, Folder, FileText } from 'lucide-react';
 import { Folder as FolderType } from '@/redux/slices/foldersSlice';
 import usePermission from '@/hooks/usePermission';
@@ -105,31 +105,31 @@ const DeleteFolderModal: React.FC<DeleteFolderModalProps> = ({
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={() => onOpenChange(false)}
             disabled={loading}
-          >
-            Cancel
-          </Button>
+            text="Cancel"
+          />
           {hasContent ? (
-            <Button
-              variant="destructive"
+            <ActionButton
+              variant="primary"
+              motion="subtle"
               onClick={handleCascadeDelete}
               disabled={loading}
-              className="w-full sm:w-auto"
-            >
-              {loading ? 'Deleting...' : 'Delete All Contents'}
-            </Button>
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              text={loading ? 'Deleting...' : 'Delete All Contents'}
+            />
           ) : (
-            <Button
-              variant="destructive"
+            <ActionButton
+              variant="primary"
+              motion="subtle"
               onClick={handleSimpleDelete}
               disabled={loading}
-              className="w-full sm:w-auto"
-            >
-              {loading ? 'Deleting...' : 'Delete Folder'}
-            </Button>
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+              text={loading ? 'Deleting...' : 'Delete Folder'}
+            />
           )}
         </DialogFooter>
       </DialogContent>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -168,9 +168,7 @@ const ImageLibrary = () => {
             <h1 className="text-3xl font-light mb-2">Image Library</h1>
             <p className="text-muted-foreground">Store and organize design images and inspiration</p>
           </div>
-          <MotionButton variant="default" motion="subtle">
-            <ArrowUpToLine size={18} className="mr-2" /> Upload Images
-          </MotionButton>
+          <ActionButton variant="primary" motion="subtle" text="Upload Images" leftIcon={<ArrowUpToLine size={18} />} />
         </div>
 
         {/* Filters and Search */}
@@ -255,9 +253,7 @@ const ImageLibrary = () => {
                   <p className="text-muted-foreground mb-6">
                     No images match your current filters. Try a different search or category.
                   </p>
-                  <MotionButton variant="default" motion="subtle">
-                    <ArrowUpToLine size={18} className="mr-2" /> Upload New Images
-                  </MotionButton>
+                  <ActionButton variant="primary" motion="subtle" text="Upload New Images" leftIcon={<ArrowUpToLine size={18} />} />
                 </GlassCard>
               </div>
             ) : (
@@ -337,9 +333,7 @@ const ImageLibrary = () => {
                 <p className="text-muted-foreground mb-6">
                   No images match your current filters. Try a different search or category.
                 </p>
-                <MotionButton variant="default" motion="subtle">
-                  <ArrowUpToLine size={18} className="mr-2" /> Upload New Images
-                </MotionButton>
+                <ActionButton variant="primary" motion="subtle" text="Upload New Images" leftIcon={<ArrowUpToLine size={18} />} />
               </div>
             ) : (
               <div className="overflow-x-auto">

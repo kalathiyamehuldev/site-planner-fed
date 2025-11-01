@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Button } from "@/components/ui/button";
 import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
@@ -53,7 +54,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 import ActionButton from "@/components/ui/ActionButton";
-import { DocumentsMinimalistic } from "@solar-icons/react";
+import { DocumentsMinimalistic, DownloadMinimalistic } from "@solar-icons/react";
 
 // Static data for progress (keeping as requested)
 const staticProjectData = {
@@ -523,14 +524,13 @@ const ProjectDetails = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Documents</h2>
               {hasPermission(documentResource, 'create') && (
-                <MotionButton 
-                  variant="default" 
-                  size="sm" 
+                <ActionButton 
+                  variant="primary" 
                   motion="subtle"
                   onClick={() => setUploadDocumentDialogOpen(true)}
-                >
-                  <Plus size={16} className="mr-2" /> Upload Document
-                </MotionButton>
+                  text="Upload Document"
+                  leftIcon={<Plus size={16} />}
+                />
               )}
             </div>
             <GlassCard className="overflow-hidden animate-scale-in">
@@ -582,15 +582,14 @@ const ProjectDetails = () => {
                           <td className="p-4">{new Date(doc.createdAt).toLocaleDateString()}</td>
                           <td className="p-4 text-right">
                             {hasPermission(documentResource, 'read') && (
-                              <MotionButton
-                                variant="ghost"
-                                size="sm"
+                              <ActionButton
+                                variant="text"
                                 motion="subtle"
                                 className="text-primary"
                                 onClick={() => handleDownloadDocument(doc.url, doc.name)}
-                              >
-                                Download
-                              </MotionButton>
+                                // text="Download"
+                                leftIcon={<DownloadMinimalistic weight="Bold"/>}
+                              />
                             )}
                           </td>
                         </tr>
@@ -613,9 +612,7 @@ const ProjectDetails = () => {
           <TabsContent value="invoices" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Invoices</h2>
-              <MotionButton variant="default" size="sm" motion="subtle">
-                <Plus size={16} className="mr-2" /> Create Invoice
-              </MotionButton>
+              <ActionButton variant="primary" motion="subtle" text="Create Invoice" leftIcon={<Plus size={16} />} />
             </div>
             <div className="flex items-center justify-center p-12 text-muted-foreground animate-fade-in">
               No invoices created yet for this project.

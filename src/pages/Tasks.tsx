@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
 import TaskTable from "@/components/TaskTable";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";

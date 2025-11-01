@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -279,14 +280,17 @@ const CustomerManagement: React.FC = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             {hasPermission('users', 'create') && (
-              <Button onClick={() => {
-                setEditingCustomer(null);
-                setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
-                setFormErrors({});
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Customer
-              </Button>
+              <ActionButton 
+                variant="primary" 
+                motion="subtle"
+                onClick={() => {
+                  setEditingCustomer(null);
+                  setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
+                  setFormErrors({});
+                }}
+                text="Add Customer"
+                leftIcon={<Plus className="h-4 w-4" />}
+              />
             )}
           </DialogTrigger>
           <DialogContent className="w-5/6 sm:max-w-md">
@@ -426,9 +430,12 @@ const CustomerManagement: React.FC = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={loading || !isFormValid()}>
-                  {loading ? 'Saving...' : editingCustomer ? 'Update' : 'Create'}
-                </Button>
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle" 
+                  disabled={loading || !isFormValid()}
+                  text={loading ? 'Saving...' : editingCustomer ? 'Update' : 'Create'}
+                />
               </DialogFooter>
             </form>
           </DialogContent>

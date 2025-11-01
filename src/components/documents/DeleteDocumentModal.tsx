@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { AlertTriangle, FileText } from 'lucide-react';
 import { Document } from '@/redux/slices/documentsSlice';
 import usePermission from '@/hooks/usePermission';
@@ -78,21 +78,21 @@ const DeleteDocumentModal: React.FC<DeleteDocumentModalProps> = ({
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={() => onOpenChange(false)}
             disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
+            text="Cancel"
+          />
+          <ActionButton
+            variant="danger"
+            motion="subtle"
             onClick={onConfirm}
             disabled={loading}
-            className="w-full sm:w-auto"
-          >
-            {loading ? 'Deleting...' : 'Delete Document'}
-          </Button>
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            text={loading ? 'Deleting...' : 'Delete Document'}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

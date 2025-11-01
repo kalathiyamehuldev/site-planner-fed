@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectCompany } from "@/redux/slices/authSlice";
-import { Button } from "@/components/ui/button";
+import ActionButton from "@/components/ui/ActionButton";
 import {
   Card,
   CardContent,
@@ -61,13 +61,14 @@ const CompanySelection = () => {
             ))}
           </div>
 
-          <Button
+          <ActionButton
+            variant="primary"
+            motion="subtle"
             onClick={handleCompanySelect}
             className="w-full"
             disabled={!selectedCompanyId || isLoading}
-          >
-            {isLoading ? "Selecting..." : "Continue"}
-          </Button>
+            text={isLoading ? "Selecting..." : "Continue"}
+          />
         </CardContent>
       </Card>
     </div>

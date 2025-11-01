@@ -3,7 +3,6 @@ import PageContainer from "@/components/layout/PageContainer";
 import DashboardHeader from "@/components/layout/DashboardHeader";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { getProfile, updateProfile, selectUser, selectSelectedCompany } from "@/redux/slices/authSlice";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";

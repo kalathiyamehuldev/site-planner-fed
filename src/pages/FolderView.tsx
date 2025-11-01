@@ -29,8 +29,7 @@ import {
 } from '@/redux/slices/foldersSlice';
 import PageContainer from '@/components/layout/PageContainer';
 import { GlassCard } from '@/components/ui/glass-card';
-import { MotionButton } from '@/components/ui/motion-button';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -789,42 +788,38 @@ const FolderView: React.FC = () => {
         <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-center lg:justify-between animate-fade-in">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-4 mb-2 max-lg:hidden">
-              <MotionButton
-                variant="outline"
-                size="sm"
+              <ActionButton
+                variant="gray"
                 motion="subtle"
                 onClick={handleBackClick}
                 className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back</span>
-              </MotionButton>
+                text="Back"
+                leftIcon={<ArrowLeft className="h-4 w-4" />}
+              />
             </div>
             <h1 className="text-2xl sm:text-3xl font-light mb-2 truncate">{currentFolder?.name}</h1>
             <p className="text-muted-foreground text-sm sm:text-base">Manage files and folders in this directory</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
             {hasPermission('folders', 'create') && (
-              <MotionButton
-                variant="outline"
-                size="sm"
+              <ActionButton
+                variant="secondary"
                 motion="subtle"
                 className="w-auto sm:w-auto"
                 onClick={handleCreateFolder}
-              >
-                <Plus size={16} className="mr-2" /> <span className="sm:inline">New Folder</span>
-              </MotionButton>
+                text="New Folder"
+                leftIcon={<Plus size={16} />}
+              />
             )}
             {hasPermission('documents', 'create') && (
-              <MotionButton
-                variant="default"
-                size="sm"
+              <ActionButton
+                variant="primary"
                 motion="subtle"
                 onClick={() => setIsUploadDialogOpen(true)}
                 className="w-auto sm:w-auto"
-              >
-                <Upload size={16} className="mr-2" /> <span className="sm:inline">Upload Files</span>
-              </MotionButton>
+                text="Upload Files"
+                leftIcon={<Upload size={16} />}
+              />
             )}
           </div>
         </div>
@@ -958,9 +953,8 @@ const FolderView: React.FC = () => {
 
           {/* Clear Filters Button */}
           {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
-            <MotionButton
-              variant="outline"
-              size="sm"
+            <ActionButton
+              variant="secondary"
               motion="subtle"
               onClick={() => {
                 setSearchTerm("");
@@ -968,9 +962,9 @@ const FolderView: React.FC = () => {
                 setSelectedFileType("All");
               }}
               className="whitespace-nowrap"
-            >
-              <X size={16} className="mr-1" /> Clear
-            </MotionButton>
+              text="Clear"
+              leftIcon={<X size={16} />}
+            />
           )}
         </div>
         {/* Content Area */}
@@ -1206,14 +1200,10 @@ const FolderView: React.FC = () => {
                     {!searchTerm && (
                       <div className="flex items-center justify-center gap-3">
                         {hasPermission('folders', 'create') && (
-                          <MotionButton onClick={handleCreateFolder} variant="outline" motion="subtle">
-                            <Plus size={18} className="mr-2" /> New Folder
-                          </MotionButton>
+                          <ActionButton onClick={handleCreateFolder} variant="secondary" motion="subtle" text="New Folder" leftIcon={<Plus size={18} />} />
                         )}
                         {hasPermission('documents', 'create') && (
-                          <MotionButton onClick={() => setIsUploadDialogOpen(true)} variant="default" motion="subtle">
-                            <Upload size={18} className="mr-2" /> Upload Files
-                          </MotionButton>
+                          <ActionButton onClick={() => setIsUploadDialogOpen(true)} variant="primary" motion="subtle" text="Upload Files" leftIcon={<Upload size={18} />} />
                         )}
                       </div>
                     )}
@@ -1439,18 +1429,19 @@ const FolderView: React.FC = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
+                <ActionButton
+                  variant="secondary"
+                  motion="subtle"
                   onClick={handleCancelCreateFolder}
-                >
-                  Cancel
-                </Button>
-                <Button
+                  text="Cancel"
+                />
+                <ActionButton
+                  variant="primary"
+                  motion="subtle"
                   onClick={handleCreateFolderSubmit}
                   disabled={!newFolderName.trim()}
-                >
-                  Create
-                </Button>
+                  text="Create"
+                />
               </div>
             </div>
           </div>
@@ -1522,18 +1513,19 @@ const FolderView: React.FC = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
+                <ActionButton
+                  variant="secondary"
+                  motion="subtle"
                   onClick={handleCancelRename}
-                >
-                  Cancel
-                </Button>
-                <Button
+                  text="Cancel"
+                />
+                <ActionButton
+                  variant="primary"
+                  motion="subtle"
                   onClick={handleRenameDocument}
                   disabled={!newDocumentName.trim()}
-                >
-                  Rename
-                </Button>
+                  text="Rename"
+                />
               </div>
             </DialogContent>
           </Dialog>

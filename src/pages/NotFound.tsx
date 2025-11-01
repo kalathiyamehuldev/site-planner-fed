@@ -2,7 +2,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
 import { ArrowLeft } from "lucide-react";
 
@@ -30,16 +30,12 @@ const NotFound = () => {
         <div className="flex flex-col gap-2 items-center">
           {/* Desktop version with arrow */}
           <Link to="/">
-            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto hidden md:flex">
-              <ArrowLeft size={18} className="mr-2" /> Return to Dashboard
-            </MotionButton>
+            <ActionButton variant="primary" motion="subtle" className="w-full sm:w-auto hidden md:flex" text="Return to Dashboard" leftIcon={<ArrowLeft size={18} />} />
           </Link>
           
           {/* Mobile version without arrow */}
           <Link to="/">
-            <MotionButton variant="default" motion="subtle" className="w-full sm:w-auto flex md:hidden">
-              Return to Dashboard
-            </MotionButton>
+            <ActionButton variant="primary" motion="subtle" className="w-full sm:w-auto flex md:hidden" text="Return to Dashboard" />
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
             If you believe this is an error, please contact support.

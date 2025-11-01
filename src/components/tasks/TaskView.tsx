@@ -909,17 +909,17 @@ const TaskView: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <Button
-                            aria-label="Delete subtask"
-                            onClick={() => {
-                              dispatch(deleteTaskAsync(st.id)).unwrap()
-                                .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                            }}
-                            className="opacity-70 group-hover:opacity-100"
-                            title="Delete"
-                          >
-                            <TrashBinTrash weight="Bold" size={20} color="red" />
-                          </Button>
+                          <button
+                              aria-label="Delete subtask"
+                              onClick={() => {
+                                dispatch(deleteTaskAsync(st.id)).unwrap()
+                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                              }}
+                              className="opacity-70 group-hover:opacity-100 mx-auto"
+                              title="Delete"
+                            >
+                              <TrashBinTrash weight="Bold" color="red" size={20} />
+                            </button>
                         </div>
                       </div>
                     ))}
@@ -1009,8 +1009,9 @@ const TaskView: React.FC = () => {
                                     onChange={(e) => setEditingComments((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', saving: false }), text: e.target.value } }))}
                                   />
                                   <div className="flex items-center gap-2">
-                                    <Button
-                                      size="sm"
+                                    <ActionButton
+                                      variant="primary"
+                                      motion="subtle"
                                       disabled={!editingComments[c.id].text.trim() || editingComments[c.id].saving}
                                       onClick={async () => {
                                         if (!id) return;
@@ -1022,16 +1023,14 @@ const TaskView: React.FC = () => {
                                           setEditingComments((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', saving: false }), saving: false } }));
                                         }
                                       }}
-                                    >
-                                      {editingComments[c.id].saving ? 'Saving...' : 'Save'}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
+                                      text={editingComments[c.id].saving ? 'Saving...' : 'Save'}
+                                    />
+                                    <ActionButton
+                                      variant="secondary"
+                                      motion="subtle"
                                       onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[c.id]; return next; })}
-                                    >
-                                      Cancel
-                                    </Button>
+                                      text="Cancel"
+                                    />
                                   </div>
                                 </div>
                               ) : (
@@ -1092,8 +1091,9 @@ const TaskView: React.FC = () => {
                                         }));
                                       }}
                                     />
-                                    <Button
-                                      size="sm"
+                                    <ActionButton
+                                      variant="primary"
+                                      motion="subtle"
                                       disabled={!replyDrafts[c.id].text.trim() || replyDrafts[c.id].posting || !hasPermission('tasks', 'update')}
                                       onClick={async () => {
                                         if (!id || !hasPermission('tasks', 'update')) return;
@@ -1105,9 +1105,8 @@ const TaskView: React.FC = () => {
                                           setReplyDrafts((prev) => ({ ...prev, [c.id]: { ...(prev[c.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: false } }));
                                         }
                                       }}
-                                    >
-                                      {replyDrafts[c.id].posting ? 'Posting...' : 'Send'}
-                                    </Button>
+                                      text={replyDrafts[c.id].posting ? 'Posting...' : 'Send'}
+                                    />
                                   </div>
 
                                   {/* Mention dropdown for reply */}
@@ -1202,8 +1201,9 @@ const TaskView: React.FC = () => {
                                               onChange={(e) => setEditingComments((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', saving: false }), text: e.target.value } }))}
                                             />
                                             <div className="flex items-center gap-2">
-                                              <Button
-                                                size="sm"
+                                              <ActionButton
+                                                variant="primary"
+                                                motion="subtle"
                                                 disabled={!editingComments[rc.id].text.trim() || editingComments[rc.id].saving}
                                                 onClick={async () => {
                                                   if (!id) return;
@@ -1215,16 +1215,14 @@ const TaskView: React.FC = () => {
                                                     setEditingComments((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', saving: false }), saving: false } }));
                                                   }
                                                 }}
-                                              >
-                                                {editingComments[rc.id].saving ? 'Saving...' : 'Save'}
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
+                                                text={editingComments[rc.id].saving ? 'Saving...' : 'Save'}
+                                              />
+                                              <ActionButton
+                                                variant="secondary"
+                                                motion="subtle"
                                                 onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[rc.id]; return next; })}
-                                              >
-                                                Cancel
-                                              </Button>
+                                                text="Cancel"
+                                              />
                                             </div>
                                           </div>
                                         ) : (
@@ -1283,8 +1281,9 @@ const TaskView: React.FC = () => {
                                                   }));
                                                 }}
                                               />
-                                              <Button
-                                                size="sm"
+                                              <ActionButton
+                                                variant="primary"
+                                                motion="subtle"
                                                 disabled={!replyDrafts[rc.id].text.trim() || replyDrafts[rc.id].posting || !hasPermission('tasks', 'update')}
                                                 onClick={async () => {
                                                   if (!id || !hasPermission('tasks', 'update')) return;
@@ -1296,9 +1295,8 @@ const TaskView: React.FC = () => {
                                                     setReplyDrafts((prev) => ({ ...prev, [rc.id]: { ...(prev[rc.id] || { text: '', posting: false, mentions: [], mentionOpen: false, mentionQuery: '' }), posting: false } }));
                                                   }
                                                 }}
-                                              >
-                                                {replyDrafts[rc.id].posting ? 'Posting...' : 'Send'}
-                                              </Button>
+                                                text={replyDrafts[rc.id].posting ? 'Posting...' : 'Send'}
+                                              />
                                             </div>
 
                                             {replyDrafts[rc.id].mentionOpen && members.length > 0 && (
@@ -1393,8 +1391,9 @@ const TaskView: React.FC = () => {
                                                           onChange={(e) => setEditingComments((prev) => ({ ...prev, [rrc.id]: { ...(prev[rrc.id] || { text: '', saving: false }), text: e.target.value } }))}
                                                         />
                                                         <div className="flex items-center gap-2">
-                                                          <Button
-                                                            size="sm"
+                                                          <ActionButton
+                                                            variant="primary"
+                                                            motion="subtle"
                                                             disabled={!editingComments[rrc.id].text.trim() || editingComments[rrc.id].saving}
                                                             onClick={async () => {
                                                               if (!id) return;
@@ -1406,16 +1405,14 @@ const TaskView: React.FC = () => {
                                                                 setEditingComments((prev) => ({ ...prev, [rrc.id]: { ...(prev[rrc.id] || { text: '', saving: false }), saving: false } }));
                                                               }
                                                             }}
-                                                          >
-                                                            {editingComments[rrc.id].saving ? 'Saving...' : 'Save'}
-                                                          </Button>
-                                                          <Button
-                                                            size="sm"
-                                                            variant="ghost"
+                                                            text={editingComments[rrc.id].saving ? 'Saving...' : 'Save'}
+                                                          />
+                                                          <ActionButton
+                                                            variant="secondary"
+                                                            motion="subtle"
                                                             onClick={() => setEditingComments((prev) => { const next = { ...prev }; delete next[rrc.id]; return next; })}
-                                                          >
-                                                            Cancel
-                                                          </Button>
+                                                            text="Cancel"
+                                                          />
                                                         </div>
                                                       </div>
                                                     ) : (
@@ -1468,9 +1465,13 @@ const TaskView: React.FC = () => {
                     onChange={(e) => setNewComment(e.target.value)}
                     disabled={!hasPermission('tasks', 'update')}
                   />
-                  <Button size="sm" onClick={handlePostComment} disabled={!newComment.trim() || postingComment || !hasPermission('tasks', 'update')}>
-                    {postingComment ? "Posting..." : "Post"}
-                  </Button>
+                  <ActionButton 
+                    variant="primary" 
+                    motion="subtle" 
+                    onClick={handlePostComment} 
+                    disabled={!newComment.trim() || postingComment || !hasPermission('tasks', 'update')}
+                    text={postingComment ? "Posting..." : "Post"}
+                  />
                 </div>
 
                 {/* Mention dropdown for main composer */}

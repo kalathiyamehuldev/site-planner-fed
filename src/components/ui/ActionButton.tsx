@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-export type ActionButtonVariant = "primary" | "secondary" | "gray" | "text";
+export type ActionButtonVariant = "primary" | "secondary" | "gray" | "text" | "danger";
 export type ActionButtonMotion = "subtle" | "bounce" | "scale" | "none";
 export type ActionButtonSize = "xl" | "l" | "m" | "s";
 
@@ -22,6 +22,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   className,
   disabled,
   motion = "subtle",
+  size = "m",
   ...props
 }) => {
   const hasLeftIcon = !!leftIcon;
@@ -31,13 +32,13 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     scale: "hover:scale-[1.03] active:scale-[0.98]",
     none: "",
   };
-  // const sizeClass = size ? `app-btn--${size}` : "";
+
   return (
     <button
       className={cn(
         "app-btn transition-all duration-200",
+        `app-btn--${size}`,
         motionClasses[motion],
-        // sizeClass,
         `app-btn--${variant}`,
         hasLeftIcon ? "has-left-icon" : "",
         disabled ? "app-btn--disabled" : "",

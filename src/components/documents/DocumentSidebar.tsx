@@ -35,6 +35,7 @@ import {
   clearComments,
   Comment as CommentType
 } from '@/redux/slices/commentsSlice';
+import ActionButton from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -851,21 +852,18 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    size="sm"
+                  <ActionButton
+                    variant="primary"
                     onClick={() => handleSaveEdit(comment.id)}
                     disabled={isUpdatingComment || !editingContent.trim()}
-                  >
-                    {isUpdatingComment ? 'Saving..' : 'Save'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                    text={isUpdatingComment ? 'Saving..' : 'Save'}
+                  />
+                  <ActionButton
+                    variant="secondary"
                     onClick={handleCancelEdit}
                     disabled={isUpdatingComment}
-                  >
-                    Cancel
-                  </Button>
+                    text="Cancel"
+                  />
                 </div>
               </div>
             ) : (
@@ -965,21 +963,20 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    size="sm"
+                  <ActionButton
+                    variant="primary"
+                    motion="subtle"
                     onClick={() => handleSubmitReply(comment.id)}
                     disabled={isSubmittingReply || !replyContent.trim()}
-                  >
-                    {isSubmittingReply ? 'Replying...' : 'Reply'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                    text={isSubmittingReply ? 'Replying...' : 'Reply'}
+                  />
+                  <ActionButton
+                    variant="secondary"
+                    motion="subtle"
                     onClick={handleCancelReply}
                     disabled={isSubmittingReply}
-                  >
-                    Cancel
-                  </Button>
+                    text="Cancel"
+                  />
                 </div>
               </div>
             )}
@@ -1266,15 +1263,14 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                       ));
                     })()}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <ActionButton
+                    variant="secondary"
                     className="w-full mt-2 flex items-center justify-center gap-1"
                     onClick={() => setIsVersionUploadOpen(true)}
+                    leftIcon={<Plus className="h-3 w-3" />}
+                    text='Add a new version'
                   >
-                    <Plus className="h-3 w-3" />
-                    Add a new version
-                  </Button>
+                  </ActionButton>
                 </div>
               )}
             </div>
@@ -1427,19 +1423,13 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
+                    <ActionButton
+                      variant="primary"
                       onClick={handleSaveDescription}
                       disabled={isUpdating}
                       className="h-8 px-3"
-                    >
-                      {isUpdating ? (
-                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
-                      ) : (
-                        <span className="text-sm">Save</span>
-                      )}
-                    </Button>
+                      text={isUpdating ? "Saving..." : "Save"}
+                    />
                   </div>
                 )}
               </div>
@@ -1744,10 +1734,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                             Add Image
                           </Button>
                         </div> */}
-                        <Button size="sm" onClick={handleAddComment} disabled={isAddingComment}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Comment
-                        </Button>
+                        <ActionButton variant="primary" motion="subtle" onClick={handleAddComment} disabled={isAddingComment} text="Comment" leftIcon={<Send className="h-4 w-4" />} />
                       </div>
                     </div>
 

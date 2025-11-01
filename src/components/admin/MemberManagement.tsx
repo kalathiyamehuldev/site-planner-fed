@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import ActionButton from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -309,13 +310,16 @@ const MemberManagement: React.FC = () => {
         {hasPermission('users', 'create') && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingMember(null);
-              resetForm();
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Member
-            </Button>
+            <ActionButton 
+              variant="primary" 
+              motion="subtle"
+              onClick={() => {
+                setEditingMember(null);
+                resetForm();
+              }}
+              text="Add Member"
+              leftIcon={<Plus className="h-4 w-4" />}
+            />
           </DialogTrigger>
            <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -475,9 +479,12 @@ const MemberManagement: React.FC = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={loading || !isFormValid()}>
-                  {loading ? 'Saving...' : editingMember ? 'Update' : 'Create'}
-                </Button>
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle" 
+                  disabled={loading || !isFormValid()}
+                  text={loading ? 'Saving...' : editingMember ? 'Update' : 'Create'}
+                />
               </DialogFooter>
             </form>
           </DialogContent>

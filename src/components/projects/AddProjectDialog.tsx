@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createProject, updateProjectAsync, selectProjectLoading, selectProjectError, Project } from '@/redux/slices/projectsSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -318,19 +318,21 @@ const AddProjectDialog: React.FC<AddProjectDialogProps> = ({ open, onOpenChange,
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
+            <ActionButton
+              variant="secondary"
+              motion="subtle"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading 
+              text="Cancel"
+            />
+            <ActionButton 
+              variant="primary" 
+              motion="subtle" 
+              disabled={loading}
+              text={loading 
                 ? (mode === 'edit' ? 'Updating...' : 'Creating...') 
                 : (mode === 'edit' ? 'Update Project' : 'Create Project')}
-            </Button>
+            />
           </DialogFooter>
         </form>
       </DialogContent>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -193,9 +193,7 @@ const Invoices = () => {
             <h1 className="text-3xl font-light mb-2">Invoices</h1>
             <p className="text-muted-foreground">Manage and track project invoices</p>
           </div>
-          <MotionButton variant="default" motion="subtle">
-            <Plus size={18} className="mr-2" /> Create Invoice
-          </MotionButton>
+          <ActionButton variant="primary" motion="subtle" text="Create Invoice" leftIcon={<Plus size={18} />} />
         </div>
 
         {/* Stats Cards */}
@@ -342,9 +340,7 @@ const Invoices = () => {
                       <p className="text-muted-foreground mb-6">
                         No invoices match your current filters. Try a different search or status filter.
                       </p>
-                      <MotionButton variant="default" motion="subtle">
-                        <Plus size={18} className="mr-2" /> Create New Invoice
-                      </MotionButton>
+                      <ActionButton variant="primary" motion="subtle" text="Create New Invoice" leftIcon={<Plus size={18} />} />
                     </td>
                   </tr>
                 ) : (
@@ -411,16 +407,10 @@ const Invoices = () => {
                     </div>
                     
                     <div className="flex gap-2">
-                      <MotionButton variant="outline" size="sm" motion="subtle">
-                        <Download size={16} className="mr-2" /> Download PDF
-                      </MotionButton>
-                      <MotionButton variant="outline" size="sm" motion="subtle">
-                        <Mail size={16} className="mr-2" /> Send to Client
-                      </MotionButton>
+                      <ActionButton variant="secondary" motion="subtle" text="Download PDF" leftIcon={<Download size={16} />} />
+                      <ActionButton variant="secondary" motion="subtle" text="Send to Client" leftIcon={<Mail size={16} />} />
                       {invoice.status === "Pending" || invoice.status === "Overdue" ? (
-                        <MotionButton variant="default" size="sm" motion="subtle">
-                          <CheckCircle size={16} className="mr-2" /> Mark as Paid
-                        </MotionButton>
+                        <ActionButton variant="primary" motion="subtle" text="Mark as Paid" leftIcon={<CheckCircle size={16} />} />
                       ) : null}
                     </div>
                   </div>
@@ -481,9 +471,7 @@ const Invoices = () => {
                   </div>
                   
                   <div className="border-t border-border pt-6 flex justify-end">
-                    <MotionButton variant="ghost" size="sm" motion="subtle" onClick={() => setSelectedInvoice(null)}>
-                      Close Details
-                    </MotionButton>
+                    <ActionButton variant="secondary" motion="subtle" onClick={() => setSelectedInvoice(null)} text="Close Details" />
                   </div>
                 </div>
               ))}

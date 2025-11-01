@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -607,7 +607,6 @@ const Documents = () => {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
               <ActionButton 
                 variant="primary" 
-                // size="sm" 
                 motion="subtle" 
                 className="w-full sm:w-auto"
                 onClick={createNewFolder}
@@ -702,9 +701,8 @@ const Documents = () => {
           
           {/* Clear Filters Button */}
           {(searchTerm || selectedProject !== "All" || selectedFileType !== "All") && (
-            <MotionButton
-              variant="outline"
-              size="sm"
+            <ActionButton
+              variant="secondary"
               motion="subtle"
               onClick={() => {
                 setSearchTerm("");
@@ -713,9 +711,9 @@ const Documents = () => {
                 setSelectedFileType("All");
               }}
               className="whitespace-nowrap"
-            >
-              <X size={16} className="mr-1" /> Clear
-            </MotionButton>
+              text="Clear"
+              leftIcon={<X size={16} />}
+            />
           )}
         </div>
 
@@ -1215,18 +1213,18 @@ const Documents = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <button
+                <ActionButton
                   onClick={() => setShowCreateFolderModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
+                  variant="secondary"
+                  motion="subtle"
+                  text="Cancel"
+                />
+                <ActionButton
                   onClick={handleCreateFolder}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Create
-                </button>
+                  variant="primary"
+                  motion="subtle"
+                  text="Create"
+                />
               </div>
             </div>
           </div>
@@ -1264,22 +1262,22 @@ const Documents = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <button
+                <ActionButton
                   onClick={() => {
                     setShowEditFolderModal(false);
                     setSelectedFolderForEdit(null);
                     setEditFolderForm({ name: '', projectId: '' });
                   }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
+                  variant="secondary"
+                  motion="subtle"
+                  text="Cancel"
+                />
+                <ActionButton
                   onClick={handleUpdateFolder}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Update Folder
-                </button>
+                  variant="primary"
+                  motion="subtle"
+                  text="Update Folder"
+                />
               </div>
             </div>
           </div>
@@ -1294,18 +1292,19 @@ const Documents = () => {
                 Are you sure you want to delete <strong>{documentToDelete.name}</strong>? This action cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
-                <button
+                <ActionButton
                   onClick={cancelDeleteDocument}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
+                  variant="secondary"
+                  motion="subtle"
+                  text="Cancel"
+                />
+                <ActionButton
                   onClick={confirmDeleteDocument}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                >
-                  Delete
-                </button>
+                  variant="primary"
+                  motion="subtle"
+                  text="Delete"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                />
               </div>
             </div>
           </div>

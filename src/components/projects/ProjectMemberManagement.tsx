@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
+import {Button} from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -163,10 +164,12 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         {hasPermission(resource, 'create') && (
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Member
-              </Button>
+              <ActionButton 
+                variant="primary" 
+                motion="subtle"
+                text="Add Member"
+                leftIcon={<Plus className="h-4 w-4" />}
+              />
             </DialogTrigger>
               <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -258,9 +261,9 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                 </TableCell>
                 <TableCell className="text-right">
                   {hasPermission(resource, 'delete') && (
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <ActionButton
+                      variant="text"
+                      // size="sm"
                       onClick={() =>
                         handleRemoveMember(
                           member.user.id,
@@ -268,9 +271,9 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                         )
                       }
                       disabled={memberLoading}
+                      leftIcon={<Trash2 className="h-5 w-5" color='red' />}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </ActionButton>
                   )}
                 </TableCell>
               </TableRow>

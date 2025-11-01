@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/contacts/ContactModal";
@@ -229,15 +229,14 @@ const AddressBook = () => {
               Manage clients, vendors, and other contacts
             </p>
           </div>
-          <MotionButton
-            variant="default"
+          <ActionButton
+            variant="primary"
             motion="subtle"
-            size="sm"
             onClick={handleAddContact}
             className={!hasPermission(resource, 'create') ? 'hidden' : ''}
-          >
-            <Plus size={16} className="mr-2" /> Add Contact
-          </MotionButton>
+            text="Add Contact"
+            leftIcon={<Plus size={16} />}
+          />
         </div>
 
         {/* Filters and Search */}
@@ -535,24 +534,22 @@ const AddressBook = () => {
                         }
                       />
                     </button>
-                    <MotionButton
-                      variant="ghost"
-                      size="sm"
+                    <ActionButton
+                      variant="gray"
                       motion="subtle"
                       onClick={() => handleEditContact(selectedContact)}
                       className={!hasPermission(resource, 'update') ? 'hidden' : ''}
-                    >
-                      <Edit size={14} className="mr-1" /> Edit
-                    </MotionButton>
-                    <MotionButton
-                      variant="ghost"
-                      size="sm"
+                      text="Edit"
+                      leftIcon={<Edit size={14} />}
+                    />
+                    <ActionButton
+                      variant="gray"
                       motion="subtle"
                       onClick={() => handleDeleteContact(selectedContact)}
                       className={!hasPermission(resource, 'delete') ? 'hidden' : ''}
-                    >
-                      <Trash2 size={14} className="mr-1" /> Delete
-                    </MotionButton>
+                      text="Delete"
+                      leftIcon={<Trash2 size={14} />}
+                    />
                   </div>
                 </div>
 
@@ -762,13 +759,11 @@ const AddressBook = () => {
                           className="w-full h-32 bg-background rounded-lg p-4 border border-input resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-sm"
                         ></textarea>
                         <div className="flex justify-end mt-4">
-                          <MotionButton
-                            variant="default"
-                            size="sm"
+                          <ActionButton
+                            variant="primary"
                             motion="subtle"
-                          >
-                            Save Notes
-                          </MotionButton>
+                            text="Save Notes"
+                          />
                         </div>
                       </div>
                     </div> */}
@@ -790,14 +785,13 @@ const AddressBook = () => {
                   a new contact to your address book.
                 </p>
                 {hasPermission(resource, 'create') && (
-                  <MotionButton
-                    variant="default"
+                  <ActionButton
+                    variant="primary"
                     motion="subtle"
-                    size="sm"
                     onClick={handleAddContact}
-                  >
-                    <Plus size={16} className="mr-2" /> Add New Contact
-                  </MotionButton>
+                    text="Add New Contact"
+                    leftIcon={<Plus size={16} />}
+                  />
                 )}
               </div>
             </GlassCard>

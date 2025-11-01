@@ -17,7 +17,7 @@ import {
   selectSelectedProject,
   selectAllProjects,
 } from '@/redux/slices/projectsSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -809,16 +809,18 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                 )}
 
                 <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
+                  <ActionButton
+                    variant="secondary"
+                    motion="subtle"
                     onClick={() => onOpenChange(false)}
                     disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={loading}>
-                    {uploading
+                    text="Cancel"
+                  />
+                  <ActionButton 
+                    variant="primary" 
+                    motion="subtle" 
+                    disabled={loading}
+                    text={uploading
                       ? 'Uploading...'
                       : loading
                         ? 'Saving...'
@@ -827,7 +829,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                           : mode === 'version'
                             ? 'Create Version'
                             : 'Upload Document'}
-                  </Button>
+                  />
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -858,7 +860,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button onClick={() => onOpenChange(false)}>Close</Button>
+              <ActionButton variant="secondary" motion="subtle" onClick={() => onOpenChange(false)} text="Close" />
             </DialogFooter>
           </DialogContent>
         </Dialog>

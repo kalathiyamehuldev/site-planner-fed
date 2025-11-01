@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { login } from "@/redux/slices/authSlice";
 import { LoginDto, UserType } from "@/common/types/auth.types";
-import { Button } from "@/components/ui/button";
+import ActionButton from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -163,9 +163,7 @@ const Login = () => {
                 )}
               />
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
+              <ActionButton variant="primary" motion="subtle" className="w-full" disabled={isLoading} text={isLoading ? "Signing In..." : "Sign In"} />
             </form>
           </Form>
         </CardContent>

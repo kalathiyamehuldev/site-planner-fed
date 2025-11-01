@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -1005,17 +1006,20 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           <div className="flex items-center space-x-2">
             {isEditMode ? (
               <>
-                {hasPermission(resource,'update') && (<Button size="sm" onClick={handleSaveAll} disabled={isUpdating}>
-                  Save
-                </Button>)}
-                <Button
-                  variant="outline"
-                  size="sm"
+                {hasPermission(resource,'update') && (
+                  <ActionButton 
+                    variant="primary" 
+                    onClick={handleSaveAll} 
+                    disabled={isUpdating}
+                    text="Save"
+                  />
+                )}
+                <ActionButton
+                  variant="secondary"
                   onClick={handleCancelEdit}
                   disabled={isUpdating}
-                >
-                  Cancel
-                </Button>
+                  text="Cancel"
+                />
               </>
             ) : (
               <DropdownMenu>
@@ -1138,9 +1142,11 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                       className="min-h-[100px]"
                     />
                     <div className="flex space-x-2">
-                      <Button size="sm" onClick={handleSaveDescription}>
-                        Save
-                      </Button>
+                      <ActionButton 
+                        variant="primary" 
+                        onClick={handleSaveDescription}
+                        text="Save"
+                      />
                       <Button
                         variant="outline"
                         size="sm"
@@ -1257,10 +1263,13 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                             Add Image
                           </Button>
                         </div> */}
-                        <Button size="sm" onClick={handleAddComment} disabled={isAddingComment}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Comment
-                        </Button>
+                        <ActionButton 
+                          variant="primary" 
+                          onClick={handleAddComment} 
+                          disabled={isAddingComment}
+                          text="Comment"
+                          leftIcon={<Send className="h-4 w-4" />}
+                        />
                       </div>
                     </div>
 

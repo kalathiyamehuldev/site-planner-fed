@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -190,9 +190,12 @@ const ProductLibrary = () => {
             <h1 className="text-3xl font-light mb-2">Product Library</h1>
             <p className="text-muted-foreground">Manage your catalog of furniture, fixtures, and materials</p>
           </div>
-          <MotionButton variant="default" motion="subtle">
-            <Plus size={18} className="mr-2" /> Add Product
-          </MotionButton>
+          <ActionButton 
+            variant="primary" 
+            motion="subtle"
+            text="Add Product"
+            leftIcon={<Plus size={18} />}
+          />
         </div>
 
         {/* Filters and Search */}
@@ -277,9 +280,12 @@ const ProductLibrary = () => {
                   <p className="text-muted-foreground mb-6">
                     No products match your current filters. Try a different search or category.
                   </p>
-                  <MotionButton variant="default" motion="subtle">
-                    <Plus size={18} className="mr-2" /> Add New Product
-                  </MotionButton>
+                  <ActionButton 
+                    variant="primary" 
+                    motion="subtle"
+                    text="Add New Product"
+                    leftIcon={<Plus size={18} />}
+                  />
                 </GlassCard>
               </div>
             ) : (
@@ -369,9 +375,12 @@ const ProductLibrary = () => {
                 <p className="text-muted-foreground mb-6">
                   No products match your current filters. Try a different search or category.
                 </p>
-                <MotionButton variant="default" motion="subtle">
-                  <Plus size={18} className="mr-2" /> Add New Product
-                </MotionButton>
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle"
+                  text="Add New Product"
+                  leftIcon={<Plus size={18} />}
+                />
               </div>
             ) : (
               <div className="overflow-x-auto">

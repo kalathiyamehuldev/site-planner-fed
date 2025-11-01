@@ -6,7 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { registerCompany } from "@/redux/slices/authSlice";
 import { CreateCompanyDto } from "@/common/types/auth.types";
-import { Button } from "@/components/ui/button";
+import ActionButton from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -268,13 +268,13 @@ const Signup = () => {
                 />
               </div>
 
-              <Button 
-                type="submit" 
+              <ActionButton 
+                variant="primary"
+                motion="subtle"
                 className="w-full" 
                 disabled={isLoading || !isValid}
-              >
-                {isLoading ? "Creating Company..." : "Register Company"}
-              </Button>
+                text={isLoading ? "Creating Company..." : "Register Company"}
+              />
             </form>
           </Form>
         </CardContent>

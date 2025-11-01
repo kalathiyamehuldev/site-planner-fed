@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Contact, CreateContactDto, UpdateContactDto, createContactAsync, updateContactAsync, selectContactsLoading, selectContactsError, clearError, fetchAllContactsByCompany } from '@/redux/slices/contactsSlice';
 import { fetchProjects, Project, selectAllProjects, selectProjectLoading } from '@/redux/slices/projectsSlice';
 import { fetchTags, Tag } from '@/redux/slices/adminSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -428,19 +428,21 @@ const ContactModal: React.FC<ContactModalProps> = ({ open, onOpenChange, contact
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
+            <ActionButton
+              variant="secondary"
+              motion="subtle"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading 
+              text="Cancel"
+            />
+            <ActionButton 
+              variant="primary" 
+              motion="subtle" 
+              disabled={loading}
+              text={loading 
                 ? (mode === 'add' ? 'Creating...' : 'Updating...') 
                 : (mode === 'add' ? 'Create Contact' : 'Update Contact')}
-            </Button>
+            />
           </DialogFooter>
         </form>
       </DialogContent>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -165,9 +165,7 @@ const PurchaseOrders = () => {
             <h1 className="text-3xl font-light mb-2">Purchase Orders</h1>
             <p className="text-muted-foreground">Manage orders for materials, furniture, and fixtures</p>
           </div>
-          <MotionButton variant="default" motion="subtle">
-            <Plus size={18} className="mr-2" /> Create Purchase Order
-          </MotionButton>
+          <ActionButton variant="primary" motion="subtle" text="Create Purchase Order" leftIcon={<Plus size={18} />} />
         </div>
 
         {/* Filters and Search */}
@@ -257,9 +255,7 @@ const PurchaseOrders = () => {
                 <p className="text-muted-foreground mb-6">
                   No purchase orders match your current filters. Try a different search or status filter.
                 </p>
-                <MotionButton variant="default" motion="subtle">
-                  <Plus size={18} className="mr-2" /> Create Purchase Order
-                </MotionButton>
+                <ActionButton variant="primary" motion="subtle" text="Create Purchase Order" leftIcon={<Plus size={18} />} />
               </GlassCard>
             </div>
           ) : (

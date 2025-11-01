@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Plus, 
@@ -27,9 +27,12 @@ const ProcurementHub = () => {
             <h1 className="text-3xl font-light mb-2">Procurement Hub</h1>
             <p className="text-muted-foreground">Manage your materials, furniture, and vendor orders</p>
           </div>
-          <MotionButton variant="default" motion="subtle">
-            <Plus size={18} className="mr-2" /> Create Order
-          </MotionButton>
+          <ActionButton 
+            variant="primary" 
+            motion="subtle"
+            text="Create Order"
+            leftIcon={<Plus size={18} />}
+          />
         </div>
 
         {/* Coming Soon Message */}

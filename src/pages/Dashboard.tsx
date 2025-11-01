@@ -4,7 +4,6 @@ import PageContainer from "@/components/layout/PageContainer";
 import DashboardHeader from "@/components/layout/DashboardHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
-import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import ProjectCard from "@/components/ProjectCard";
 import TaskTable from "@/components/TaskTable";

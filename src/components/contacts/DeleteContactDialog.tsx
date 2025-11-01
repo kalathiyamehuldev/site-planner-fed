@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Contact, deleteContactAsync, selectContactsLoading, selectContactsError } from '@/redux/slices/contactsSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import {
   Dialog,
   DialogContent,
@@ -88,32 +88,24 @@ const DeleteContactDialog: React.FC<DeleteContactDialogProps> = ({
         </DialogHeader>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={() => onOpenChange(false)}
             disabled={isDeleting || loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
+            text="Cancel"
+          />
+          <ActionButton
+            variant="danger"
+            motion="subtle"
             onClick={handleDelete}
             disabled={isDeleting || loading || !contact}
-          >
-            {isDeleting || loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Deleting...
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Contact
-              </>
-            )}
-          </Button>
+            text={isDeleting || loading ? 'Deleting...' : 'Delete Contact'}
+            leftIcon={isDeleting || loading ? 
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 
+              <Trash2 className="h-4 w-4" />
+            }
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

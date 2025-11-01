@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { 
   Check, 
@@ -185,16 +185,15 @@ const TodoList = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
               />
 
-              <MotionButton
-                variant="default"
+              <ActionButton
+                variant="primary"
                 onClick={handleAddTodo}
                 disabled={
                   newTodoText.trim() === "" || !selectedProject || loading
                 }
                 motion="subtle"
-              >
-                <Plus size={18} />
-              </MotionButton>
+                leftIcon={<Plus size={18} />}
+              />
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -274,21 +273,19 @@ const TodoList = () => {
                         if (e.key === "Escape") cancelEdit();
                       }}
                     />
-                    <MotionButton
-                      variant="default"
+                    <ActionButton
+                      variant="primary"
                       onClick={saveEdit}
                       disabled={editText.trim() === ""}
                       motion="subtle"
-                    >
-                      Save
-                    </MotionButton>
-                    <MotionButton
-                      variant="ghost"
+                      text="Save"
+                    />
+                    <ActionButton
+                      variant="secondary"
                       onClick={cancelEdit}
                       motion="subtle"
-                    >
-                      Cancel
-                    </MotionButton>
+                      text="Cancel"
+                    />
                   </div>
                 ) : (
                   <div className="flex items-start justify-between gap-4">

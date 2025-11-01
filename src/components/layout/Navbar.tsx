@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LayoutGrid, CheckSquare, FileText, Users, Settings, Menu, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MotionButton } from "@/components/ui/motion-button";
+import ActionButton from "@/components/ui/ActionButton";
 
 const Navbar = () => {
   const location = useLocation();
@@ -90,15 +90,13 @@ const Navbar = () => {
 
         {isMobile ? (
           <>
-            <MotionButton
-              variant="ghost"
-              size="icon"
+            <ActionButton
+              variant="secondary"
+              motion="subtle"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label="Toggle menu"
               className="relative z-50"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </MotionButton>
+              leftIcon={isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            />
 
             {/* Mobile Menu */}
             <div
@@ -127,14 +125,13 @@ const Navbar = () => {
         )}
 
         <div className="hidden md:block">
-          <MotionButton 
-            variant="glass" 
-            size="sm" 
+          <ActionButton 
+            variant="primary" 
+            motion="subtle"
             className="opacity-0 animate-delayed-fade-in" 
             style={{ animationFillMode: "forwards", animationDelay: "0.6s" }}
-          >
-            Get Started
-          </MotionButton>
+            text="Get Started"
+          />
         </div>
       </div>
     </header>

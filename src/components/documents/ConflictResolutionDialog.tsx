@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { AlertTriangle, Replace, FilePlus } from 'lucide-react';
 
 interface ConflictResolutionDialogProps {
@@ -95,13 +95,12 @@ const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> = ({
         </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={handleCancel}
-          >
-            Cancel
-          </Button>
+            text="Cancel"
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
+import ActionButton from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -333,14 +334,17 @@ const VendorManagement: React.FC = () => {
         {hasPermission('users', 'create') && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingVendor(null);
-              setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] , selectedProjects: []});
-              setFormErrors({});
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vendor
-            </Button>
+            <ActionButton 
+              variant="primary" 
+              motion="subtle"
+              onClick={() => {
+                setEditingVendor(null);
+                setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', tags: [] , selectedProjects: []});
+                setFormErrors({});
+              }}
+              text="Add Vendor"
+              leftIcon={<Plus className="h-4 w-4" />}
+            />
           </DialogTrigger>
           <DialogContent className="w-5/6 sm:max-w-xl">
             <DialogHeader>
@@ -483,9 +487,12 @@ const VendorManagement: React.FC = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={loading || !isFormValid()}>
-                  {loading ? 'Saving...' : editingVendor ? 'Update' : 'Create'}
-                </Button>
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle" 
+                  disabled={loading || !isFormValid()}
+                  text={loading ? 'Saving...' : editingVendor ? 'Update' : 'Create'}
+                />
               </DialogFooter>
             </form>
           </DialogContent>

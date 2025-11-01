@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '@/redux/hooks';
 import { uploadDocumentVersion } from '@/redux/slices/documentsSlice';
-import { Button } from '@/components/ui/button';
+import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -228,21 +228,20 @@ export const UploadVersionDialog: React.FC<UploadVersionDialogProps> = ({
         </form>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
+          <ActionButton
+            variant="secondary"
+            motion="subtle"
             onClick={handleCancel}
             disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
+            text="Cancel"
+          />
+          <ActionButton
+            variant="primary"
+            motion="subtle"
             onClick={handleSubmit}
             disabled={loading || !formData.file}
-          >
-            {loading ? 'Uploading...' : 'Upload'}
-          </Button>
+            text={loading ? 'Uploading...' : 'Upload'}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>
