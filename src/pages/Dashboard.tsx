@@ -206,15 +206,8 @@ const Dashboard = () => {
   return (
     <PageContainer>
       <div className="space-y-4 sm:space-y-6 w-full min-w-0">
-        {/* Dashboard Header - Hidden on mobile, shown on desktop */}
-        <DashboardHeader />
-        
-        {/* Dashboard Title */}
-        <div className="mb-6 sm:hidden">
-          <h1 className="font-semibold leading-[100%] text-gray-900">
-            Dashboard
-          </h1>
-        </div>
+        {/* Dashboard Header with Profile */}
+        <DashboardHeader title="Dashboard" showProfile={true} />
 
         {/* Stats Cards */}
         <section className="mb-6 sm:mb-8">

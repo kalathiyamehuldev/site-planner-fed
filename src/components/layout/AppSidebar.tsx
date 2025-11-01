@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu, User } from "lucide-react";
-import { logout } from "@/redux/slices/authSlice";
+import { LogOut, Menu, User, ChevronDown, ChevronRight } from "lucide-react";
+import { logout, selectUser } from "@/redux/slices/authSlice";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+
 import usePermission from "@/hooks/usePermission";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -54,14 +55,16 @@ const MobileHeader: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const isCollapsed = !isMobile && state === "collapsed";
+  const [isProfileExpanded, setIsProfileExpanded] = useState(false);
 
-  // User data (in real app, this would come from Redux/context)
+  // User data from Redux or fallback
   const userData = {
-    name: "Alex Polo",
-    role: "Project Manager"
+    name: user ? `${user.firstName} ${user.lastName}` : "User",
+    role: user?.role?.name || "User"
   };
 
   // Generate avatar initials
@@ -70,6 +73,31 @@ const AppSidebar: React.FC = () => {
     return words.length >= 2 
       ? `${words[0][0]}${words[1][0]}`.toUpperCase()
       : name.substring(0, 2).toUpperCase();
+  };
+
+  // Generate avatar colors based on user name
+  const getAvatarColors = (name: string) => {
+    const colors = [
+      { bg: 'bg-blue-100', text: 'text-blue-700' },
+      { bg: 'bg-green-100', text: 'text-green-700' },
+      { bg: 'bg-purple-100', text: 'text-purple-700' },
+      { bg: 'bg-pink-100', text: 'text-pink-700' },
+      { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+      { bg: 'bg-red-100', text: 'text-red-700' },
+      { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+      { bg: 'bg-teal-100', text: 'text-teal-700' },
+      { bg: 'bg-orange-100', text: 'text-orange-700' },
+      { bg: 'bg-cyan-100', text: 'text-cyan-700' },
+    ];
+    
+    // Generate a consistent index based on the name
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    
+    return colors[index];
   };
 
   const mainItems: SidebarItem[] = [
@@ -138,7 +166,7 @@ const AppSidebar: React.FC = () => {
             isActive={isActive(item.path)}
             tooltip={item.name}
             className={cn(
-              "p-2 rounded-md transition-colors w-full justify-start gap-2",
+              "p-2 rounded-sm transition-colors w-full justify-start gap-2",
               isActive(item.path)
                 ? "bg-[#1b78f9] text-white hover:bg-[#1b78f9]"
                 : "text-gray-900/80 hover:bg-gray-50"
@@ -242,60 +270,259 @@ const AppSidebar: React.FC = () => {
 
         <SidebarFooter className="px-4">
           {isMobile ? (
-            // Mobile: User Profile Section + Logout
-            <div className="flex flex-col md:gap-3">
-              {/* Logout Button */}
+            // Mobile: Always show expanded profile options
+            <div className="flex flex-col gap-2">
+              {/* Settings */}
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    tooltip="Log Out"
-                    onClick={handleLogout}
-                    className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
+                    asChild
+                    isActive={isActive("/settings")}
+                    tooltip="Settings"
+                    className={cn(
+                      "p-2 rounded-sm transition-colors w-full justify-start gap-2",
+                      isActive("/settings")
+                        ? "bg-[#1b78f9] text-white hover:bg-[#1b78f9]"
+                        : "text-gray-900/80 hover:bg-gray-50"
+                    )}
+                    onClick={() => setOpenMobile(false)}
                   >
-                    <LogOut className="h-5 w-5 shrink-0" />
-                    <span className="text-sm font-normal">Log Out</span>
+                    <Link to="/settings" className="flex items-center gap-2 w-full">
+                      <solar.Settings.SettingsMinimalistic 
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isActive("/settings") ? "text-white" : "text-gray-900/80"
+                        )} 
+                      />
+                      <span 
+                        className={cn(
+                          "text-sm",
+                          isActive("/settings") 
+                            ? "text-white font-medium" 
+                            : "text-gray-900/80 font-normal"
+                        )}
+                      >
+                        Settings
+                      </span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
-              {/* User Profile Section */}
-              <Link 
-                to="/profile" 
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                onClick={() => setOpenMobile(false)}
-              >
-                {/* Avatar */}
-                <div className="w-10 h-10 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-medium text-gray-700 flex-shrink-0">
-                  {getInitials(userData.name)}
-                </div>
-                
-                {/* User Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {userData.name}
+
+              {/* Separator line */}
+              <div className="h-0 border-t border-gray-900/10" />
+
+              {/* User Profile Section - Always expanded on mobile */}
+              <div className="flex flex-col gap-2">
+                {/* User Info Display */}
+                <div className="flex items-center gap-3 px-2 py-1">
+                  <div className={cn(
+                    "w-10 h-10 rounded-sm flex items-center justify-center text-sm font-medium flex-shrink-0",
+                    getAvatarColors(userData.name).bg,
+                    getAvatarColors(userData.name).text
+                  )}>
+                    {getInitials(userData.name)}
                   </div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {userData.role}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {userData.name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {userData.role}
+                    </div>
                   </div>
                 </div>
-              </Link>
-              
+
+                {/* Profile and Logout Menu Items */}
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive("/profile")}
+                      tooltip="Profile"
+                      className={cn(
+                        "p-2 rounded-sm transition-colors w-full justify-start gap-2",
+                        isActive("/profile")
+                          ? "bg-[#1b78f9] text-white hover:bg-[#1b78f9]"
+                          : "text-gray-900/80 hover:bg-gray-50"
+                      )}
+                      onClick={() => setOpenMobile(false)}
+                    >
+                      <Link to="/profile" className="flex items-center gap-2 w-full">
+                        <User 
+                          className={cn(
+                            "h-5 w-5 shrink-0",
+                            isActive("/profile") ? "text-white" : "text-gray-900/80"
+                          )} 
+                        />
+                        <span 
+                          className={cn(
+                            "text-sm",
+                            isActive("/profile") 
+                              ? "text-white font-medium" 
+                              : "text-gray-900/80 font-normal"
+                          )}
+                        >
+                          Profile
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Log Out"
+                      onClick={handleLogout}
+                      className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 justify-start gap-2"
+                    >
+                      <LogOut className="h-5 w-5 shrink-0" />
+                      <span className="text-sm font-normal">Log Out</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
             </div>
           ) : (
-            // Desktop: Only Settings (no logout)
-            <SidebarMenu className="flex flex-col gap-2">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Settings"
-                  className="p-2 rounded-md text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
-                >
-                  <Link to="/settings" className="flex items-center gap-2 w-full">
-                    <solar.Settings.SettingsMinimalistic className="h-5 w-5 shrink-0" />
-                    <span className="text-sm font-normal">Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            // Desktop: Collapsible profile section
+            <div className="flex flex-col gap-2">
+              {/* Settings */}
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/settings")}
+                    tooltip="Settings"
+                    className={cn(
+                      "p-2 rounded-sm transition-colors w-full justify-start gap-2",
+                      isActive("/settings")
+                        ? "bg-[#1b78f9] text-white hover:bg-[#1b78f9]"
+                        : "text-gray-900/80 hover:bg-gray-50"
+                    )}
+                  >
+                    <Link to="/settings" className="flex items-center gap-2 w-full">
+                      <solar.Settings.SettingsMinimalistic 
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isActive("/settings") ? "text-white" : "text-gray-900/80"
+                        )} 
+                      />
+                      <span 
+                        className={cn(
+                          "text-sm",
+                          isActive("/settings") 
+                            ? "text-white font-medium" 
+                            : "text-gray-900/80 font-normal"
+                        )}
+                      >
+                        Settings
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+
+              {/* Separator line */}
+              <div className="h-0 border-t border-gray-900/10" />
+
+              {/* User Profile Section - Collapsible on desktop */}
+              <div className="flex flex-col gap-2">
+                {/* User Profile Toggle Button */}
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip={isCollapsed ? userData.name : "User Menu"}
+                      onClick={() => setIsProfileExpanded(!isProfileExpanded)}
+                      className="p-2 rounded-sm text-gray-900/80 hover:bg-gray-50 justify-start gap-2"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <div className={cn(
+                          "w-8 h-8 rounded-sm flex items-center justify-center text-sm font-medium flex-shrink-0",
+                          getAvatarColors(userData.name).bg,
+                          getAvatarColors(userData.name).text
+                        )}>
+                          {getInitials(userData.name)}
+                        </div>
+                        
+                        {!isCollapsed && (
+                          <>
+                            <div className="flex-1 min-w-0 text-left">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {userData.name}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {userData.role}
+                              </div>
+                            </div>
+                            
+                            {/* Expand/Collapse Arrow */}
+                            {isProfileExpanded ? (
+                              <ChevronDown size={14} className="text-gray-500 flex-shrink-0" />
+                            ) : (
+                              <ChevronRight size={14} className="text-gray-500 flex-shrink-0" />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+
+                {/* Expandable Profile and Logout Menu Items */}
+                {isProfileExpanded && !isCollapsed && (
+                  <div className="ml-4 flex flex-col gap-1">
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive("/profile")}
+                          tooltip="Profile"
+                          className={cn(
+                            "p-2 rounded-sm transition-colors w-full justify-start gap-2",
+                            isActive("/profile")
+                              ? "bg-[#1b78f9] text-white hover:bg-[#1b78f9]"
+                              : "text-gray-900/80 hover:bg-gray-50"
+                          )}
+                          onClick={() => setIsProfileExpanded(false)}
+                        >
+                          <Link to="/profile" className="flex items-center gap-2 w-full">
+                            <User 
+                              className={cn(
+                                "h-4 w-4 shrink-0",
+                                isActive("/profile") ? "text-white" : "text-gray-900/80"
+                              )} 
+                            />
+                            <span 
+                              className={cn(
+                                "text-sm",
+                                isActive("/profile") 
+                                  ? "text-white font-medium" 
+                                  : "text-gray-900/80 font-normal"
+                              )}
+                            >
+                              Profile
+                            </span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          tooltip="Log Out"
+                          onClick={() => {
+                            handleLogout();
+                            setIsProfileExpanded(false);
+                          }}
+                          className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 justify-start gap-2"
+                        >
+                          <LogOut className="h-4 w-4 shrink-0" />
+                          <span className="text-sm font-normal">Log Out</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </SidebarFooter>
       </Sidebar>
