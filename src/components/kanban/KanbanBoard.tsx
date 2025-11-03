@@ -64,7 +64,7 @@ const KanbanBoard = ({
   ];
 
   // Filter to show only subtasks (tasks with parentId) for Kanban view
-  const subtasks = tasks.filter(task => task.parentId);
+  const subtasks = tasks.filter(task => task.parentId === null);
   
   const tasksByStatus = subtasks.reduce((acc: Record<string, any[]>, task) => {
     const status = task.status || "TODO";

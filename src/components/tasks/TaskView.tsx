@@ -3,7 +3,11 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Clock, Calendar, Eye, Edit, Trash2 } from "lucide-react";
+import StatusBadge from '@/components/shared/StatusBadge';
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchTaskById,
@@ -91,6 +95,7 @@ const TaskView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const isMobile = useIsMobile();
 
   const task = useAppSelector(selectSelectedTask);
   const loading = useAppSelector(selectTaskLoading);
@@ -104,6 +109,8 @@ const TaskView: React.FC = () => {
   const subtasks = useAppSelector(selectSubtasksByParentId(id || ""));
   const subtasksLoading = useAppSelector(selectSubtasksLoading);
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [selectedSubtask, setSelectedSubtask] = useState<any>(null);
 
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -466,6 +473,46 @@ const TaskView: React.FC = () => {
   const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
   const canAddSubtask = !task?.parentId; // if current task is a subtask, prohibit adding subtasks
 
+  // Priority border colors for mobile cards
+  const priorityBorderColors = {
+    LOW: "border-l-[#28a745]",
+    MEDIUM: "border-l-[#fdbe02]", 
+    HIGH: "border-l-[#dc3545]",
+    URGENT: "border-l-[#ff6e0d]"
+  };
+
+  const transformSubtaskForCard = (subtask: any) => {
+    const statusMap = {
+      'TODO': 'Not Started' as const,
+      'IN_PROGRESS': 'In Progress' as const,
+      'DONE': 'Completed' as const,
+    };
+
+    const priorityMap = {
+      'LOW': 'Low' as const,
+      'MEDIUM': 'Medium' as const,
+      'HIGH': 'High' as const,
+      'URGENT': 'Urgent' as const,
+    };
+
+    return {
+      ...subtask,
+      status: statusMap[subtask.status] || 'Not Started',
+      priority: priorityMap[subtask.priority] || 'Medium',
+      assignedTo: subtask.assignee || (subtask.member?.firstName && subtask.member?.lastName ? `${subtask.member.firstName} ${subtask.member.lastName}` : 'N/A'),
+      dueDate: subtask.dueDate ? new Date(subtask.dueDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }) : 'No due date',
+    };
+  };
+
+  const handleSubtaskCardClick = (subtask: any) => {
+    setSelectedSubtask(subtask);
+    setActionSheetOpen(true);
+  };
+
   return (
     <PageContainer>
       <div className="space-y-6">
@@ -507,8 +554,8 @@ const TaskView: React.FC = () => {
                 )}
                 {task?.parentId && (
                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                    <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
-                    <span>Parent:</span>
+                    {/* <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
+                    <span>Parent:</span> */}
                     <Link
                       to={`/tasks/${task.parentId}`}
                       className="text-foreground font-medium hover:underline"
@@ -549,11 +596,11 @@ const TaskView: React.FC = () => {
               </div>
               {task?.parentId && (
                 <div className="md:hidden mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
-                  <span>Parent:</span>
+                  {/* <solar.Arrows.AltArrowUp className="size-4" weight="Linear" />
+                  <span>Parent:</span> */}
                   <Link
                     to={`/tasks/${task.parentId}`}
-                    className="text-foreground font-medium hover:underline"
+                    className="ml-7 text-foreground font-medium hover:underline"
                   >
                     {parentTitle || 'Open Parent'}
                   </Link>
@@ -938,180 +985,242 @@ const TaskView: React.FC = () => {
                           </div>
                         </div>
                         {/* Mobile card */}
-                        <div className="md:hidden flex items-start justify-between gap-2 py-3 border-b">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => navigate(`/tasks/${st.id}`)}
-                                className="font-medium text-left flex-1 truncate"
-                                title={st.title}
-                              >
-                                {st.title}
-                              </button>
-                              <button aria-label="Edit title" onClick={() => toggleSubtaskEdit(st.id, 'title', true)} className="opacity-60 hover:opacity-100">
-                                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4" /></svg>
-                              </button>
-                            </div>
-                            {subtaskEditing[st.id]?.title && (
-                              <input
-                                className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm mt-1"
-                                defaultValue={st.title}
-                                onBlur={(e) => {
-                                  const val = e.currentTarget.value.trim();
-                                  toggleSubtaskEdit(st.id, 'title', false);
-                                  if (val && val !== st.title) {
-                                    dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
-                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                  }
-                                }}
-                                autoFocus
-                              />
+                        {isMobile ? (
+                          <GlassCard
+                            key={`mobile-${st.id}`}
+                            variant="clean"
+                            className={cn(
+                              "p-4 cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 border-l-4 border-r border-t border-b border-gray-100 hover:border-gray-200 mb-3",
+                              priorityBorderColors[st.priority || 'MEDIUM']
                             )}
-                            <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
-                              {subtaskEditing[st.id]?.status ? (
-                                <Select
-                                  value={st.status || 'TODO'}
-                                  onValueChange={(val) => {
-                                    if (val !== (st.status || 'TODO')) {
-                                      dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
-                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                    }
-                                    toggleSubtaskEdit(st.id, 'status', false);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
-                                    <SelectValue placeholder="Select status" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="TODO">Not Started</SelectItem>
-                                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                                    <SelectItem value="DONE">Completed</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <button className={cn("px-2 py-1 rounded-md", statusColor[st.status || 'TODO'])} onClick={() => toggleSubtaskEdit(st.id, 'status', true)}>
-                                  {statusLabel[st.status || 'TODO']}
-                                </button>
-                              )}
-                              {subtaskEditing[st.id]?.priority ? (
-                                <Select
-                                  value={st.priority || 'MEDIUM'}
-                                  onValueChange={(val) => {
-                                    if (val !== (st.priority || 'MEDIUM')) {
-                                      dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
-                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                    }
-                                    toggleSubtaskEdit(st.id, 'priority', false);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="LOW"><span className="inline-flex items-center gap-1">{renderPriorityIcon('LOW')}<span>Low</span></span></SelectItem>
-                                    <SelectItem value="MEDIUM"><span className="inline-flex items-center gap-1">{renderPriorityIcon('MEDIUM')}<span>Medium</span></span></SelectItem>
-                                    <SelectItem value="HIGH"><span className="inline-flex items-center gap-1">{renderPriorityIcon('HIGH')}<span>High</span></span></SelectItem>
-                                    <SelectItem value="URGENT"><span className="inline-flex items-center gap-1">{renderPriorityIcon('URGENT')}<span>Urgent</span></span></SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <button
-                                  className={cn(
-                                    'px-2 py-1 rounded-md',
-                                    st.priority === 'URGENT' ? 'bg-red-100 text-red-700' : st.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : st.priority === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
-                                  )}
-                                  onClick={() => toggleSubtaskEdit(st.id, 'priority', true)}
-                                  title={st.priority || 'MEDIUM'}
-                                >
-                                  {renderPriorityIcon(st.priority)}
-                                </button>
-                              )}
-                              {subtaskEditing[st.id]?.dueDate ? (
-                                <input
-                                  type="date"
-                                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                                  defaultValue={st.dueDate ? st.dueDate.split('T')[0] : ''}
-                                  onBlur={() => toggleSubtaskEdit(st.id, 'dueDate', false)}
-                                  onChange={(e) => {
-                                    const val = e.currentTarget.value || undefined;
-                                    toggleSubtaskEdit(st.id, 'dueDate', false);
-                                    if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
-                                      dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
-                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                <button className="text-muted-foreground" onClick={() => toggleSubtaskEdit(st.id, 'dueDate', true)}>
-                                  Due: {formatDate(st.dueDate)}
-                                </button>
-                              )}
-                              {subtaskEditing[st.id]?.assignee ? (
-                                <Select
-                                  value={st.member?.id || 'unassigned'}
-                                  onValueChange={(val) => {
-                                    const memberId = val === 'unassigned' ? undefined : val;
-                                    const selected = members.find((m: any) => m.user.id === memberId);
-                                    const updatedMember = selected
-                                      ? {
-                                        id: selected.user.id,
-                                        firstName: selected.user.firstName,
-                                        lastName: selected.user.lastName,
-                                        email: selected.user.email,
-                                      }
-                                      : undefined;
-                                    const updatedAssignee = selected
-                                      ? `${selected.user.firstName} ${selected.user.lastName}`
-                                      : undefined;
-                                    dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
-                                      .unwrap()
-                                      .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                                    toggleSubtaskEdit(st.id, 'assignee', false);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
-                                    <SelectValue placeholder="Assign member" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {members.map((m: any) => (
-                                      <SelectItem key={m.user.id} value={m.user.id}>
-                                        {m.user.firstName} {m.user.lastName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                (() => {
-                                  const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
-                                  const avatar = getAvatarData(assignedName);
-                                  return (
-                                    <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
-                                      <div
-                                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
-                                        style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
-                                      >
-                                        {avatar.initials}
-                                      </div>
-                                      <span className="text-muted-foreground">{assignedName || '-'}</span>
-                                    </button>
-                                  );
-                                })()
-                              )}
+                            onClick={() => handleSubtaskCardClick(st)}
+                          >
+                            <div className="space-y-3">
+                              {/* Subtask Name */}
+                              <h3 className="text-gray-800 text-base font-semibold font-['Poppins'] line-clamp-2">
+                                {st.title}
+                              </h3>
+
+                              {/* Project Name */}
+                              <p className="text-gray-500 text-sm font-normal font-['Poppins']">{task?.project?.name || 'Unknown Project'}</p>
+
+                              {/* Status and Duration Row */}
+                              <div className="flex items-center justify-between">
+                                <StatusBadge status={transformSubtaskForCard(st).status} />
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Clock size={16} className="text-gray-500" />
+                                  <span className="text-sm font-medium">{st.estimatedHours || 0} hours</span>
+                                </div>
+                              </div>
+
+                              {/* Separator */}
+                              <div className="border-t border-gray-100" />
+
+                              {/* Due Date and Assigned Member Row */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Calendar size={16} className="text-gray-500" />
+                                  <span className="text-gray-700 text-sm font-medium">{transformSubtaskForCard(st).dueDate}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {(() => {
+                                    const transformedSubtask = transformSubtaskForCard(st);
+                                    const avatarData = getAvatarData(transformedSubtask.assignedTo);
+                                    return (
+                                      <>
+                                        <div
+                                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                                          style={{
+                                            backgroundColor: avatarData.bgColor,
+                                            color: avatarData.color
+                                          }}
+                                        >
+                                          {avatarData.initials}
+                                        </div>
+                                        <span className="text-gray-700 text-sm font-medium truncate">{transformedSubtask.assignedTo}</span>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
                             </div>
+                          </GlassCard>
+                        ) : (
+                          <div className="md:hidden flex items-start justify-between gap-2 py-3 border-b">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => navigate(`/tasks/${st.id}`)}
+                                  className="font-medium text-left flex-1 truncate"
+                                  title={st.title}
+                                >
+                                  {st.title}
+                                </button>
+                                <button aria-label="Edit title" onClick={() => toggleSubtaskEdit(st.id, 'title', true)} className="opacity-60 hover:opacity-100">
+                                  <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4" /></svg>
+                                </button>
+                              </div>
+                              {subtaskEditing[st.id]?.title && (
+                                <input
+                                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm mt-1"
+                                  defaultValue={st.title}
+                                  onBlur={(e) => {
+                                    const val = e.currentTarget.value.trim();
+                                    toggleSubtaskEdit(st.id, 'title', false);
+                                    if (val && val !== st.title) {
+                                      dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
+                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                              )}
+                              <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
+                                {subtaskEditing[st.id]?.status ? (
+                                  <Select
+                                    value={st.status || 'TODO'}
+                                    onValueChange={(val) => {
+                                      if (val !== (st.status || 'TODO')) {
+                                        dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
+                                          .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                      }
+                                      toggleSubtaskEdit(st.id, 'status', false);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                                      <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="TODO">Not Started</SelectItem>
+                                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                      <SelectItem value="DONE">Completed</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <button className={cn("px-2 py-1 rounded-md", statusColor[st.status || 'TODO'])} onClick={() => toggleSubtaskEdit(st.id, 'status', true)}>
+                                    {statusLabel[st.status || 'TODO']}
+                                  </button>
+                                )}
+                                {subtaskEditing[st.id]?.priority ? (
+                                  <Select
+                                    value={st.priority || 'MEDIUM'}
+                                    onValueChange={(val) => {
+                                      if (val !== (st.priority || 'MEDIUM')) {
+                                        dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
+                                          .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                      }
+                                      toggleSubtaskEdit(st.id, 'priority', false);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                                      <SelectValue placeholder="Select priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="LOW"><span className="inline-flex items-center gap-1">{renderPriorityIcon('LOW')}<span>Low</span></span></SelectItem>
+                                      <SelectItem value="MEDIUM"><span className="inline-flex items-center gap-1">{renderPriorityIcon('MEDIUM')}<span>Medium</span></span></SelectItem>
+                                      <SelectItem value="HIGH"><span className="inline-flex items-center gap-1">{renderPriorityIcon('HIGH')}<span>High</span></span></SelectItem>
+                                      <SelectItem value="URGENT"><span className="inline-flex items-center gap-1">{renderPriorityIcon('URGENT')}<span>Urgent</span></span></SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <button
+                                    className={cn(
+                                      'px-2 py-1 rounded-md',
+                                      st.priority === 'URGENT' ? 'bg-red-100 text-red-700' : st.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : st.priority === 'MEDIUM' ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
+                                    )}
+                                    onClick={() => toggleSubtaskEdit(st.id, 'priority', true)}
+                                    title={st.priority || 'MEDIUM'}
+                                  >
+                                    {renderPriorityIcon(st.priority)}
+                                  </button>
+                                )}
+                                {subtaskEditing[st.id]?.dueDate ? (
+                                  <input
+                                    type="date"
+                                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                    defaultValue={st.dueDate ? st.dueDate.split('T')[0] : ''}
+                                    onBlur={() => toggleSubtaskEdit(st.id, 'dueDate', false)}
+                                    onChange={(e) => {
+                                      const val = e.currentTarget.value || undefined;
+                                      toggleSubtaskEdit(st.id, 'dueDate', false);
+                                      if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
+                                        dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
+                                          .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <button className="text-muted-foreground" onClick={() => toggleSubtaskEdit(st.id, 'dueDate', true)}>
+                                    Due: {formatDate(st.dueDate)}
+                                  </button>
+                                )}
+                                {subtaskEditing[st.id]?.assignee ? (
+                                  <Select
+                                    value={st.member?.id || 'unassigned'}
+                                    onValueChange={(val) => {
+                                      const memberId = val === 'unassigned' ? undefined : val;
+                                      const selected = members.find((m: any) => m.user.id === memberId);
+                                      const updatedMember = selected
+                                        ? {
+                                          id: selected.user.id,
+                                          firstName: selected.user.firstName,
+                                          lastName: selected.user.lastName,
+                                          email: selected.user.email,
+                                        }
+                                        : undefined;
+                                      const updatedAssignee = selected
+                                        ? `${selected.user.firstName} ${selected.user.lastName}`
+                                        : undefined;
+                                      dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
+                                        .unwrap()
+                                        .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                      toggleSubtaskEdit(st.id, 'assignee', false);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 px-2 text-xs w-[180px]">
+                                      <SelectValue placeholder="Assign member" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                                      {members.map((m: any) => (
+                                        <SelectItem key={m.user.id} value={m.user.id}>
+                                          {m.user.firstName} {m.user.lastName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  (() => {
+                                    const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
+                                    const avatar = getAvatarData(assignedName);
+                                    return (
+                                      <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
+                                        <div
+                                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
+                                          style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
+                                        >
+                                          {avatar.initials}
+                                        </div>
+                                        <span className="text-muted-foreground">{assignedName || '-'}</span>
+                                      </button>
+                                    );
+                                  })()
+                                )}
+                              </div>
+                            </div>
+                            <button
+                                aria-label="Delete subtask"
+                                onClick={() => {
+                                  dispatch(deleteTaskAsync(st.id)).unwrap()
+                                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                                }}
+                                className="opacity-70 group-hover:opacity-100 mx-auto"
+                                title="Delete"
+                              >
+                                <TrashBinTrash weight="Bold" color="red" size={20} />
+                              </button>
                           </div>
-                          <button
-                              aria-label="Delete subtask"
-                              onClick={() => {
-                                dispatch(deleteTaskAsync(st.id)).unwrap()
-                                  .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
-                              }}
-                              className="opacity-70 group-hover:opacity-100 mx-auto"
-                              title="Delete"
-                            >
-                              <TrashBinTrash weight="Bold" color="red" size={20} />
-                            </button>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1883,6 +1992,59 @@ const TaskView: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bottom Sheet for Subtask Actions */}
+      <BottomSheet
+        isOpen={actionSheetOpen}
+        onClose={() => setActionSheetOpen(false)}
+        title={selectedSubtask?.title || "Subtask Actions"}
+      >
+        <div className="space-y-4">
+          {/* View Subtask */}
+          <button
+            onClick={() => {
+              setActionSheetOpen(false);
+              navigate(`/tasks/${selectedSubtask?.id}`);
+            }}
+            className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <Eye size={20} className="text-gray-600" />
+            <span className="text-gray-800 font-medium">View Subtask</span>
+          </button>
+
+          {/* Edit Subtask */}
+          {hasPermission('tasks', 'update') && (
+            <button
+              onClick={() => {
+                setActionSheetOpen(false);
+                // You can add edit functionality here if needed
+                navigate(`/tasks/${selectedSubtask?.id}`);
+              }}
+              className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Edit size={20} className="text-blue-600" />
+              <span className="text-gray-800 font-medium">Edit Subtask</span>
+            </button>
+          )}
+
+          {/* Delete Subtask */}
+          {hasPermission('tasks', 'delete') && (
+            <button
+              onClick={() => {
+                setActionSheetOpen(false);
+                if (selectedSubtask?.id) {
+                  dispatch(deleteTaskAsync(selectedSubtask.id)).unwrap()
+                    .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
+                }
+              }}
+              className="w-full flex items-center gap-3 p-4 text-left hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Trash2 size={20} className="text-red-600" />
+              <span className="text-red-600 font-medium">Delete Subtask</span>
+            </button>
+          )}
+        </div>
+      </BottomSheet>
     </PageContainer>
   );
 };

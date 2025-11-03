@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
-import { Clock, Calendar, User, ArrowRight, Eye, Edit, Trash2, MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
-import { RiArrowUpDownLine } from "@remixicon/react";
+import { Clock, Calendar, Eye, Edit, Trash2, MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
+import { RiArrowRightSLine, RiArrowUpDownLine } from "@remixicon/react";
 import { Link } from "react-router-dom";
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import usePermission from "@/hooks/usePermission";
 import { useAppSelector, useAppDispatch } from '@/redux/hooks';
 import { fetchSubtasksByParent, selectSubtasksLoading } from '@/redux/slices/tasksSlice';
@@ -38,9 +39,13 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
   const resource = 'tasks';
   const dispatch = useAppDispatch();
   const subtasksByParent = useAppSelector((state) => state.tasks.subtasksByParentId);
-  const loadingSubtasks = useAppSelector(selectSubtasksLoading);
+
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [selectedTaskSubtasks, setSelectedTaskSubtasks] = useState<any[]>([]);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
 
   // Generate avatar initials and color
   const getAvatarData = (name: string) => {
@@ -145,12 +150,7 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
 
   // StatusBadge now provided by shared component for consistency across views
 
-  const statusColors = {
-    "Not Started": "bg-gray-100 text-gray-600",
-    "In Progress": "bg-blue-100 text-blue-600",
-    "On Hold": "bg-amber-100 text-amber-600",
-    Completed: "bg-green-100 text-green-600",
-  };
+
 
   const priorityColors = {
     Low: "bg-blue-50 text-blue-600",
@@ -158,6 +158,25 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
     High: "bg-red-50 text-red-600",
     Urgent: "bg-orange-50 text-orange-500"
   };
+
+  const priorityBorderColors = {
+    Low: "border-l-[#28a745]",
+    Medium: "border-l-[#fdbe02]", 
+    High: "border-l-[#dc3545]",
+    Urgent: "border-l-[#ff6e0d]"
+  };
+
+  const handleViewSubtasks = (task: any, subtasks: any[]) => {
+    setSelectedTaskSubtasks(subtasks);
+    setBottomSheetOpen(true);
+  };
+
+  const handleCardClick = (task: any) => {
+    setSelectedTask(task);
+    setActionSheetOpen(true);
+  };
+
+
 
   const transformTaskForTable = (task: any) => {
     const statusMap = {
@@ -201,77 +220,64 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
   // Mobile Card View
   if (isMobile) {
     return (
-      <div className={cn("space-y-3", className)}>
-        {parentTasks.map((task, index) => {
-          const transformedTask = transformTaskForTable(task);
-          const avatarData = getAvatarData(transformedTask.assignedTo);
-          const subtasks = subtasksByParent[task.id] || [];
-          const hasSubtasks = subtasks.length > 0;
-          const isExpanded = expandedParents[task.id];
+      <>
+        <div className={cn("space-y-3", className)}>
+          {parentTasks.map((task, index) => {
+            const transformedTask = transformTaskForTable(task);
+            const avatarData = getAvatarData(transformedTask.assignedTo);
+            const subtasks = subtasksByParent[task.id] || [];
+            const hasSubtasks = subtasks.length > 0;
 
-          return (
-            <div key={task.id} className="space-y-2">
+            return (
               <GlassCard
+                key={task.id}
                 variant="clean"
-                className="p-5 cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 animate-fade-in border border-gray-100 hover:border-gray-200"
+                className={cn(
+                  "p-4 cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 animate-fade-in border-l-4 border-r border-t border-b border-gray-100 hover:border-gray-200",
+                  priorityBorderColors[transformedTask.priority]
+                )}
                 style={{
                   animationDelay: `${index * 0.05}s`,
                   animationFillMode: "forwards",
                 }}
-                onClick={() => onTaskClick?.(task.id)}
+                onClick={() => handleCardClick(task)}
               >
                 <div className="space-y-3">
-                  {/* Header: Title and Status */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0 flex items-start gap-2">
-                      {hasSubtasks && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleExpand(task.id);
-                          }}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
-                        >
-                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                        </Button>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          to={`/tasks/${task.id}`}
-                          className="text-gray-800 text-base font-semibold font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {task.title}
-                        </Link>
-                        {showProject && (
-                          <p className="text-gray-500 text-xs font-normal font-['Poppins']">{transformedTask.projectName}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <StatusBadge status={transformedTask.status} />
-                    </div>
-                  </div>
+                  {/* Task Name */}
+                  <Link
+                    to={`/tasks/${task.id}`}
+                    className="text-gray-800 text-base font-semibold font-['Poppins'] line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer block"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {task.title}
+                  </Link>
 
-                  {/* Info Grid: Date and Hours */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-500 flex-shrink-0" />
-                      <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.dueDate}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-gray-500 flex-shrink-0" />
-                      <span className="text-gray-700 text-sm font-medium font-['Poppins']">{task.estimatedHours || 0}h</span>
-                    </div>
-                  </div>
+                  {/* Project Name */}
+                  {showProject && (
+                    <p className="text-gray-500 text-sm font-normal font-['Poppins']">{transformedTask.projectName}</p>
+                  )}
 
-                  {/* Assignee and Priority Row */}
+                  {/* Status and Duration Row */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <StatusBadge status={transformedTask.status} />
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <Clock size={16} className="text-gray-500" />
+                      <span className="text-sm font-medium">{task.estimatedHours || 0} hours</span>
+                    </div>
+                  </div>
+
+                  {/* Separator */}
+                  <div className="border-t border-gray-100" />
+
+                  {/* Due Date and Assigned Member Row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} className="text-gray-500" />
+                      <span className="text-gray-700 text-sm font-medium">{transformedTask.dueDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
                         style={{
                           backgroundColor: avatarData.bgColor,
                           color: avatarData.color
@@ -279,166 +285,155 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                       >
                         {avatarData.initials}
                       </div>
-                      <span className="text-gray-700 text-sm font-medium font-['Poppins'] truncate">{transformedTask.assignedTo}</span>
-                    </div>
-
-                    {/* Priority */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        transformedTask.priority === 'High' ? 'bg-[#dc3545]' :
-                          transformedTask.priority === 'Medium' ? 'bg-[#fdbe02]' : 'bg-[#28a745]'
-                      )} />
-                      <span className="text-gray-600 text-xs font-medium font-['Poppins']">
-                        {transformedTask.priority}
-                      </span>
+                      <span className="text-gray-700 text-sm font-medium truncate">{transformedTask.assignedTo}</span>
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="border-t border-gray-100" />
-
-                  {/* Footer: View More and Actions */}
-                  <div className="flex items-center justify-between">
-                    {hasPermission(resource, 'read') && (
-                      <Link
-                        to={`/tasks/${task.id}`}
-                        className="flex items-center gap-1 text-[#0e489a] text-[10px] font-medium font-['General_Sans'] uppercase hover:gap-2 transition-all duration-200"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        VIEW MORE
-                        <ArrowRight size={12} />
-                      </Link>
-                    )}
-                    <div className="flex items-center gap-2">
-                      {hasPermission(resource, 'update') && onEditTask && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditTask(task);
-                          }}
-                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
-                        >
-                          <Edit size={14} />
-                        </Button>
-                      )}
-                      {hasPermission(resource, 'delete') && onDeleteTask && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteTask(task.id);
-                          }}
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      )}
+                  {/* Subtasks Section */}
+                  {hasSubtasks && (
+                    <div 
+                      className="bg-blue-50 rounded-lg p-3 flex items-center justify-between w-full cursor-pointer hover:bg-blue-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewSubtasks(task, subtasks);
+                      }}
+                    >
+                      <span className="text-blue-600 text-sm font-medium">Subtasks {subtasks.length}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-blue-600 text-sm font-medium">VIEW</span>
+                        <RiArrowRightSLine size={20} className="text-blue-600"/>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </GlassCard>
+            );
+          })}
+        </div>
 
-              {/* Subtasks */}
-              {isExpanded && hasSubtasks && (
-                <div className="ml-4 space-y-2">
-                  {subtasks.map((subtask, subIndex) => {
-                    const transformedSubtask = transformTaskForTable(subtask);
-                    const subtaskAvatarData = getAvatarData(transformedSubtask.assignedTo);
+        {/* Bottom Sheet for Subtasks */}
+        <BottomSheet
+          isOpen={bottomSheetOpen}
+          onClose={() => setBottomSheetOpen(false)}
+          title="Subtasks"
+        >
+          <div className="space-y-3">
+            {selectedTaskSubtasks.map((subtask) => {
+              const transformedSubtask = transformTaskForTable(subtask);
+              const subtaskAvatarData = getAvatarData(transformedSubtask.assignedTo);
 
-                    return (
-                      <GlassCard
-                        key={subtask.id}
-                        variant="clean"
-                        className="p-4 cursor-pointer hover:shadow-md hover:shadow-gray-200/50 transition-all duration-300 border border-gray-100 hover:border-gray-200 bg-gray-50/50"
-                        onClick={() => onTaskClick?.(subtask.id)}
-                      >
-                        <div className="space-y-2">
-                          {/* Subtask Header */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <Link
-                                to={`/tasks/${subtask.id}`}
-                                className="text-gray-700 text-sm font-medium font-['Poppins'] mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {subtask.title}
-                              </Link>
-                            </div>
-                            <div className="flex-shrink-0">
-                              <StatusBadge status={transformedSubtask.status} />
-                            </div>
-                          </div>
+              return (
+                <GlassCard
+                  key={subtask.id}
+                  variant="clean"
+                  className={cn(
+                    "p-4 cursor-pointer hover:shadow-md hover:shadow-gray-200/50 transition-all duration-300 border-l-4 border-r border-t border-b border-gray-100 hover:border-gray-200",
+                    priorityBorderColors[transformedSubtask.priority]
+                  )}
+                  onClick={() => {
+                    setBottomSheetOpen(false);
+                    setSelectedTask(subtask);
+                    setActionSheetOpen(true);
+                  }}
+                >
+                  <div className="space-y-3">
+                    {/* Subtask Name */}
+                    <h3 className="text-gray-800 text-base font-semibold font-['Poppins'] line-clamp-2">
+                      {subtask.title}
+                    </h3>
 
-                          {/* Subtask Info */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={14} className="text-gray-500 flex-shrink-0" />
-                              <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.dueDate}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock size={14} className="text-gray-500 flex-shrink-0" />
-                              <span className="text-gray-600 text-xs font-medium font-['Poppins']">{subtask.estimatedHours || 0}h</span>
-                            </div>
-                          </div>
+                    {/* Project Name */}
+                    {showProject && (
+                      <p className="text-gray-500 text-sm font-normal font-['Poppins']">{transformedSubtask.projectName}</p>
+                    )}
 
-                          {/* Subtask Assignee and Actions */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                                style={{
-                                  backgroundColor: subtaskAvatarData.bgColor,
-                                  color: subtaskAvatarData.color
-                                }}
-                              >
-                                {subtaskAvatarData.initials}
-                              </div>
-                              <span className="text-gray-600 text-xs font-medium font-['Poppins'] truncate">{transformedSubtask.assignedTo}</span>
-                            </div>
+                    {/* Status and Duration Row */}
+                    <div className="flex items-center justify-between">
+                      <StatusBadge status={transformedSubtask.status} />
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <Clock size={16} className="text-gray-500" />
+                        <span className="text-sm font-medium">{subtask.estimatedHours || 0} hours</span>
+                      </div>
+                    </div>
 
-                            <div className="flex items-center gap-1">
-                              {hasPermission(resource, 'update') && onEditTask && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEditTask(subtask);
-                                  }}
-                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
-                                >
-                                  <Edit size={12} />
-                                </Button>
-                              )}
-                              {hasPermission(resource, 'delete') && onDeleteTask && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteTask(subtask.id);
-                                  }}
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-                                >
-                                  <Trash2 size={12} />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+                    {/* Separator */}
+                    <div className="border-t border-gray-100" />
+
+                    {/* Due Date and Assigned Member Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-gray-500" />
+                        <span className="text-gray-700 text-sm font-medium">{transformedSubtask.dueDate}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                          style={{
+                            backgroundColor: subtaskAvatarData.bgColor,
+                            color: subtaskAvatarData.color
+                          }}
+                        >
+                          {subtaskAvatarData.initials}
                         </div>
-                      </GlassCard>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                        <span className="text-gray-700 text-sm font-medium truncate">{transformedSubtask.assignedTo}</span>
+                      </div>
+                    </div>
+                  </div>
+                </GlassCard>
+              );
+            })}
+          </div>
+        </BottomSheet>
+
+        {/* Bottom Sheet for Task Actions */}
+        <BottomSheet
+          isOpen={actionSheetOpen}
+          onClose={() => setActionSheetOpen(false)}
+          title={selectedTask?.title || "Task Actions"}
+        >
+          <div className="space-y-4">
+            {/* View Task */}
+            <button
+              onClick={() => {
+                setActionSheetOpen(false);
+                onTaskClick?.(selectedTask?.id);
+              }}
+              className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Eye size={20} className="text-gray-600" />
+              <span className="text-gray-800 font-medium">View Task</span>
+            </button>
+
+            {/* Edit Task */}
+            {hasPermission(resource, 'update') && onEditTask && (
+              <button
+                onClick={() => {
+                  setActionSheetOpen(false);
+                  onEditTask(selectedTask);
+                }}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Edit size={20} className="text-blue-600" />
+                <span className="text-gray-800 font-medium">Edit Task</span>
+              </button>
+            )}
+
+            {/* Delete Task */}
+            {hasPermission(resource, 'delete') && onDeleteTask && (
+              <button
+                onClick={() => {
+                  setActionSheetOpen(false);
+                  onDeleteTask(selectedTask?.id);
+                }}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={20} className="text-red-600" />
+                <span className="text-red-600 font-medium">Delete Task</span>
+              </button>
+            )}
+          </div>
+        </BottomSheet>
+      </>
     );
   }
 
