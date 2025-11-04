@@ -34,9 +34,9 @@ const NotFound = () => {
           </Link>
           
           {/* Mobile version without arrow */}
-          <Link to="/">
+          {/* <Link to="/">
             <ActionButton variant="primary" motion="subtle" className="w-full sm:w-auto flex md:hidden" text="Return to Dashboard" />
-          </Link>
+          </Link> */}
           <p className="text-sm text-muted-foreground mt-4">
             If you believe this is an error, please contact support.
           </p>

@@ -94,6 +94,7 @@ import {
 } from "@/components/ui/tooltip";
 import { convertToDecimalDuration } from "@/lib/timeUtils";
 import usePermission from "@/hooks/usePermission";
+import * as yup from 'yup';
 
 const TimeTracking = () => {
   const dispatch = useAppDispatch();
@@ -112,6 +113,37 @@ const TimeTracking = () => {
   const error = useAppSelector(selectTimeTrackingError);
   const pagination = useAppSelector(selectTimeTrackingPagination);
   const {hasPermission} = usePermission();
+
+  // Yup validation schema for new time entry
+  const newTimeEntryValidationSchema = yup.object().shape({
+    hours: yup.number().required('Hours is required').min(0, 'Hours must be 0 or greater').max(23, 'Hours cannot exceed 23'),
+    minutes: yup.number().required('Minutes is required').min(0, 'Minutes must be 0 or greater').max(59, 'Minutes cannot exceed 59'),
+    date: yup.string().required('Date is required'),
+    projectId: yup.string().required('Project is required'),
+    taskId: yup.string().required('Task is required'),
+    status: yup.string().required('Status is required'),
+    description: yup.string().optional(),
+    isBillable: yup.boolean().optional(),
+    hourlyRate: yup.number().optional().min(0, 'Hourly rate must be positive')
+  }).test('duration-not-zero', 'Duration must be greater than 0', function(values) {
+    const { hours, minutes } = values;
+    if ((hours || 0) === 0 && (minutes || 0) === 0) {
+      return this.createError({
+        path: 'hours',
+        message: 'Total duration must be greater than 0 minutes'
+      });
+    }
+    return true;
+  });
+
+  // Yup validation schema for timer form
+  const timerValidationSchema = yup.object().shape({
+    projectId: yup.string().required('Project is required'),
+    taskId: yup.string().optional(),
+    description: yup.string().optional(),
+    hourlyRate: yup.number().optional().min(0, 'Hourly rate must be positive'),
+    isBillable: yup.boolean().optional()
+  });
 
   // Local state
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
@@ -156,6 +188,8 @@ const TimeTracking = () => {
     minutes: 0,
     status: 'TO_DO',
   });
+  const [newTimeEntryErrors, setNewTimeEntryErrors] = useState<Record<string, string>>({});
+  const [timerErrors, setTimerErrors] = useState<Record<string, string>>({});
   
   // Live timer state
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -398,13 +432,28 @@ const TimeTracking = () => {
     setIsTimerModalOpen(true);
   };
   
+  const validateTimerForm = async (): Promise<boolean> => {
+    try {
+      await timerValidationSchema.validate(timerFormData, { abortEarly: false });
+      setTimerErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const errors: Record<string, string> = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            errors[err.path] = err.message;
+          }
+        });
+        setTimerErrors(errors);
+      }
+      return false;
+    }
+  };
+
   const handleStartTimerSubmit = async () => {
-    if (!timerFormData.projectId && !timerFormData.taskId) {
-      toast({
-        title: "Error",
-        description: "Please select a project or task to start the timer",
-        variant: "destructive",
-      });
+    const isValid = await validateTimerForm();
+    if (!isValid) {
       return;
     }
 
@@ -429,6 +478,7 @@ const TimeTracking = () => {
       });
       setIsTimerModalOpen(false);
       setTimerFormData({ isBillable: true });
+      setTimerErrors({});
       // Refresh time entries to get the new running entry
       dispatch(fetchTimeEntries({}));
     } catch (error) {
@@ -541,45 +591,33 @@ const TimeTracking = () => {
     setIsNewTimeEntryModalOpen(true);
   };
 
+  const validateNewTimeEntry = async (): Promise<boolean> => {
+    try {
+      await newTimeEntryValidationSchema.validate(newTimeEntryFormData, { abortEarly: false });
+      setNewTimeEntryErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const errors: Record<string, string> = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            errors[err.path] = err.message;
+          }
+        });
+        setNewTimeEntryErrors(errors);
+      }
+      return false;
+    }
+  };
+
   const handleNewTimeEntrySubmit = async () => {
-    if (!newTimeEntryFormData.projectId) {
-      toast({
-        title: "Error",
-        description: "Please select a project",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!newTimeEntryFormData.taskId) {
-      toast({
-        title: "Error",
-        description: "Please select a task",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!newTimeEntryFormData.date) {
-      toast({
-        title: "Error",
-        description: "Please select a date",
-        variant: "destructive",
-      });
+    const isValid = await validateNewTimeEntry();
+    if (!isValid) {
       return;
     }
 
     const hours = newTimeEntryFormData.hours || 0;
     const minutes = newTimeEntryFormData.minutes || 0;
-    
-    if (hours === 0 && minutes === 0) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid duration",
-        variant: "destructive",
-      });
-      return;
-    }
 
     try {
       const duration = convertToDecimalDuration(hours, minutes);
@@ -609,6 +647,7 @@ const TimeTracking = () => {
         minutes: 0,
         status: 'TO_DO',
       });
+      setNewTimeEntryErrors({});
       
       // Refresh time entries
       dispatch(fetchTimeEntries({}));
@@ -1499,7 +1538,7 @@ const TimeTracking = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Project
+                  Project <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -1529,7 +1568,7 @@ const TimeTracking = () => {
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Task
+                  Task <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -1558,7 +1597,7 @@ const TimeTracking = () => {
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Date
+                  Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -1577,7 +1616,7 @@ const TimeTracking = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Start Time
+                  Start Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="time"
@@ -1594,7 +1633,7 @@ const TimeTracking = () => {
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  End Time
+                  End Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="time"
@@ -1852,12 +1891,12 @@ const TimeTracking = () => {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="timer-project">Project</Label>
+              <Label htmlFor="timer-project">Project <span className="text-red-500">*</span></Label>
               <Select
                 value={timerFormData.projectId || ''}
                 onValueChange={(value) => setTimerFormData(prev => ({ ...prev, projectId: value, taskId: undefined }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className={timerErrors.projectId ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1868,15 +1907,18 @@ const TimeTracking = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {timerErrors.projectId && (
+                <p className="text-sm text-red-500">{timerErrors.projectId}</p>
+              )}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="timer-task">Task (Optional)</Label>
+              <Label htmlFor="timer-task">Task</Label>
               <Select
                 value={timerFormData.taskId || ''}
                 onValueChange={(value) => setTimerFormData(prev => ({ ...prev, taskId: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className={timerErrors.taskId ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select a task" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1887,21 +1929,28 @@ const TimeTracking = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {timerErrors.taskId && (
+                <p className="text-sm text-red-500">{timerErrors.taskId}</p>
+              )}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="timer-description">Description (Optional)</Label>
+              <Label htmlFor="timer-description">Description</Label>
               <Textarea
                 id="timer-description"
                 placeholder="What are you working on?"
                 value={timerFormData.description || ''}
                 onChange={(e) => setTimerFormData(prev => ({ ...prev, description: e.target.value }))}
+                className={timerErrors.description ? 'border-red-500' : ''}
                 rows={3}
               />
+              {timerErrors.description && (
+                <p className="text-sm text-red-500">{timerErrors.description}</p>
+              )}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="timer-hourly-rate">Hourly Rate (Optional)</Label>
+              <Label htmlFor="timer-hourly-rate">Hourly Rate</Label>
               <Input
                 id="timer-hourly-rate"
                 type="number"
@@ -1910,7 +1959,11 @@ const TimeTracking = () => {
                 placeholder="0.00"
                 value={timerFormData.hourlyRate || ''}
                 onChange={(e) => setTimerFormData(prev => ({ ...prev, hourlyRate: parseFloat(e.target.value) || undefined }))}
+                className={timerErrors.hourlyRate ? 'border-red-500' : ''}
               />
+              {timerErrors.hourlyRate && (
+                <p className="text-sm text-red-500">{timerErrors.hourlyRate}</p>
+              )}
             </div>
             
             <div className="flex items-center space-x-2">
@@ -2011,53 +2064,62 @@ const TimeTracking = () => {
             {/* Hours and Minutes */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="hours" className="text-sm">Hours</Label>
+                <Label htmlFor="hours" className="text-sm">Hours <span className="text-red-500">*</span></Label>
                 <Input
                   id="hours"
                   type="number"
                   min="0"
                   max="23"
                   placeholder="0"
-                  className="h-9"
+                  className={`h-9 ${newTimeEntryErrors.hours ? 'border-red-500' : ''}`}
                   value={newTimeEntryFormData.hours || ''}
                   onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, hours: parseInt(e.target.value) || 0 }))}
                 />
+                {newTimeEntryErrors.hours && (
+                  <p className="text-sm text-red-500">{newTimeEntryErrors.hours}</p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="minutes" className="text-sm">Minutes</Label>
+                <Label htmlFor="minutes" className="text-sm">Minutes <span className="text-red-500">*</span></Label>
                 <Input
                   id="minutes"
                   type="number"
                   min="0"
                   max="59"
                   placeholder="0"
-                  className="h-9"
+                  className={`h-9 ${newTimeEntryErrors.minutes ? 'border-red-500' : ''}`}
                   value={newTimeEntryFormData.minutes || ''}
                   onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
                 />
+                {newTimeEntryErrors.minutes && (
+                  <p className="text-sm text-red-500">{newTimeEntryErrors.minutes}</p>
+                )}
               </div>
             </div>
             
             {/* Date */}
             <div className="space-y-1">
-              <Label htmlFor="date" className="text-sm">Date*</Label>
+              <Label htmlFor="date" className="text-sm">Date <span className="text-red-500">*</span></Label>
               <Input
                 id="date"
                 type="date"
-                className="h-9"
+                className={`h-9 ${newTimeEntryErrors.date ? 'border-red-500' : ''}`}
                 value={newTimeEntryFormData.date || ''}
                 onChange={(e) => setNewTimeEntryFormData(prev => ({ ...prev, date: e.target.value }))}
               />
+              {newTimeEntryErrors.date && (
+                <p className="text-sm text-red-500">{newTimeEntryErrors.date}</p>
+              )}
             </div>
             
             {/* Project */}
             <div className="space-y-1">
-              <Label htmlFor="project" className="text-sm">Project*</Label>
+              <Label htmlFor="project" className="text-sm">Project <span className="text-red-500">*</span></Label>
               <Select
                 value={newTimeEntryFormData.projectId || ''}
                 onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, projectId: value, taskId: undefined }))}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger className={`h-9 ${newTimeEntryErrors.projectId ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2068,36 +2130,20 @@ const TimeTracking = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            {/* Status */}
-            <div className="space-y-1">
-              <Label htmlFor="status" className="text-sm">Status*</Label>
-              <Select
-                value={newTimeEntryFormData.status || ''}
-                onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TO_DO">To Do</SelectItem>
-                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                  <SelectItem value="IN_REVIEW">In Review</SelectItem>
-                  <SelectItem value="DONE">Done</SelectItem>
-                </SelectContent>
-              </Select>
+              {newTimeEntryErrors.projectId && (
+                <p className="text-sm text-red-500">{newTimeEntryErrors.projectId}</p>
+              )}
             </div>
             
             {/* Task */}
             <div className="space-y-1">
-              <Label htmlFor="task" className="text-sm">Task*</Label>
+              <Label htmlFor="task" className="text-sm">Task <span className="text-red-500">*</span></Label>
               <Select
                 value={newTimeEntryFormData.taskId || ''}
                 onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, taskId: value }))}
                 disabled={!newTimeEntryFormData.projectId}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger className={`h-9 ${newTimeEntryErrors.taskId ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select a task" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2108,6 +2154,31 @@ const TimeTracking = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {newTimeEntryErrors.taskId && (
+                <p className="text-sm text-red-500">{newTimeEntryErrors.taskId}</p>
+              )}
+            </div>
+            
+            {/* Status */}
+            <div className="space-y-1">
+              <Label htmlFor="status" className="text-sm">Status <span className="text-red-500">*</span></Label>
+              <Select
+                value={newTimeEntryFormData.status || ''}
+                onValueChange={(value) => setNewTimeEntryFormData(prev => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger className={`h-9 ${newTimeEntryErrors.status ? 'border-red-500' : ''}`}>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TO_DO">To Do</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="IN_REVIEW">In Review</SelectItem>
+                  <SelectItem value="DONE">Done</SelectItem>
+                </SelectContent>
+              </Select>
+              {newTimeEntryErrors.status && (
+                <p className="text-sm text-red-500">{newTimeEntryErrors.status}</p>
+              )}
             </div>
             
             {/* Description */}

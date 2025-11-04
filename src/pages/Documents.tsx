@@ -17,7 +17,7 @@ import {
   Download,
   Upload,
   Trash2,
-  MoreHorizontal,
+  MoreVertical,
   Calendar,
   UserCircle,
   Clock,
@@ -856,7 +856,7 @@ const Documents = () => {
                                      openContextMenu(e, folder.id);
                                    }}
                                  >
-                                   <MoreHorizontal size={16} />
+                                   <MoreVertical size={16} />
                                  </button>
                               </div>
                             </div>
@@ -1040,7 +1040,7 @@ const Documents = () => {
                             }}
                             className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
                           >
-                            <MoreHorizontal size={16} />
+                            <MoreVertical size={16} />
                           </button>
                         </div>
                       </div>
@@ -1088,7 +1088,7 @@ const Documents = () => {
                                 onClick={(e) => e.stopPropagation()}
                                 className="p-1 hover:bg-accent rounded text-[#1a2624]/60 hover:text-[#1a2624]"
                               >
-                                <MoreHorizontal size={16} />
+                                <MoreVertical size={16} />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" side="left" sideOffset={5} className="w-48">

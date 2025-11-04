@@ -2,14 +2,10 @@ import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import {
-  MessageSquare,
-  CheckSquare,
-  Pin,
   Calendar,
   Clock,
   Edit,
-  Trash2,
-  User
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Link } from "react-router-dom";
+
 import usePermission from "@/hooks/usePermission";
 
 interface KanbanCardProps {
@@ -27,6 +23,7 @@ interface KanbanCardProps {
   onEditTask?: (task: any) => void;
   onDeleteTask?: (taskId: string) => void;
   className?: string;
+  isMobile?: boolean;
 }
 
 const KanbanCard = ({
@@ -34,7 +31,8 @@ const KanbanCard = ({
   onTaskClick,
   onEditTask,
   onDeleteTask,
-  className
+  className,
+  isMobile = false
 }: KanbanCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const { hasPermission } = usePermission();
@@ -52,7 +50,6 @@ const KanbanCard = ({
   const handleDragEnd = () => {
     setIsDragging(false);
   };
-  // Removed priority colors to match Jira-style design
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No due date";
@@ -75,189 +72,181 @@ const KanbanCard = ({
     return `${member.firstName || ""} ${member.lastName || ""}`.trim() || "Unknown";
   };
 
+  // Helper function to get avatar data like in TaskView
+  function getAvatarData(name?: string) {
+    const initials = name
+      ? name
+        .split(" ")
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+      : "?";
+    const colors = [
+      { bg: "#FDE68A", color: "#92400E" },
+      { bg: "#A7F3D0", color: "#065F46" },
+      { bg: "#BFDBFE", color: "#1E40AF" },
+      { bg: "#FECACA", color: "#7F1D1D" },
+      { bg: "#DDD6FE", color: "#4C1D95" },
+    ];
+    const idx = name
+      ? (name.charCodeAt(0) + name.charCodeAt(name.length - 1)) % colors.length
+      : 0;
+    return { initials, bgColor: colors[idx].bg, color: colors[idx].color };
+  }
+
+  // Priority border colors for cards
+  const priorityBorderColors = {
+    LOW: "border-l-[#28a745]",
+    MEDIUM: "border-l-[#fdbe02]", 
+    HIGH: "border-l-[#dc3545]",
+    URGENT: "border-l-[#ff6e0d]"
+  };
+
+  const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
+  const avatarData = getAvatarData(assignedName);
+
   return (
     <GlassCard
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      variant="clean"
       className={cn(
-        "p-3 cursor-pointer hover:shadow-sm transition-all duration-200 group rounded-md",
-        "!bg-white !backdrop-blur-none !border-gray-300 !shadow-sm",
-        "hover:!shadow-md hover:!border-gray-400 w-full",
+        "cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 border-l-4 border-r border-t border-b border-gray-100 hover:border-gray-200",
+        priorityBorderColors[task.priority || 'MEDIUM'],
         isDragging && "opacity-50 rotate-1 scale-105",
+        isMobile ? "p-3" : "p-4",
         className
       )}
       onClick={() => onTaskClick?.(task.id)}
     >
-      {/* Task Title - Fixed height for consistency */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="mb-2 h-16 flex items-start">
-              <Link
-                to={`/tasks/${task.id}`}
-                className="font-medium text-sm hover:text-blue-600 transition-colors cursor-pointer"
-                style={{
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  lineHeight: '1.4em',
-                  maxHeight: '4.2em'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {task.title}
-              </Link>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs">
-            <p>{task.title}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="space-y-3">
+        {/* Task Title */}
+        <h3 className={cn(
+          "text-gray-800 font-semibold font-['Poppins'] line-clamp-2",
+          isMobile ? "text-sm" : "text-base"
+        )}>
+          {task.title}
+        </h3>
 
-      {/* Project Name - Single line with ellipsis */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="text-xs text-muted-foreground mb-2 truncate cursor-pointer">
-              {task.project?.name || "Unknown Project"}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs">
-            <p>{task.project?.name || "Unknown Project"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+        {/* Project Name */}
+        <p className={cn(
+          "text-gray-500 font-normal font-['Poppins']",
+          isMobile ? "text-xs" : "text-sm"
+        )}>
+          {task.project?.name || 'Unknown Project'}
+        </p>
 
-      {/* Members and Actions Row */}
-      <div className="flex items-center justify-between mb-2">
-        {/* Member Avatar */}
-        <div className="flex items-center">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                  {task.member ? getMemberInitials(task.member) : (
-                    <User size={10} className="text-muted-foreground" />
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{getMemberName(task.member)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        {/* Status and Duration Row */}
+        <div className="flex items-center justify-between">
+          <div className={cn(
+            "px-2 py-1 rounded-md text-xs font-medium",
+            task.status === 'TODO' ? "bg-gray-200 text-gray-700" :
+            task.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-700" :
+            "bg-green-100 text-green-700"
+          )}>
+            {task.status === 'TODO' ? 'Not Started' : 
+             task.status === 'IN_PROGRESS' ? 'In Progress' : 
+             'Completed'}
+          </div>
+          <div className="flex items-center gap-1 text-gray-600">
+            <Clock size={isMobile ? 14 : 16} className="text-gray-500" />
+            <span className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>
+              {task.estimatedHours || 0} hours
+            </span>
+          </div>
         </div>
 
-        {/* Action Icons */}
-        {/* <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                    <CheckSquare size={10} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Checklist</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+        {/* Separator */}
+        <div className="border-t border-gray-100" />
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                    <MessageSquare size={10} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Comments</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                    <Pin size={10} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Pin</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider> 
-          </div>*/}
-      </div>
-
-      {/* Date and Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Calendar size={10} />
-          <span>{formatDate(task.createdAt)}</span>
+        {/* Due Date and Assigned Member Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar size={isMobile ? 14 : 16} className="text-gray-500" />
+            <span className={cn("text-gray-700 font-medium", isMobile ? "text-xs" : "text-sm")}>
+              {formatDate(task.dueDate || task.createdAt)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "rounded-full flex items-center justify-center font-medium",
+                isMobile ? "w-5 h-5 text-xs" : "w-6 h-6 text-xs"
+              )}
+              style={{
+                backgroundColor: avatarData.bgColor,
+                color: avatarData.color
+              }}
+            >
+              {avatarData.initials}
+            </div>
+            <span className={cn("text-gray-700 font-medium truncate", isMobile ? "text-xs" : "text-sm")}>
+              {assignedName || 'Unassigned'}
+            </span>
+          </div>
         </div>
 
-        {/* Edit and Delete Actions */}
-        <div className="flex items-center gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {hasPermission(resource, 'update') && (
+        {/* Action buttons - only show on hover for desktop, always visible for mobile */}
+        <div className={cn(
+          "flex items-center justify-end gap-1 pt-2",
+          !isMobile && "opacity-0 group-hover:opacity-100 transition-opacity"
+        )}>
+          {hasPermission(resource, 'update') && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 hover:bg-secondary"
+                    className={cn(
+                      "p-0 hover:bg-secondary",
+                      isMobile ? "h-6 w-6" : "h-7 w-7"
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditTask?.(task);
                     }}
                   >
-                    <Edit size={12} />
+                    <Edit size={isMobile ? 12 : 14} />
                   </Button>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit task</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit task</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {hasPermission(resource, 'delete') && (
+          {hasPermission(resource, 'delete') && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                    className={cn(
+                      "p-0 hover:bg-red-100 hover:text-red-600",
+                      isMobile ? "h-6 w-6" : "h-7 w-7"
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteTask?.(task.id);
                     }}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={isMobile ? 12 : 14} />
                   </Button>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete task</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete task</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
-
-      {/* Estimated Hours */}
-      {/* {task.estimatedHours && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-          <Clock size={10} />
-          <span>{task.estimatedHours}h</span>
-        </div>
-      )} */}
     </GlassCard>
   );
 };

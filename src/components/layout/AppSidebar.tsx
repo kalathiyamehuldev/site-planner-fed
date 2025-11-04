@@ -36,14 +36,14 @@ const MobileHeader: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
   if (!isMobile) return null;
   
   return (
-    <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-4 py-3">
+    <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-4 py-3 h-16 mobile-header-fixed">
       <Link to="/" className="flex items-center gap-2">
         <img src="/logo/logo.svg" alt="ProjectIQ" className="h-7 w-auto" />
       </Link>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-gray-600 hover:bg-gray-100"
+        className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0"
         onClick={onOpen}
       >
         <Menu className="h-5 w-5" />

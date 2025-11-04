@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import * as yup from 'yup';
 
 interface AddTaskDialogProps {
   open: boolean;
@@ -61,6 +62,22 @@ interface FormErrors {
   memberId?: string;
   projectId?: string;
 }
+
+// Yup validation schema
+const taskValidationSchema = yup.object().shape({
+  title: yup.string().required('Task title is required').min(3, 'Task title must be at least 3 characters'),
+  description: yup.string().optional(),
+  status: yup.string().required('Task status is required'),
+  priority: yup.string().required('Task priority is required'),
+  dueDate: yup.date().optional().min(new Date(), 'Due date cannot be in the past'),
+  estimatedHours: yup.number().optional().min(0, 'Estimated hours must be a positive number'),
+  memberId: yup.string().optional(),
+  projectId: yup.string().when('isFromTasksPage', {
+    is: true,
+    then: (schema) => schema.required('Project selection is required'),
+    otherwise: (schema) => schema.optional()
+  })
+});
 
 const TASK_STATUSES = [
   { value: "TODO", label: "To Do" },
@@ -194,50 +211,37 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
     }
   };
 
-  // Validate form
-  const validateForm = (): boolean => {
-    const errors: FormErrors = {};
-
-    if (!formData.title.trim()) {
-      errors.title = "Task title is required";
+  // Validate form using Yup
+  const validateForm = async (): Promise<boolean> => {
+    try {
+      await taskValidationSchema.validate({
+        ...formData,
+        isFromTasksPage,
+        estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
+        dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined
+      }, { abortEarly: false });
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const errors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            errors[err.path as keyof FormErrors] = err.message;
+          }
+        });
+        setFormErrors(errors);
+      }
+      return false;
     }
-
-    if (isFromTasksPage && !formData.projectId) {
-      errors.projectId = "Project selection is required";
-    }
-
-    if (!formData.status) {
-      errors.status = "Task status is required";
-    }
-
-    if (!formData.priority) {
-      errors.priority = "Task priority is required";
-    }
-
-    if (
-      formData.estimatedHours &&
-      (isNaN(Number(formData.estimatedHours)) ||
-        Number(formData.estimatedHours) < 0)
-    ) {
-      errors.estimatedHours = "Estimated hours must be a valid positive number";
-    }
-
-    if (
-      formData.dueDate &&
-      new Date(formData.dueDate) < new Date(new Date().toDateString())
-    ) {
-      errors.dueDate = "Due date cannot be in the past";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    const isValid = await validateForm();
+    if (!isValid) {
       return;
     }
 
@@ -334,7 +338,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Task Title */}
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="title">Task Title *</Label>
+              <Label htmlFor="title">Task Title <span className="text-red-500">*</span></Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -350,7 +354,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
             {/* Project Selection - Only show when creating from /tasks page */}
             {isFromTasksPage && (
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="projectId">Project *</Label>
+                <Label htmlFor="projectId">Project <span className="text-red-500">*</span></Label>
                 <Select
                   value={formData.projectId}
                   onValueChange={(value) =>
@@ -379,12 +383,12 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
             {/* Status */}
             {lockStatus ? (
               <div className="space-y-2">
-                <Label>Status *</Label>
+                <Label>Status <span className="text-red-500">*</span></Label>
                 <Input value={getStatusLabel(formData.status)} disabled />
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value) => handleInputChange("status", value)}
@@ -410,7 +414,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
             {/* Priority */}
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority *</Label>
+              <Label htmlFor="priority">Priority <span className="text-red-500">*</span></Label>
               <Select
                 value={formData.priority}
                 onValueChange={(value) => handleInputChange("priority", value)}

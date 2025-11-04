@@ -262,7 +262,7 @@ const Dashboard = () => {
         {/* Recent Projects Section */}
         {hasPermission('projects', 'read') && (
           <section className="mb-6 sm:mb-8 w-full min-w-0">
-            <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <div className="flex justify-between items-center mb-2 sm:mb-4">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Recent Projects</h2>
               <button 
                 onClick={() => navigate("/projects")}
@@ -309,7 +309,7 @@ const Dashboard = () => {
         {/* Upcoming Tasks Section */}
         {hasPermission('tasks', 'read') && (
           <section className="w-full min-w-0">
-            <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <div className="flex justify-between items-center mb-2 sm:mb-4">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Upcoming tasks</h2>
               <button 
                 onClick={() => navigate("/tasks")}

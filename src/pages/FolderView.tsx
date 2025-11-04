@@ -1068,8 +1068,8 @@ const FolderView: React.FC = () => {
                       className={cn(
                         "relative cursor-pointer group opacity-0 animate-scale-in",
                         "bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-100",
-                        "transition-colors duration-150 shadow-sm hover:shadow-md overflow-hidden",
-                        "flex flex-col p-3 h-24 w-full"
+                        "transition-colors duration-150 shadow-sm hover:shadow-md",
+                        "flex flex-col p-4 h-full w-full min-h-[130px]"
                       )}
                       style={{
                         animationDelay: `${0.05 * (filteredFolders.length + index)}s`,
@@ -1082,7 +1082,7 @@ const FolderView: React.FC = () => {
                     >
                       <div className="flex flex-col h-full">
                         {/* Header with file icon, name and menu */}
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center flex-1 min-w-0">
                             <div className="w-8 h-8 rounded bg-blue-100 border border-blue-200 flex items-center justify-center mr-2 flex-shrink-0">
                               {getFileIcon(doc.files?.[0]?.fileType || doc.type)}
@@ -1151,7 +1151,7 @@ const FolderView: React.FC = () => {
                         </div>
 
                         {/* File details */}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
                           <span className="uppercase font-medium">
                             {doc?.files?.[0]?.fileType || doc.type || 'FILE'}
                           </span>
@@ -1163,7 +1163,7 @@ const FolderView: React.FC = () => {
                         </div>
 
                         {/* Bottom row with date and badges */}
-                        <div className="flex items-center justify-between mt-auto">
+                        <div className="flex items-center justify-between mt-auto pb-1">
                           <span className="text-xs text-muted-foreground">
                             {formatDate(doc.files?.[0]?.updatedAt ? new Date(doc.files[0].updatedAt).toISOString() : doc.updatedAt)}
                           </span>

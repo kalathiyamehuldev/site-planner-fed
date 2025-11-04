@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { GlassCard } from "@/components/ui/glass-card";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -20,10 +23,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Eye, User, Mail, Phone } from 'lucide-react';
 import { RiArrowUpDownLine } from '@remixicon/react';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
+import { cn } from '@/lib/utils';
+import * as yup from 'yup';
 import {
   fetchProjects,
   selectAllProjects,
@@ -58,12 +63,30 @@ interface FormErrors {
   password?: string;
 }
 
+// Yup validation schema
+const customerValidationSchema = yup.object().shape({
+  firstName: yup.string().required('First name is required').min(2, 'First name must be at least 2 characters'),
+  lastName: yup.string().required('Last name is required').min(2, 'Last name must be at least 2 characters'),
+  email: yup.string().required('Email is required').email('Please enter a valid email address'),
+  phone: yup.string().optional(),
+  address: yup.string().optional(),
+  password: yup.string().when('isEditing', {
+    is: false,
+    then: (schema) => schema.required('Password is required').min(6, 'Password must be at least 6 characters'),
+    otherwise: (schema) => schema.optional()
+  }),
+  selectedProjects: yup.array().optional()
+});
+
 const CustomerManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const isMobile = useIsMobile();
   const { items: customers, loading, error } = useSelector((state: RootState) => state.admin.customers);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const projects = useSelector(selectAllProjects);
   const projectsLoading = useSelector(selectProjectLoading);
   const [formData, setFormData] = useState<CustomerFormData>({
@@ -82,32 +105,53 @@ const CustomerManagement: React.FC = () => {
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  // Validate form fields
-  const validateForm = (): boolean => {
-    const errors: FormErrors = {};
+  // Generate avatar initials and color for customers
+  const getAvatarData = (firstName: string, lastName: string) => {
+    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
+    
+    // Color palette from design system
+    const colors = [
+      '#1B78F9', '#00C2FF', '#3DD598', '#FFB547', '#FF6B6B',
+      '#A970FF', '#FF82D2', '#29C499', '#E89F3D', '#2F95D8'
+    ];
 
-    if (!formData.firstName.trim()) {
-      errors.firstName = 'First name is required';
+    // Generate consistent color based on name
+    const name = `${firstName} ${lastName}`;
+    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+
+    return {
+      initials,
+      color: colors[colorIndex],
+      bgColor: `${colors[colorIndex]}1A` // 10% opacity
+    };
+  };
+
+  const handleCustomerCardClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setActionSheetOpen(true);
+  };
+
+  // Validate form fields using Yup
+  const validateForm = async (): Promise<boolean> => {
+    try {
+      await customerValidationSchema.validate({
+        ...formData,
+        isEditing: !!editingCustomer
+      }, { abortEarly: false });
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const errors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            errors[err.path as keyof FormErrors] = err.message;
+          }
+        });
+        setFormErrors(errors);
+      }
+      return false;
     }
-
-    if (!formData.lastName.trim()) {
-      errors.lastName = 'Last name is required';
-    }
-
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    if (!editingCustomer && !formData.password.trim()) {
-      errors.password = 'Password is required';
-    } else if (!editingCustomer && formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   // Check if form is valid for button state
@@ -169,7 +213,8 @@ const CustomerManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    const isValid = await validateForm();
+    if (!isValid) {
       return;
     }
 
@@ -309,19 +354,19 @@ const CustomerManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", isMobile && "bg-transparent")}>
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
           <input
             type="text"
             placeholder="Search customers..."
-            className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-lg border border-input bg-background px-10 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center md:justify-end">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             {hasPermission('users', 'create') && (
@@ -351,7 +396,7 @@ const CustomerManagement: React.FC = () => {
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
+                    <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
@@ -364,7 +409,7 @@ const CustomerManagement: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
@@ -378,7 +423,7 @@ const CustomerManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                   <Input
                     id="email"
                     type="email"
@@ -391,24 +436,6 @@ const CustomerManagement: React.FC = () => {
                     <p className="text-sm text-red-500">{formErrors.email}</p>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                  />
-                </div>
-                
                 {/* Associated Projects */}
                 <div className="space-y-2">
                   <Label>Associated Projects</Label>
@@ -457,9 +484,26 @@ const CustomerManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                  />
+                </div>
+                
                 {!editingCustomer && (
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
+                    <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
                     <Input
                       id="password"
                       type="password"
@@ -488,154 +532,322 @@ const CustomerManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full bg-white rounded-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
-            <thead className="h-12">
-              <tr className="border-b border-[#1a2624]/10">
-                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
-                  <button
-                    onClick={() => handleSort('name')}
-                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Name
-                    <RiArrowUpDownLine size={14} />
-                  </button>
-                </th>
-                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/4 hidden sm:table-cell">
-                  <button
-                    onClick={() => handleSort('email')}
-                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Email
-                    <RiArrowUpDownLine size={14} />
-                  </button>
-                </th>
-                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
-                  <button
-                    onClick={() => handleSort('phone')}
-                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Phone
-                    <RiArrowUpDownLine size={14} />
-                  </button>
-                </th>
-                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
-                  Projects
-                </th>
-                <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-16 sm:w-20 md:w-24 hidden sm:table-cell">
-                  <button
-                    onClick={() => handleSort('status')}
-                    className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Status
-                    <RiArrowUpDownLine size={14} />
-                  </button>
-                </th>
-                <th className="w-12 px-3 border-b border-[#1a2624]/10">
-                  {/* Actions column - empty header */}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-8">
-                    <div className="text-lg">Loading customers...</div>
-                  </td>
-                </tr>
-              ) : filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-8">
-                    <div className="text-lg text-muted-foreground">No customers found</div>
-                  </td>
-                </tr>
-              ) : (
-                filteredCustomers.map((customer, index) => (
-                  <tr
-                    key={customer.id}
-                    className="h-16 hover:bg-gray-50/50 transition-colors animate-fade-in border-b border-[#1a2624]/10"
-                    style={{
-                      animationDelay: `${index * 0.05}s`,
-                      animationFillMode: "forwards",
-                    }}
-                  >
-                    <td className="px-3 max-w-xs">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
-                          {`${customer.firstName} ${customer.lastName}`}
+      {/* Mobile and Desktop Views */}
+      {isMobile ? (
+        /* Mobile Card View */
+        <div className="space-y-3 mt-4">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-lg">Loading customers...</div>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="text-center py-8">
+              <h4 className="text-muted-foreground">No customers found...</h4>
+            </div>
+          ) : (
+            filteredCustomers.map((customer, index) => {
+              const avatarData = getAvatarData(customer.firstName, customer.lastName);
+              
+              return (
+                <GlassCard
+                  key={customer.id}
+                  variant="clean"
+                  className="p-4 cursor-pointer hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 animate-fade-in border border-gray-200 hover:border-gray-300 bg-white shadow-sm"
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: "forwards",
+                  }}
+                  onClick={() => handleCustomerCardClick(customer)}
+                >
+                  <div className="space-y-3">
+                    {/* Customer Name */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium"
+                        style={{
+                          backgroundColor: avatarData.bgColor,
+                          color: avatarData.color
+                        }}
+                      >
+                        {avatarData.initials}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-gray-800 text-base font-semibold font-['Poppins'] line-clamp-1">
+                          {customer.firstName} {customer.lastName}
+                        </h3>
+                        <p className="text-gray-500 text-sm font-normal font-['Poppins']">Customer</p>
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="border-t border-gray-100" />
+
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Mail size={16} className="text-gray-500" />
+                        <span className="text-gray-700 text-sm font-medium truncate">{customer.email}</span>
+                      </div>
+                      {customer.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone size={16} className="text-gray-500" />
+                          <span className="text-gray-700 text-sm font-medium">{customer.phone}</span>
                         </div>
-                        {/* Mobile: Show email under name */}
-                        <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none sm:hidden truncate">
-                          {customer.email}
+                      )}
+                    </div>
+
+                    {/* Projects Section */}
+                    {customer.projects && customer.projects.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-gray-600 text-xs font-medium">Projects:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {customer.projects.slice(0, 3).map((cp, idx) => (
+                            <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                              {cp.project.name}
+                            </span>
+                          ))}
+                          {customer.projects.length > 3 && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                              +{customer.projects.length - 3} more
+                            </span>
+                          )}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-3 max-w-xs hidden sm:table-cell">
-                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
-                        {customer.email}
-                      </div>
-                    </td>
-                    <td className="px-3 hidden md:table-cell">
-                      <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
-                        {customer.phone || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 hidden lg:table-cell">
-                      <div className="text-sm">
-                        {customer.projects && customer.projects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {customer.projects.map((cp, idx) => (
-                              <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                {cp.project.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-[#1a2624]/70 text-sm font-normal font-['Manrope']">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 hidden sm:table-cell">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        customer.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {customer.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-3">
-                      <div className="flex items-center justify-center gap-1">
-                        {hasPermission('users', 'update') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(customer)}
-                            className="w-6 h-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded"
-                          >
-                            <Edit size={16} />
-                          </Button>
-                        )}
-                        {hasPermission('users', 'delete') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(customer.id)}
-                            className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 size={16} />
-                        </Button>
-                        )}
-                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Desktop Table View */
+        <div className="w-full bg-white rounded-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
+              <thead className="h-12">
+                <tr className="border-b border-[#1a2624]/10">
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
+                    <button
+                      onClick={() => handleSort('name')}
+                      className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                    >
+                      Name
+                      <RiArrowUpDownLine size={14} />
+                    </button>
+                  </th>
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/4 hidden sm:table-cell">
+                    <button
+                      onClick={() => handleSort('email')}
+                      className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                    >
+                      Email
+                      <RiArrowUpDownLine size={14} />
+                    </button>
+                  </th>
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                    <button
+                      onClick={() => handleSort('phone')}
+                      className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                    >
+                      Phone
+                      <RiArrowUpDownLine size={14} />
+                    </button>
+                  </th>
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
+                    Projects
+                  </th>
+                  <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                    {/* Actions column - empty header */}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8">
+                      <div className="text-lg">Loading customers...</div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8">
+                      <h4 className="text-muted-foreground">No customers found...</h4>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCustomers.map((customer, index) => (
+                    <tr
+                      key={customer.id}
+                      className="h-16 hover:bg-gray-50/50 transition-colors animate-fade-in border-b border-[#1a2624]/10"
+                      style={{
+                        animationDelay: `${index * 0.05}s`,
+                        animationFillMode: "forwards",
+                      }}
+                    >
+                      <td className="px-3 max-w-xs">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
+                            {`${customer.firstName} ${customer.lastName}`}
+                          </div>
+                          {/* Mobile: Show email under name */}
+                          <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none sm:hidden truncate">
+                            {customer.email}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 max-w-xs hidden sm:table-cell">
+                        <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
+                          {customer.email}
+                        </div>
+                      </td>
+                      <td className="px-3 hidden md:table-cell">
+                        <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
+                          {customer.phone || '-'}
+                        </div>
+                      </td>
+                      <td className="px-3 hidden lg:table-cell">
+                        <div className="text-sm">
+                          {customer.projects && customer.projects.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {customer.projects.map((cp, idx) => (
+                                <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                  {cp.project.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[#1a2624]/70 text-sm font-normal font-['Manrope']">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3">
+                        <div className="flex items-center justify-center gap-1">
+                          {hasPermission('users', 'update') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(customer)}
+                              className="w-6 h-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded"
+                            >
+                              <Edit size={16} />
+                            </Button>
+                          )}
+                          {hasPermission('users', 'delete') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(customer.id)}
+                              className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 size={16} />
+                          </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+      {/* Bottom Sheet for Customer Actions */}
+      <BottomSheet
+        isOpen={actionSheetOpen}
+        onClose={() => setActionSheetOpen(false)}
+        title={selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : "Customer Actions"}
+      >
+        <div className="space-y-4">
+          {/* Customer Details */}
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-3">
+              {selectedCustomer && (
+                <>
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const avatarData = getAvatarData(selectedCustomer.firstName, selectedCustomer.lastName);
+                      return (
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium"
+                          style={{
+                            backgroundColor: avatarData.bgColor,
+                            color: avatarData.color
+                          }}
+                        >
+                          {avatarData.initials}
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{selectedCustomer.firstName} {selectedCustomer.lastName}</h3>
+                      <p className="text-sm text-gray-600">Customer</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Mail size={16} className="text-gray-500" />
+                      <span className="text-gray-700">{selectedCustomer.email}</span>
+                    </div>
+                    {selectedCustomer.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone size={16} className="text-gray-500" />
+                        <span className="text-gray-700">{selectedCustomer.phone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedCustomer.projects && selectedCustomer.projects.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700">Projects:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedCustomer.projects.map((cp, idx) => (
+                          <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {cp.project.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            {/* Edit Customer */}
+            {hasPermission('users', 'update') && selectedCustomer && (
+              <button
+                onClick={() => {
+                  setActionSheetOpen(false);
+                  handleEdit(selectedCustomer);
+                }}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Edit size={20} className="text-blue-600" />
+                <span className="text-gray-800 font-medium">Edit Customer</span>
+              </button>
+            )}
+
+            {/* Delete Customer */}
+            {hasPermission('users', 'delete') && selectedCustomer && (
+              <button
+                onClick={() => {
+                  setActionSheetOpen(false);
+                  handleDelete(selectedCustomer.id);
+                }}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={20} className="text-red-600" />
+                <span className="text-red-600 font-medium">Delete Customer</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 };

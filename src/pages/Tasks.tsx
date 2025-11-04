@@ -211,7 +211,8 @@ const Tasks = () => {
   return (
     <PageContainer>
       <div className="space-y-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
+        {/* Desktop Controls */}
+        <div className="hidden md:flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-light mb-2">Tasks</h1>
             <p className="text-muted-foreground">
@@ -260,7 +261,7 @@ const Tasks = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
+        <div className="hidden md:flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
@@ -287,9 +288,9 @@ const Tasks = () => {
           </div>
         </div>
 
-        {/* Filter Info Banner */}
+        {/* Desktop Filter Info Banner */}
         {(filter !== "all" || searchTerm) && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 animate-fade-in">
+          <div className="hidden md:block bg-blue-50 border border-blue-200 rounded-lg p-3 animate-fade-in">
             <div className="flex items-center gap-2 text-sm text-blue-700">
               <Filter size={16} />
               <span>
@@ -320,6 +321,19 @@ const Tasks = () => {
             }}
              onUpdateTaskStatus={handleUpdateTaskStatus}
              className="animate-fade-in"
+             // Mobile controls props
+             viewMode={viewMode}
+             onViewModeChange={setViewMode}
+             onNewTask={() => {
+               setLockNewTaskStatus(false);
+               setNewTaskInitialStatus(null);
+               setShowNewTaskDialog(true);
+             }}
+             searchTerm={searchTerm}
+             onSearchChange={setSearchTerm}
+             filter={filter}
+             onFilterChange={setFilter}
+             hasCreatePermission={hasPermission('tasks', 'create')}
            />
          ) : viewMode === "timeline" ? (
           <div className="animate-fade-in">

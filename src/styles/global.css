@@ -92,7 +92,7 @@ h5,
 h6 {
   font-family: 'Poppins', sans-serif !important;
   letter-spacing: 0 !important;
-  line-height: 100% !important;
+  line-height: 120% !important;
   font-style: normal !important;
   /* Reset UA logical margins robustly */
   margin-block-start: 0 !important;
@@ -507,3 +507,87 @@ td {
 .app-btn--danger:active { background: #bf2e2e; }
 .app-btn--danger:focus-visible { background: #e72a2a; border: 2px solid #FCA5A5; outline: none; }
 .app-btn--disabled.app-btn--danger, .app-btn--danger:disabled { background: #F87171; color: #FFFFFF; cursor: not-allowed; }
+/* Kanban Board Mobile Styles */
+.kanban-mobile-container {
+  /* Ensure the container doesn't interfere with header navigation */
+  position: relative;
+  z-index: 1;
+}
+
+.kanban-mobile-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  /* Prevent horizontal scroll from affecting the entire page */
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  /* Contain the scroll within this element */
+  contain: layout style paint;
+}
+
+.kanban-mobile-scroll::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* Ensure proper touch scrolling on mobile devices */
+@media (max-width: 767px) {
+  .kanban-mobile-scroll {
+    scroll-snap-type: x mandatory;
+    scroll-snap-stop: always;
+  }
+  
+  .kanban-column-mobile {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  
+  /* Ensure mobile header stays accessible and properly sized */
+  .mobile-header-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    height: 64px; /* Fixed height for consistency */
+  }
+  
+  /* Jira-style mobile kanban layout */
+  .kanban-mobile-container {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+  }
+  
+  /* Allow body scroll but contain kanban scroll */
+  body.mobile-kanban-active {
+    /* Keep normal scrolling behavior */
+  }
+  
+  /* Ensure columns fill full height */
+  .kanban-column-full-height {
+    height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Custom scrollbar for mobile columns */
+  .kanban-mobile-scroll::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+  }
+  
+  .kanban-mobile-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .kanban-mobile-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+}
