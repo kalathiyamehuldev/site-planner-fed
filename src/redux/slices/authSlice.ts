@@ -306,16 +306,29 @@ export const updateProfile = createAsyncThunk(
 );
 export const logout = createAsyncThunk(
     'auth/logout',
-    async (_, { rejectWithValue }) => {
+    async (_, { rejectWithValue, dispatch }) => {
         try {
+            // Import forceStopTimer dynamically to avoid circular dependency
+            const { forceStopTimer } = await import('./timeTrackingSlice');
+            
+            // Force stop any running timer before logout
+            try {
+                await dispatch(forceStopTimer()).unwrap();
+            } catch (timerError) {
+                // Continue with logout even if timer stop fails
+                console.warn('Failed to stop timer during logout:', timerError);
+            }
+            
             localStorage.removeItem('token');
             localStorage.removeItem('selectedCompany');
+            localStorage.removeItem('userPermissions');
             window.location.href = '/auth/login';
             return null;
         } catch (error: any) {
             // Even if logout fails on server, clear local storage
             localStorage.removeItem('token');
             localStorage.removeItem('selectedCompany');
+            localStorage.removeItem('userPermissions');
             return null;
         }
     }

@@ -11,7 +11,7 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ActionButton from "@/components/ui/ActionButton";
 import { User, Building, Mail, Phone, MapPin, Lock } from "lucide-react";
-
+import { useToast } from "@/hooks/use-toast";
 type ProfileFormValues = {
   firstName?: string;
   lastName?: string;
@@ -30,6 +30,7 @@ const Profile = () => {
   const user = useAppSelector(selectUser);
   const selectedCompany = useAppSelector(selectSelectedCompany);
   const isCompanyAccount = Boolean((user as any)?.isCompany);
+  const { toast } = useToast();
 
   useEffect(() => {
     dispatch(getProfile());
@@ -248,7 +249,20 @@ const Profile = () => {
       }
     }
 
-    await dispatch(updateProfile(payload));
+    
+    try {
+      await dispatch(updateProfile(payload)).unwrap();
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -256,7 +270,7 @@ const Profile = () => {
       <div className="space-y-6 w-full min-w-0">
         {/* <DashboardHeader /> */}
         <div className="mb-2 sm:hidden">
-          <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+          <h1>Profile Settings</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -266,23 +280,23 @@ const Profile = () => {
               <div className="mx-auto w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mb-4">
                 <User className="w-10 h-10 text-white" />
               </div>
-              <CardTitle className="text-xl font-bold text-gray-800">
-                {isCompanyAccount ? (selectedCompany?.name || "Company Account") : `${user?.firstName} ${user?.lastName}`}
+              <CardTitle>
+                <h2>{isCompanyAccount ? (selectedCompany?.name || "Company Account") : `${user?.firstName} ${user?.lastName}`}</h2>
               </CardTitle>
-              <CardDescription className="text-gray-600">
-                {isCompanyAccount ? "Company Administrator" : user?.role?.name || "User"}
+              <CardDescription>
+                <p>{isCompanyAccount ? "Company Administrator" : user?.role?.name || "User"}</p>
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <div className="space-y-2 text-sm text-gray-600">
+              <div className="space-y-2 text-gray-600">
                 <div className="flex items-center justify-center gap-2">
                   <Mail className="w-4 h-4" />
-                  <span>{user?.email}</span>
+                  <p>{user?.email}</p>
                 </div>
                 {(selectedCompany?.phone || user?.company?.phone) && (
                   <div className="flex items-center justify-center gap-2">
                     <Phone className="w-4 h-4" />
-                    <span>{selectedCompany?.phone || user?.company?.phone}</span>
+                    <p>{selectedCompany?.phone || user?.company?.phone}</p>
                   </div>
                 )}
               </div>
@@ -292,11 +306,11 @@ const Profile = () => {
           {/* Profile Form Card */}
           <Card className="lg:col-span-2 shadow-lg border-0">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Edit Profile
+              <CardTitle className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <h1>Edit Profile</h1>
               </CardTitle>
-              <CardDescription className="text-lg text-gray-600">
-                Update your personal and company details
+              <CardDescription>
+                <p>Update your personal and company details</p>
               </CardDescription>
             </CardHeader>
             <CardContent className="p-8">
@@ -305,11 +319,11 @@ const Profile = () => {
                   {/* Personal Details Section */}
                   {!isCompanyAccount && (
                     <div className="space-y-6">
-                      <div className="flex items-center space-x-3 pb-3 border-b-2 border-blue-100">
+                      <div className="flex items-center gap-x-2 pb-3 border-b-2 border-blue-100">
                         <div className="p-2 bg-blue-100 rounded-lg">
                           <User className="h-6 w-6 text-blue-600" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-800">Personal Information</h3>
+                        <h3>Personal Information</h3>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -318,21 +332,21 @@ const Profile = () => {
                           name="firstName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">First Name</FormLabel>
+                              <FormLabel><h5>First Name</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter your first name" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <User className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <User className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -342,21 +356,21 @@ const Profile = () => {
                           name="lastName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Last Name</FormLabel>
+                              <FormLabel><h5>Last Name</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter your last name" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <User className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <User className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -366,21 +380,21 @@ const Profile = () => {
                           name="phone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Phone Number</FormLabel>
+                              <FormLabel><h5>Phone Number</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter your phone number" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <Phone className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Phone className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -390,21 +404,21 @@ const Profile = () => {
                           name="address"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Address</FormLabel>
+                              <FormLabel><h5>Address</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter your address" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <MapPin className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -415,11 +429,11 @@ const Profile = () => {
                   {/* Company Details Section */}
                   {(isAdminLike || isCompanyAccount) && (
                     <div className="space-y-6">
-                      <div className="flex items-center space-x-3 pb-3 border-b-2 border-green-100">
+                      <div className="flex items-center gap-x-2 pb-3 border-b-2 border-green-100">
                         <div className="p-2 bg-green-100 rounded-lg">
                           <Building className="h-6 w-6 text-green-600" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-800">Company Information</h3>
+                        <h3>Company Information</h3>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -428,21 +442,21 @@ const Profile = () => {
                           name="companyName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Company Name</FormLabel>
+                              <FormLabel><h5>Company Name</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter company name" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <Building className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Building className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -452,22 +466,22 @@ const Profile = () => {
                           name="companyEmail"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Company Email</FormLabel>
+                              <FormLabel><h5>Company Email</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter company email" 
                                     type="email" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Mail className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -477,21 +491,21 @@ const Profile = () => {
                           name="companyPhone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Company Phone</FormLabel>
+                              <FormLabel><h5>Company Phone</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter company phone" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <Phone className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Phone className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -501,21 +515,21 @@ const Profile = () => {
                           name="companyAddress"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">Company Address</FormLabel>
+                              <FormLabel><h5>Company Address</h5></FormLabel>
                               <FormControl>
                                 <div className="relative flex items-center">
                                   <Input 
                                     placeholder="Enter company address" 
                                     {...field} 
-                                    className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                    style={{ paddingRight: '48px' }}
+                                    className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                    style={{ paddingRight: '36px' }}
                                   />
-                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
+                                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <MapPin className="h-4 w-4 text-gray-400" />
                                   </div>
                                 </div>
                               </FormControl>
-                              <FormMessage className="text-red-500 text-sm" />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -525,11 +539,11 @@ const Profile = () => {
 
                   {/* Account Settings Section */}
                   <div className="space-y-6">
-                    <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-100">
+                    <div className="flex items-center gap-x-2 pb-3 border-b-2 border-purple-100">
                       <div className="p-2 bg-purple-100 rounded-lg">
                         <Lock className="h-6 w-6 text-purple-600" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-800">Account Settings</h3>
+                      <h3>Account Settings</h3>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -538,8 +552,8 @@ const Profile = () => {
                         name="accountEmail"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="flex items-center gap-1 text-sm font-medium text-gray-700">
-                              Account Email
+                            <FormLabel className="flex items-center gap-1">
+                              <h5>Account Email</h5>
                               <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
@@ -548,15 +562,15 @@ const Profile = () => {
                                   placeholder="Enter account email" 
                                   type="email" 
                                   {...field} 
-                                  className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                  style={{ paddingRight: '48px' }}
+                                  className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                  style={{ paddingRight: '36px' }}
                                 />
-                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                  <Mail className="h-5 w-5 text-gray-400" />
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <Mail className="h-4 w-4 text-gray-400" />
                                 </div>
                               </div>
                             </FormControl>
-                            <FormMessage className="text-red-500 text-sm" />
+                            <FormMessage className="text-red-500" />
                           </FormItem>
                         )}
                       />
@@ -566,22 +580,22 @@ const Profile = () => {
                         name="newPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-gray-700">New Password (Optional)</FormLabel>
+                            <FormLabel><h5>New Password (Optional)</h5></FormLabel>
                             <FormControl>
                               <div className="relative flex items-center">
                                 <Input 
                                   placeholder="Enter new password" 
                                   type="password" 
                                   {...field} 
-                                  className="pl-4 pr-4 py-3 text-base transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
-                                  style={{ paddingRight: '48px' }}
+                                  className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                  style={{ paddingRight: '36px' }}
                                 />
-                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                  <Lock className="h-5 w-5 text-gray-400" />
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <Lock className="h-4 w-4 text-gray-400" />
                                 </div>
                               </div>
                             </FormControl>
-                            <FormMessage className="text-red-500 text-sm" />
+                            <FormMessage className="text-red-500" />
                           </FormItem>
                         )}
                       />

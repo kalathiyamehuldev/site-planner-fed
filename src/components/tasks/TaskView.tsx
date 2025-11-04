@@ -30,15 +30,12 @@ import {
   selectSubtasksLoading,
 } from "@/redux/slices/tasksSlice";
 import {
-  startTimer,
-  stopTimer,
-  selectActiveTimer,
-  selectIsTimerRunning,
-  selectRunningTimeEntry,
   deleteTimeEntry,
   fetchTimeEntries,
   fetchTimeEntrySummary,
 } from "@/redux/slices/timeTrackingSlice";
+import { useTimer } from "@/hooks/useTimer";
+import { TimerConflictModal } from "@/components/timer/TimerConflictModal";
 import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 import ActionButton from "@/components/ui/ActionButton";
@@ -99,12 +96,25 @@ const TaskView: React.FC = () => {
 
   const task = useAppSelector(selectSelectedTask);
   const loading = useAppSelector(selectTaskLoading);
-  const activeTimer = useAppSelector(selectActiveTimer);
-  const isTimerRunning = useAppSelector(selectIsTimerRunning);
-  const runningTimeEntry = useAppSelector(selectRunningTimeEntry);
   const currentUser = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
   const { toast } = useToast();
+  
+  // Use the timer hook
+  const {
+    isTimerRunning,
+    runningTimeEntry,
+    activeTimer,
+    formatElapsedTime,
+    handleStartTimer,
+    handleStopTimer,
+    handleStopAndStartNew,
+    handleContinueCurrentTimer,
+    isTimerForTask,
+    isConflictModalOpen,
+    pendingTimerData,
+    setIsConflictModalOpen,
+  } = useTimer();
 
   const subtasks = useAppSelector(selectSubtasksByParentId(id || ""));
   const subtasksLoading = useAppSelector(selectSubtasksLoading);
@@ -127,9 +137,7 @@ const TaskView: React.FC = () => {
   const [replyDrafts, setReplyDrafts] = useState<Record<string, { text: string; posting: boolean; mentions: string[]; mentionOpen: boolean; mentionQuery: string }>>({});
   const [editingComments, setEditingComments] = useState<Record<string, { text: string; saving: boolean }>>({});
 
-  // Timer state
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  // Stop confirmation dialog state
   const [isStopConfirmOpen, setIsStopConfirmOpen] = useState(false);
   const [pendingStopData, setPendingStopData] = useState<any>(null);
   const [stoppedElapsedTime, setStoppedElapsedTime] = useState<number>(0);
@@ -289,92 +297,22 @@ const TaskView: React.FC = () => {
   };
 
   const timerForThisTask = useMemo(() => {
-    return isTimerRunning && activeTimer.taskId === task?.id;
-  }, [isTimerRunning, activeTimer, task]);
+    return task?.id ? isTimerForTask(task.id) : false;
+  }, [task?.id, isTimerForTask]);
 
-  // Set timer start time when running timer is detected
-  useEffect(() => {
-    if (isTimerRunning && runningTimeEntry && !timerStartTime) {
-      // Always start fresh from current time, ignoring backend stored time
-      setTimerStartTime(Date.now());
-    } else if (!isTimerRunning && timerStartTime) {
-      // Clear timer start time when timer is not running
-      setTimerStartTime(null);
-    }
-  }, [isTimerRunning, runningTimeEntry, timerStartTime]);
-  
-  // Live timer update effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setCurrentTime(Date.now());
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning]);
-
-  const formatElapsedTime = (elapsedTimeMs?: number) => {
-    let elapsedMs: number;
-    
-    if (elapsedTimeMs !== undefined) {
-      // Use provided elapsed time (for stopped timer display)
-      elapsedMs = elapsedTimeMs;
-    } else if (timerStartTime) {
-      // Always use frontend timer start time when available (for running timer)
-      elapsedMs = currentTime - timerStartTime;
-    } else {
-      // No timer running or no start time available
-      elapsedMs = 0;
-    }
-    
-    // Ensure non-negative elapsed time
-    elapsedMs = Math.max(0, elapsedMs);
-    
-    const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
-    const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  const handleStartTimer = async () => {
+  const handleStartTimerForTask = async () => {
     if (!task) return;
     
-    try {
-      // Set timer start time to current moment
-      const startTime = Date.now();
-      setTimerStartTime(startTime);
-      setCurrentTime(startTime);
-      
-      await dispatch(
-        startTimer({
-          taskId: task.id,
-          projectId: task.project?.id,
-          description: `Working on: ${task.title}`,
-          isBillable: true,
-          hourlyRate: 40,
-        })
-      ).unwrap();
-      
-      toast({
-        title: "Timer Started",
-        description: "Time tracking has begun",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start timer",
-        variant: "destructive",
-      });
-    }
+    await handleStartTimer({
+      taskId: task.id,
+      projectId: task.project?.id,
+      description: `Working on: ${task.title}`,
+      isBillable: true,
+      hourlyRate: 40,
+    });
   };
 
-  const handleStopTimer = async () => {
+  const handleStopTimerForTask = async () => {
     if (!runningTimeEntry?.id) {
       toast({
         title: "Error",
@@ -385,10 +323,6 @@ const TaskView: React.FC = () => {
     }
 
     try {
-      // Calculate elapsed time before stopping
-      const elapsedMs = timerStartTime ? currentTime - timerStartTime : 0;
-      setStoppedElapsedTime(elapsedMs);
-      
       // Stop the timer first
       const stopData = {
         timeEntryId: runningTimeEntry.id,
@@ -397,10 +331,7 @@ const TaskView: React.FC = () => {
         hourlyRate: runningTimeEntry.hourlyRate
       };
       
-      await dispatch(stopTimer(stopData)).unwrap();
-      
-      // Reset timer start time
-      setTimerStartTime(null);
+      await handleStopTimer(stopData);
       
       // Store the stop data and show confirmation dialog for saving
       setPendingStopData(stopData);
@@ -643,14 +574,14 @@ const TaskView: React.FC = () => {
                   {timerForThisTask ? (
                     <ActionButton
                       variant="secondary"
-                      onClick={handleStopTimer}
+                      onClick={handleStopTimerForTask}
                       leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
                       text="Stop Timer"
                     />
                   ) : (
                     <ActionButton
                       variant="secondary"
-                      onClick={handleStartTimer}
+                      onClick={handleStartTimerForTask}
                       leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
                       text="Start Timer"
                     />
@@ -702,14 +633,14 @@ const TaskView: React.FC = () => {
                 {timerForThisTask ? (
                   <ActionButton
                     variant="secondary"
-                    onClick={handleStopTimer}
+                    onClick={handleStopTimerForTask}
                     leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
                     text="Stop Timer"
                   />
                 ) : (
                   <ActionButton
                     variant="secondary"
-                    onClick={handleStartTimer}
+                    onClick={handleStartTimerForTask}
                     leftIcon={<solar.Time.Stopwatch className="size-4" weight="Bold" />}
                     text="Start Timer"
                   />
@@ -2045,6 +1976,23 @@ const TaskView: React.FC = () => {
           )}
         </div>
       </BottomSheet>
+      
+      {/* Timer Conflict Modal */}
+      <TimerConflictModal
+        isOpen={isConflictModalOpen}
+        onClose={() => setIsConflictModalOpen(false)}
+        onStopAndStart={handleStopAndStartNew}
+        onContinueCurrent={handleContinueCurrentTimer}
+        currentTask={runningTimeEntry?.task ? {
+          title: runningTimeEntry.task.title,
+          project: runningTimeEntry.project,
+        } : undefined}
+        newTask={task ? {
+          title: task.title,
+          project: task.project,
+        } : undefined}
+        elapsedTime={formatElapsedTime()}
+      />
     </PageContainer>
   );
 };

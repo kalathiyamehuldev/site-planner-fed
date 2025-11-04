@@ -378,6 +378,41 @@ export const updateTimeEntryStatus = createAsyncThunk(
   }
 );
 
+export const checkTimerStatus = createAsyncThunk(
+  'timeTracking/checkTimerStatus',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response: any = await api.get('/time-tracking/timer/status');
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to check timer status');
+      }
+      
+      return response.data ? {
+        isRunning: response.data.isRunning,
+        timeEntry: response.data.timeEntry ? transformApiTimeEntry(response.data.timeEntry) : null,
+      } : { isRunning: false, timeEntry: null };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to check timer status');
+    }
+  }
+);
+
+export const forceStopTimer = createAsyncThunk(
+  'timeTracking/forceStopTimer',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/time-tracking/timer/force-stop');
+      if (response.status === 'error') {
+        return rejectWithValue(response.error || response.message || 'Failed to force stop timer');
+      }
+      
+      return response.data ? transformApiTimeEntry(response.data) : null;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to force stop timer');
+    }
+  }
+);
+
 interface TimeTrackingState {
   timeEntries: TimeEntry[];
   users: User[];
@@ -387,6 +422,7 @@ interface TimeTrackingState {
     startTime: string | null;
     isRunning: boolean;
     timeEntry?: TimeEntry | null;
+    frontendStartTime: number | null; // Frontend timestamp for accurate display
   };
   selectedEntry: TimeEntry | null;
   summary: TimeEntrySummary | null;
@@ -411,6 +447,7 @@ const initialState: TimeTrackingState = {
     startTime: null,
     isRunning: false,
     timeEntry: null,
+    frontendStartTime: null,
   },
   selectedEntry: null,
   summary: null,
@@ -452,7 +489,11 @@ export const timeTrackingSlice = createSlice({
         startTime: null,
         isRunning: false,
         timeEntry: null,
+        frontendStartTime: null,
       };
+    },
+    setFrontendStartTime: (state, action: PayloadAction<number | null>) => {
+      state.activeTimer.frontendStartTime = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -543,6 +584,7 @@ export const timeTrackingSlice = createSlice({
           startTime: action.payload.startTime || null,
           isRunning: action.payload.isRunning,
           timeEntry: action.payload,
+          frontendStartTime: Date.now(), // Set frontend start time when timer starts
         };
       })
       .addCase(startTimer.rejected, (state, action) => {
@@ -562,6 +604,7 @@ export const timeTrackingSlice = createSlice({
           startTime: null,
           isRunning: false,
           timeEntry: null,
+          frontendStartTime: null,
         };
         // Add the completed time entry to the list
         state.timeEntries.unshift(action.payload);
@@ -595,6 +638,44 @@ export const timeTrackingSlice = createSlice({
       .addCase(updateTimeEntryStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Check timer status
+      .addCase(checkTimerStatus.fulfilled, (state, action) => {
+        if (action.payload.isRunning && action.payload.timeEntry) {
+          state.activeTimer = {
+            taskId: action.payload.timeEntry.taskId || null,
+            projectId: action.payload.timeEntry.projectId || null,
+            startTime: action.payload.timeEntry.startTime || null,
+            isRunning: true,
+            timeEntry: action.payload.timeEntry,
+            frontendStartTime: state.activeTimer.frontendStartTime || Date.now(),
+          };
+        } else {
+          state.activeTimer = {
+            taskId: null,
+            projectId: null,
+            startTime: null,
+            isRunning: false,
+            timeEntry: null,
+            frontendStartTime: null,
+          };
+        }
+      })
+      // Force stop timer
+      .addCase(forceStopTimer.fulfilled, (state, action) => {
+        state.activeTimer = {
+          taskId: null,
+          projectId: null,
+          startTime: null,
+          isRunning: false,
+          timeEntry: null,
+          frontendStartTime: null,
+        };
+        if (action.payload) {
+          state.timeEntries.unshift(action.payload);
+          state.totalHours = calculateTotalHours(state.timeEntries);
+          state.pagination.total += 1;
+        }
       });
   },
 });
@@ -604,7 +685,8 @@ export const {
   clearSelectedTimeEntry, 
   setFilters,
   clearFilters,
-  cancelTimer
+  cancelTimer,
+  setFrontendStartTime
 } = timeTrackingSlice.actions;
 
 // Selectors
@@ -628,5 +710,6 @@ export const selectTimeEntrySummary = (state: RootState) => state.timeTracking.s
 export const selectRunningTimeEntry = (state: RootState) => state.timeTracking.activeTimer.timeEntry;
 export const selectIsTimerRunning = (state: RootState) => state.timeTracking.activeTimer.isRunning;
 export const selectTotalHours = (state: RootState) => state.timeTracking.totalHours;
+export const selectFrontendStartTime = (state: RootState) => state.timeTracking.activeTimer.frontendStartTime;
 
 export default timeTrackingSlice.reducer;

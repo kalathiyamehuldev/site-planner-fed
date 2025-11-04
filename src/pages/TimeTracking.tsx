@@ -59,24 +59,21 @@ import {
   fetchTimeEntries,
   createTimeEntry,
   updateTimeEntry,
-  startTimer,
-  stopTimer,
   fetchTimeEntrySummary,
   deleteTimeEntry,
   updateTimeEntryStatus,
   selectAllTimeEntries,
-  selectActiveTimer,
   selectTimeTrackingLoading,
   selectTimeTrackingError,
   selectTimeTrackingPagination,
   selectTimeEntrySummary,
-  selectIsTimerRunning,
-  selectRunningTimeEntry,
   CreateTimeEntryData,
   UpdateTimeEntryData,
   StartTimerData,
   TimeEntryStatus,
 } from "@/redux/slices/timeTrackingSlice";
+import { useTimer } from "@/hooks/useTimer";
+import { TimerConflictModal } from "@/components/timer/TimerConflictModal";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import {
   fetchParentTasksByCompany,
@@ -102,9 +99,6 @@ const TimeTracking = () => {
 
   // Redux selectors
   const timeEntries = useAppSelector(selectAllTimeEntries);
-  const activeTimer = useAppSelector(selectActiveTimer);
-  const isTimerRunning = useAppSelector(selectIsTimerRunning);
-  const runningTimeEntry = useAppSelector(selectRunningTimeEntry);
   const projects = useAppSelector(selectAllProjects);
   const tasks: Task[] = useAppSelector(selectParentTasks);
   const projectTasks: Task[] = useAppSelector(selectParentProjectTasks);
@@ -113,6 +107,22 @@ const TimeTracking = () => {
   const error = useAppSelector(selectTimeTrackingError);
   const pagination = useAppSelector(selectTimeTrackingPagination);
   const {hasPermission} = usePermission();
+  
+  // Use the timer hook
+  const {
+    isTimerRunning,
+    runningTimeEntry,
+    activeTimer,
+    formatElapsedTime,
+    handleStartTimer,
+    handleStopTimer,
+    handleStopAndStartNew,
+    handleContinueCurrentTimer,
+    isTimerForTask,
+    isConflictModalOpen,
+    pendingTimerData,
+    setIsConflictModalOpen,
+  } = useTimer();
 
   // Yup validation schema for new time entry
   const newTimeEntryValidationSchema = yup.object().shape({
@@ -190,10 +200,6 @@ const TimeTracking = () => {
   });
   const [newTimeEntryErrors, setNewTimeEntryErrors] = useState<Record<string, string>>({});
   const [timerErrors, setTimerErrors] = useState<Record<string, string>>({});
-  
-  // Live timer state
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
   
   // Stop confirmation dialog state
   const [isStopConfirmOpen, setIsStopConfirmOpen] = useState(false);
@@ -296,29 +302,7 @@ const TimeTracking = () => {
     }
   }, [selectedTimeRange, customDateRange, dispatch]);
   
-  // Set timer start time when running timer is detected
-  useEffect(() => {
-    if (isTimerRunning && runningTimeEntry && !timerStartTime) {
-      // Always start fresh from current time, ignoring backend stored time
-      setTimerStartTime(Date.now());
-    } else if (!isTimerRunning && timerStartTime) {
-      // Clear timer start time when timer is not running
-      setTimerStartTime(null);
-    }
-  }, [isTimerRunning, runningTimeEntry, timerStartTime]);
-  
-  // Live timer update effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setCurrentTime(Date.now());
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning]);
+
 
   // Calculate total hours for the selected time range
   const totalHours =
@@ -328,31 +312,7 @@ const TimeTracking = () => {
       .filter((entry) => entry.isBillable)
       .reduce((sum, entry) => sum + (entry.duration || 0), 0);
 
-  const formatElapsedTime = (elapsedTimeMs?: number) => {
-    let elapsedMs: number;
-    
-    if (elapsedTimeMs !== undefined) {
-      // Use provided elapsed time (for stopped timer display)
-      elapsedMs = elapsedTimeMs;
-    } else if (timerStartTime) {
-      // Always use frontend timer start time when available (for running timer)
-      elapsedMs = currentTime - timerStartTime;
-    } else {
-      // No timer running or no start time available
-      elapsedMs = 0;
-    }
-    
-    // Ensure non-negative elapsed time
-    elapsedMs = Math.max(0, elapsedMs);
-    
-    const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
-    const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
 
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
 
   // Helper function to format duration from decimal hours to readable format
   const formatDuration = (durationInHours: number) => {
@@ -428,7 +388,7 @@ const TimeTracking = () => {
 
 
   // Handle timer actions
-  const handleStartTimer = () => {
+  const handleStartTimerModal = () => {
     setIsTimerModalOpen(true);
   };
   
@@ -466,31 +426,18 @@ const TimeTracking = () => {
     };
 
     try {
-      // Set timer start time to current moment
-      const startTime = Date.now();
-      setTimerStartTime(startTime);
-      setCurrentTime(startTime);
-      
-      await dispatch(startTimer(timerData)).unwrap();
-      toast({
-        title: "Timer Started",
-        description: "Time tracking has begun",
-      });
+      await handleStartTimer(timerData);
       setIsTimerModalOpen(false);
       setTimerFormData({ isBillable: true });
       setTimerErrors({});
       // Refresh time entries to get the new running entry
       dispatch(fetchTimeEntries({}));
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start timer",
-        variant: "destructive",
-      });
+      // Error handling is done in the hook
     }
   };
 
-  const handleStopTimer = async () => {
+  const handleStopTimerButton = async () => {
     if (!runningTimeEntry?.id) {
       toast({
         title: "Error",
@@ -501,10 +448,6 @@ const TimeTracking = () => {
     }
 
     try {
-      // Calculate elapsed time before stopping
-      const elapsedMs = timerStartTime ? currentTime - timerStartTime : 0;
-      setStoppedElapsedTime(elapsedMs);
-      
       // Stop the timer first
       const stopData = {
         timeEntryId: runningTimeEntry.id,
@@ -513,21 +456,14 @@ const TimeTracking = () => {
         hourlyRate: runningTimeEntry.hourlyRate
       };
       
-      await dispatch(stopTimer(stopData)).unwrap();
-      
-      // Reset timer start time
-      setTimerStartTime(null);
+      await handleStopTimer(stopData);
       
       // Store the stop data and show confirmation dialog for saving
       setPendingStopData(stopData);
       setIsStopConfirmOpen(true);
       
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to stop timer",
-        variant: "destructive",
-      });
+      // Error handling is done in the hook
     }
   };
 
@@ -935,7 +871,7 @@ const TimeTracking = () => {
                   variant={isTimerRunning ? "outline" : "default"}
                   size="icon"
                   motion="subtle"
-                  onClick={isTimerRunning ? handleStopTimer : handleStartTimer}
+                  onClick={isTimerRunning ? handleStopTimerButton : handleStartTimerModal}
                 >
                   {isTimerRunning ? <Pause size={18} /> : <Play size={18} />}
                 </MotionButton>
@@ -1713,7 +1649,7 @@ const TimeTracking = () => {
                   motion="subtle"
                   leftIcon={<Play size={16} className="mr-2" />}
                   text="Start Timer"
-                  onClick={handleStartTimer}
+                  onClick={handleStartTimerModal}
                 >
                 </ActionButton>
               )}
@@ -2212,6 +2148,23 @@ const TimeTracking = () => {
         </DialogContent>
       </Dialog>
       )}
+      
+      {/* Timer Conflict Modal */}
+      <TimerConflictModal
+        isOpen={isConflictModalOpen}
+        onClose={() => setIsConflictModalOpen(false)}
+        onStopAndStart={handleStopAndStartNew}
+        onContinueCurrent={handleContinueCurrentTimer}
+        currentTask={runningTimeEntry?.task ? {
+          title: runningTimeEntry.task.title,
+          project: runningTimeEntry.project,
+        } : undefined}
+        newTask={pendingTimerData ? {
+          title: pendingTimerData.description || "New Timer",
+          project: { name: "Selected Project" },
+        } : undefined}
+        elapsedTime={formatElapsedTime()}
+      />
     </PageContainer>
   );
 };
