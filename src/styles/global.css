@@ -564,11 +564,6 @@ td {
     overflow: hidden;
   }
   
-  /* Allow body scroll but contain kanban scroll */
-  body.mobile-kanban-active {
-    /* Keep normal scrolling behavior */
-  }
-  
   /* Ensure columns fill full height */
   .kanban-column-full-height {
     height: calc(100vh - 64px);
