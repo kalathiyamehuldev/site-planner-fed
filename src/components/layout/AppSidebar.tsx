@@ -22,7 +22,7 @@ import {
 import usePermission from "@/hooks/usePermission";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import solar from "@solar-icons/react";
+import solar, { Gallery } from "@solar-icons/react";
 
 type SidebarItem = {
   name: string;
@@ -123,6 +123,9 @@ const AppSidebar: React.FC = () => {
     { name: "To-Do-List", path: "/todo", icon: solar.List.ChecklistMinimalistic },
     ...(hasPermission("documents", "manage")
       ? [{ name: "Documents", path: "/documents", icon: solar.Folders.FolderWithFiles }]
+      : []),
+    ...(hasPermission("photos", "read")
+      ? [{ name: "Photos", path: "/photos", icon: Gallery }]
       : []),
   ];
 

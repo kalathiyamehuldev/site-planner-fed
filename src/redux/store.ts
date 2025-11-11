@@ -14,6 +14,9 @@ import adminReducer from './slices/adminSlice';
 import foldersReducer from './slices/foldersSlice';
 import commentsReducer from './slices/commentsSlice';
 import rolesReducer from './slices/rolesSlice';
+import locationsReducer from './slices/locationsSlice';
+import visitsReducer from './slices/visitsSlice';
+import photosReducer from './slices/photosSlice';
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +35,9 @@ export const store = configureStore({
     folders: foldersReducer,
     comments: commentsReducer,
     roles: rolesReducer,
+    locations: locationsReducer,
+    visits: visitsReducer,
+    photos: photosReducer,
   },
 });
 

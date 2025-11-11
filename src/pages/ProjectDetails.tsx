@@ -19,6 +19,9 @@ import {
   ArrowLeft,
   Plus,
   ChevronRight,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
@@ -57,6 +60,16 @@ import ActionButton from "@/components/ui/ActionButton";
 import { DocumentsMinimalistic, DownloadMinimalistic } from "@solar-icons/react";
 import { calculateProjectProgress, formatProjectDate } from "@/utils/projectUtils";
 import DocumentSidebar from "@/components/documents/DocumentSidebar";
+import { Input } from "@/components/ui/input";
+import {
+  fetchLocationsByProject,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+  selectLocationsByProject,
+  selectLocationsLoading,
+  selectLocationsError,
+} from "@/redux/slices/locationsSlice";
 
 // Progress is now calculated from tasks
 
@@ -122,6 +135,7 @@ const ProjectDetails = () => {
   const resource = 'projects';
   const taskResource = 'tasks';
   const documentResource = 'documents';
+  const locationResource = 'projects';
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
@@ -156,6 +170,9 @@ const ProjectDetails = () => {
   const tasksLoading = useAppSelector(selectTaskLoading);
   const projectDocuments = useAppSelector(selectProjectDocuments);
   const documentsLoading = useAppSelector(selectProjectDocumentsLoading);
+  const projectLocations = useAppSelector((state) => selectLocationsByProject(state, id || ''));
+  const locationsLoading = useAppSelector(selectLocationsLoading);
+  const locationsError = useAppSelector(selectLocationsError);
 
   // Fetch project data, tasks, and documents when component mounts or ID changes
   useEffect(() => {
@@ -163,6 +180,7 @@ const ProjectDetails = () => {
       dispatch(fetchProjectById(id));
       dispatch(fetchTasksByProject(id));
       dispatch(fetchDocumentsByProject(id));
+      dispatch(fetchLocationsByProject(id));
 
       setMembersLoading(true);
       dispatch(getProjectMembers(id))
@@ -196,6 +214,55 @@ const ProjectDetails = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Locations: state and handlers
+  const [newLocationName, setNewLocationName] = useState('');
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [editingLocationName, setEditingLocationName] = useState('');
+
+  const handleAddLocation = async () => {
+    if (!id || !hasPermission(locationResource, 'create')) return;
+    const name = newLocationName.trim();
+    if (!name) return;
+    try {
+      await dispatch(createLocation({ name, projectId: id })).unwrap();
+      setNewLocationName('');
+    } catch (err) {
+      console.error('Failed to create location:', err);
+    }
+  };
+
+  const startEditLocation = (loc: any) => {
+    if (!hasPermission(locationResource, 'update')) return;
+    setEditingLocationId(loc.id);
+    setEditingLocationName(loc.name || '');
+  };
+
+  const cancelEditLocation = () => {
+    setEditingLocationId(null);
+    setEditingLocationName('');
+  };
+
+  const saveEditLocation = async () => {
+    if (!editingLocationId || !hasPermission(locationResource, 'update')) return;
+    const name = editingLocationName.trim();
+    if (!name) return;
+    try {
+      await dispatch(updateLocation({ id: editingLocationId, data: { name } })).unwrap();
+      cancelEditLocation();
+    } catch (err) {
+      console.error('Failed to update location:', err);
+    }
+  };
+
+  const handleDeleteLocation = async (locId: string) => {
+    if (!hasPermission(locationResource, 'delete')) return;
+    try {
+      await dispatch(deleteLocation(locId)).unwrap();
+    } catch (err) {
+      console.error('Failed to delete location:', err);
+    }
   };
 
   const confirmDeleteTask = async () => {
@@ -332,6 +399,7 @@ const ProjectDetails = () => {
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
             {/* <TabsTrigger value="invoices">Invoices</TabsTrigger> */}
           </TabsList>
 
@@ -486,6 +554,84 @@ const ProjectDetails = () => {
                 showProject={false}
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="locations" className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium">Locations</h2>
+              {hasPermission(locationResource, 'create') && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="New location name"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
+                    className="w-64"
+                  />
+                  <ActionButton onClick={handleAddLocation} variant="primary" text="Add New Location" leftIcon={<Plus size={18} />}/>
+                </div>
+              )}
+            </div>
+
+            <GlassCard className="p-4">
+              {locationsLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <div className="text-lg">Loading locations...</div>
+                </div>
+              ) : locationsError ? (
+                <div className="text-sm text-red-600">{locationsError}</div>
+              ) : projectLocations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No locations found for this project
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projectLocations.map((loc) => (
+                    <div key={loc.id} className="flex items-center justify-between border rounded-md p-3">
+                      {editingLocationId === loc.id ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <Input
+                            value={editingLocationName}
+                            onChange={(e) => setEditingLocationName(e.target.value)}
+                            className="w-full"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{loc.name}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {editingLocationId === loc.id ? (
+                          <>
+                            {hasPermission(locationResource, 'update') && (
+                              <Button size="icon" variant="ghost" onClick={saveEditLocation} aria-label="Save location">
+                                <Check size={18} className="text-blue-600" />
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" onClick={cancelEditLocation} aria-label="Cancel edit">
+                              <X size={18} className="text-red-600" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {hasPermission(locationResource, 'update') && (
+                              <Button size="icon" variant="ghost" onClick={() => startEditLocation(loc)} aria-label="Edit location">
+                                <Edit size={18} className="text-blue-600" />
+                              </Button>
+                            )}
+                            {hasPermission(locationResource, 'delete') && (
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteLocation(loc.id)} aria-label="Delete location">
+                                <Trash2 size={18} className="text-red-600" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-6">

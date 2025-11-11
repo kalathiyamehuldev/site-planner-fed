@@ -37,6 +37,9 @@ import RolesPage from "./pages/Roles";
 import CreateRolePage from "./pages/CreateRole";
 import EditRolePage from "./pages/EditRole";
 import Profile from "./pages/Profile";
+import Photos from "./pages/Photos";
+import AlbumView from "./components/photos/AlbumView";
+import PhotoViewer from "./components/photos/PhotoViewer";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +120,9 @@ const App = () => (
                           <Route path="/roles" element={<RolesPage />}/>
                           <Route path="/roles/create" element={<CreateRolePage />}/>
                           <Route path="/roles/edit/:roleId" element={<EditRolePage />}/>
+                          <Route path="/photos" element={<Photos />} />
+                          <Route path="/photos/album/:visitId" element={<AlbumView />} />
+                          <Route path="/photos/viewer/:photoId" element={<PhotoViewer />} />
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/admin" element={<Admin />} />
                           <Route path="*" element={<NotFound />} />

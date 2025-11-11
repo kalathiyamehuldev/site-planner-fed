@@ -1,6 +1,6 @@
 import { ApiPermission } from '../redux/slices/rolesSlice';
 
-export type Resource = 'projects' | 'documents' | 'tasks' | 'time_tracking' | 'invoices' | 'contacts' | 'folders' | 'users' | 'dashboard' | 'admin' | 'roles' | 'todo' | 'purchase_orders' | 'image_library' | 'product_library';
+export type Resource = 'projects' | 'documents' | 'tasks' | 'time_tracking' | 'invoices' | 'contacts' | 'folders' | 'users' | 'dashboard' | 'admin' | 'roles' | 'todo' | 'purchase_orders' | 'image_library' | 'product_library' | 'photos';
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 
 export interface PermissionActions {
@@ -122,7 +122,8 @@ export const getResourceName = (resource: Resource): string => {
     todo: 'To Do',
     purchase_orders: 'Purchase Orders',
     image_library: 'Image Library',
-    product_library: 'Product Library'
+    product_library: 'Product Library',
+    photos: 'Photos'
   };
   
   return resourceNames[resource] || resource;
