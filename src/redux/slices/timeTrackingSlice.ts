@@ -1,6 +1,6 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { RootState } from '../store';
+import type { RootState } from '../store';
 import api from '@/lib/axios';
 
 // API Response interface

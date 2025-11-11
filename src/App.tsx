@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/layout/AppSidebar";
 import { Provider } from "react-redux";
 import { store } from "@/redux/store";
+import AppInitializer from "@/components/layout/AppInitializer";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -63,8 +64,9 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <AppInitializer>
+          <BrowserRouter>
+            <Routes>
             {/* Auth Routes */}
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
@@ -133,8 +135,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </AppInitializer>
       </TooltipProvider>
     </QueryClientProvider>
   </Provider>

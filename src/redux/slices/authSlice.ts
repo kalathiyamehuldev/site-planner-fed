@@ -12,6 +12,7 @@ import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
 import { toast } from "sonner";
 import { fetchPermissionsByRole, ApiPermission } from './rolesSlice';
+import { forceStopTimer } from './timeTrackingSlice';
 
 // Define Company interface if not already imported
 interface Company {
@@ -308,9 +309,6 @@ export const logout = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue, dispatch }) => {
         try {
-            // Import forceStopTimer dynamically to avoid circular dependency
-            const { forceStopTimer } = await import('./timeTrackingSlice');
-            
             // Force stop any running timer before logout
             try {
                 await dispatch(forceStopTimer()).unwrap();
@@ -526,5 +524,8 @@ export const selectNeedsCompanySelection = (state: RootState) => state.auth.need
 export const selectAuthError = (state: RootState) => state.auth.error;
 export const selectAuthLoading = (state: RootState) => state.auth.isLoading;
 export const selectPermissions = (state: RootState) => state.auth.permissions;
+
+// Export actions
+export const { setPermissions } = authSlice.actions;
 
 export default authSlice.reducer;
