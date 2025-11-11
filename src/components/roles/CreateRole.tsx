@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { updateRole, fetchRoles, selectAllRoles } from '@/redux/slices/rolesSlice';
+import { createRole, updateRole, fetchRoles, selectAllRoles } from '@/redux/slices/rolesSlice';
 import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,7 @@ import usePermission from '@/hooks/usePermission';
 import PageContainer from '@/components/layout/PageContainer';
 
 // Define resource and action types
-const RESOURCES = ['projects', 'documents', 'tasks', 'time_tracking', 'invoices', 'contacts', 'folders', 'users', 'roles'] as const;
+const RESOURCES = ['projects', 'documents', 'tasks', 'time_tracking', 'invoices', 'contacts', 'folders', 'users', 'roles', 'photos'] as const;
 const ACTIONS = [ 'manage' , 'read', 'create', 'update', 'delete'] as const;
 
 type Resource = typeof RESOURCES[number];
@@ -30,10 +30,9 @@ type RoleFormData = {
   }[];
 };
 
-const EditRolePage: React.FC = () => {
+const CreateRolePage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { roleId } = useParams<{ roleId: string }>();
   const roles = useAppSelector(selectAllRoles);
   const { hasPermission, isSuperAdmin } = usePermission();
   
@@ -66,51 +65,6 @@ const EditRolePage: React.FC = () => {
       ) as Record<Action, boolean>
     }))
   });
-
-  const [loading, setLoading] = useState(true);
-
-  // State to track if roles have been fetched
-  const [rolesFetched, setRolesFetched] = useState(false);
-  
-  useEffect(() => {
-    // Fetch roles if not already loaded
-    if (roles.length === 0 && !rolesFetched) {
-      setRolesFetched(true);
-      dispatch(fetchRoles()).then(() => {
-        setLoading(false);
-        loadRoleData();
-      });
-    } else if (roleId) {
-      setLoading(false);
-      loadRoleData();
-    }
-  }, [dispatch, roleId, roles.length, rolesFetched]);
-
-  const loadRoleData = () => {
-    console.log('Loading role data for ID:', roleId);
-    if (!roleId) {
-      navigate('/roles');
-      return;
-    }
-
-    const role = roles.find(r => r.id === roleId);
-    if (role) {
-      setFormData({
-        name: role.name,
-        description: role.description || '',
-        isDefault: role.isDefault || false,
-        isActive: role.isActive !== false,
-        permissions: RESOURCES.map(resource => ({
-          resource,
-          actions: role.permissions?.find(p => p.resource === resource)?.actions || 
-            ACTIONS.reduce((acc, action) => ({ ...acc, [action]: false }), {}
-            ) as Record<Action, boolean>
-        }))
-      });
-    } else {
-      navigate('/roles');
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -184,56 +138,28 @@ const EditRolePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!roleId) return;
+      // Get company ID from localStorage
+      const selectedCompany = localStorage.getItem('selectedCompany');
+      const companyId = selectedCompany ? JSON.parse(selectedCompany).id : '';
       
-      // Get companyId from localStorage or auth state
-      const selectedCompany = JSON.parse(localStorage.getItem('selectedCompany') || '{}');
-      const companyId = selectedCompany?.id;
-      
-      if (!companyId) {
-        throw new Error('No company selected');
-      }
-      
-      // Format the role data properly for the API
-      const roleData = {
-        name: formData.name,
-        description: formData.description,
-        isDefault: formData.isDefault,
-        isActive: formData.isActive,
-        companyId: companyId,
-        permissions: formData.permissions.map(perm => ({
-          resource: perm.resource,
-          actions: perm.actions
-        }))
-      };
-      
-      await dispatch(updateRole({ id: roleId, roleData })).unwrap();
-      toast({ title: "Success", description: "Role updated successfully" });
+      await dispatch(createRole({...formData, companyId })).unwrap();
+      toast({ title: "Success", description: "Role created successfully" });
       navigate('/roles');
-    } catch (error: any) {
-      console.error("Error updating role:", error);
+    } catch (error) {
+      console.error("Error creating role:", error);
       toast({ 
         title: "Error", 
-        description: error?.message || error?.error || "Failed to update role. Please try again.", 
+        description: "Failed to create role. Please try again.", 
         variant: "destructive"
       });
     }
   };
 
-  if (loading) {
-    return (
-      <PageContainer>
-        <div className="flex items-center justify-center h-full p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </PageContainer>
-    );
-  }
-
   return (
     <PageContainer>
+      {/* <div className="max-w-3xl mx-auto py-6"> */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit Role</h1>
+          <h1 className="text-2xl font-bold">Create New Role</h1>
           <ActionButton
             variant="secondary"
             onClick={() => navigate('/roles')}
@@ -245,7 +171,7 @@ const EditRolePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Role Information</CardTitle>
             <CardDescription>
-              Update the role details and permissions.
+              Create a new role with specific permissions.
             </CardDescription>
           </CardHeader>
           
@@ -288,10 +214,9 @@ const EditRolePage: React.FC = () => {
                       id="isDefault"
                       checked={formData.isDefault}
                       onCheckedChange={() => handleBooleanToggle('isDefault')}
-                      disabled
                     />
                     <label htmlFor="isDefault" className="text-sm font-medium">
-                      Default Role (cannot be changed)
+                      Default Role
                     </label>
                   </div>
                   
@@ -354,14 +279,15 @@ const EditRolePage: React.FC = () => {
                   variant="primary"
                   type="submit"
                   className="w-full sm:w-auto"
-                  text="Update Role"
+                  text="Create Role"
                 />
               </CardFooter>
             </form>
           </CardContent>
         </Card>
+      {/* </div> */}
     </PageContainer>
   );
 };
 
-export default EditRolePage;
+export default CreateRolePage;

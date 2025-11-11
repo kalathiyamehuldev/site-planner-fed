@@ -107,6 +107,7 @@ const AlbumView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'location'>('date');
   const [editPhotoId, setEditPhotoId] = useState<string | null>(null);
   const [editPhotoData, setEditPhotoData] = useState({
+    originalName: "",
     caption: "",
     tags: "",
     locationId: "",
@@ -115,6 +116,7 @@ const AlbumView: React.FC = () => {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [isBulkActionOpen, setIsBulkActionOpen] = useState(false);
   const [bulkLocationId, setBulkLocationId] = useState("");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
 
   // Permissions
@@ -322,6 +324,7 @@ const AlbumView: React.FC = () => {
     if (photo && canManage) {
       setEditPhotoId(photoId);
       setEditPhotoData({
+        originalName: photo.originalName || "",
         caption: photo.caption || "",
         tags: photo.tags?.join(", ") || "",
         locationId: photo.locationId || "",
@@ -334,6 +337,7 @@ const AlbumView: React.FC = () => {
 
     try {
       const updateData = {
+        originalName: editPhotoData.originalName.trim() || undefined,
         caption: editPhotoData.caption.trim() || undefined,
         tags: editPhotoData.tags.trim() 
           ? editPhotoData.tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0)
@@ -347,7 +351,7 @@ const AlbumView: React.FC = () => {
       }));
       
       setEditPhotoId(null);
-      setEditPhotoData({ caption: "", tags: "", locationId: "" });
+      setEditPhotoData({ originalName: "", caption: "", tags: "", locationId: "" });
       
       // Refresh photos
       if (visitId) {
@@ -595,7 +599,7 @@ const AlbumView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start flex-shrink-0">
           {canUpload && (
             <>
               {/* Regular file upload */}
@@ -636,9 +640,9 @@ const AlbumView: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
               General Description
             </h2>
-            {visit.description ? (
+            {(description || visit.description) ? (
               <p className="text-gray-600 whitespace-pre-wrap">
-                {visit.description}
+                {description || visit.description}
               </p>
             ) : (
               <p className="text-gray-400 italic">
@@ -675,7 +679,7 @@ const AlbumView: React.FC = () => {
           </h2>
           
           {canUpload && (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <ActionButton
                 text="Add pictures"
                 variant="primary"
@@ -690,8 +694,106 @@ const AlbumView: React.FC = () => {
 
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          {/* Mobile: Search + Add on same line */}
+          <div className="flex w-full items-center justify-between gap-2 sm:hidden">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <Input
+                placeholder="Search photos by name, caption, or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {canUpload && (
+              <ActionButton
+                text="Add pictures"
+                variant="primary"
+                leftIcon={<Plus className="h-4 w-4" />}
+                disabled={isUploading}
+                onClick={() => document.getElementById('photo-upload')?.click()}
+                className="flex-shrink-0"
+              />
+            )}
+          </div>
+
+          {/* Mobile: Filters icon + View toggle */}
+          <div className="flex sm:hidden items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                aria-expanded={showMobileFilters}
+                aria-label="Toggle filters"
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+              <div className="flex rounded-md border">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="px-3 rounded-r-none"
+                  aria-pressed={viewMode === 'grid'}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="px-3 rounded-l-none border-l"
+                  aria-pressed={viewMode === 'list'}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile filter panel */}
+          {showMobileFilters && (
+            <GlassCard className="p-4 sm:hidden w-full">
+              <div className="grid grid-cols-1 gap-4">
+                {/* Location Filter */}
+                <div>
+                  <Label htmlFor="mobile-location" className="block mb-1 text-sm text-gray-700">Location</Label>
+                  <Select value={locationFilter} onValueChange={(val) => setLocationFilter(val === 'all' ? '' : val)}>
+                    <SelectTrigger id="mobile-location" className="w-full">
+                      <SelectValue placeholder="All locations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All locations</SelectItem>
+                      <SelectItem value="no-location">No location</SelectItem>
+                      {availableLocations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Sort By */}
+                <div>
+                  <Label htmlFor="mobile-sort" className="block mb-1 text-sm text-gray-700">Sort By</Label>
+                  <Select value={sortBy} onValueChange={(value: 'date' | 'name' | 'location') => setSortBy(value)}>
+                    <SelectTrigger id="mobile-sort" className="w-full">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Date Added</SelectItem>
+                      <SelectItem value="name">File Name</SelectItem>
+                      <SelectItem value="location">Location</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Desktop: Search only (Add lives in header) */}
+          <div className="relative w-full sm:flex-1 sm:max-w-md hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
               placeholder="Search photos by name, caption, or tags..."
@@ -701,38 +803,58 @@ const AlbumView: React.FC = () => {
             />
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-2">
+          {/* Filters & Selection (desktop + shared) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto">
+            {/* Selection Mode Toggle - positioned first for visibility */}
+            {canManage && (
+              <Button
+                variant={isSelectionMode ? 'default' : 'outline'}
+                size="sm"
+                onClick={toggleSelectionMode}
+                className={cn(
+                  "px-3",
+                  !isSelectionMode && "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                )}
+              >
+                {isSelectionMode ? <Check className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                <span className="ml-2">Select</span>
+              </Button>
+            )}
+
             {/* Location Filter */}
-            <Select value={locationFilter} onValueChange={(val) => setLocationFilter(val === 'all' ? '' : val)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All locations</SelectItem>
-                <SelectItem value="no-location">No location</SelectItem>
-                {availableLocations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="hidden sm:block">
+              <Select value={locationFilter} onValueChange={(val) => setLocationFilter(val === 'all' ? '' : val)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All locations</SelectItem>
+                  <SelectItem value="no-location">No location</SelectItem>
+                  {availableLocations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Sort By */}
-            <Select value={sortBy} onValueChange={(value: 'date' | 'name' | 'location') => setSortBy(value)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="location">Location</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="hidden sm:block">
+              <Select value={sortBy} onValueChange={(value: 'date' | 'name' | 'location') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Date Added</SelectItem>
+                  <SelectItem value="name">File Name</SelectItem>
+                  <SelectItem value="location">Location</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* View Mode Toggle */}
-            <div className="flex rounded-md border">
+            <div className="hidden sm:flex rounded-md border">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
@@ -750,49 +872,38 @@ const AlbumView: React.FC = () => {
                 <List className="h-4 w-4" />
               </Button>
             </div>
-
-            {/* Selection Mode Toggle */}
-            {canManage && (
-              <Button
-                variant={isSelectionMode ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleSelectionMode}
-                className="px-3"
-              >
-                {isSelectionMode ? <Check className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                <span className="ml-2">Select</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Bulk Actions Bar */}
-        {isSelectionMode && (
-          <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-900">
-                {selectedPhotoIds.size} photo{selectedPhotoIds.size !== 1 ? 's' : ''} selected
-              </span>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={selectAllVisiblePhotos}>
+            {isSelectionMode && (
+              <div className="flex items-center justify-between gap-2 ml-0 sm:ml-2 w-full sm:w-auto">
+                <span className="text-xs sm:text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                  {selectedPhotoIds.size} selected
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-gray-100 text-gray-800"
+                  onClick={selectAllVisiblePhotos}
+                >
+                  <Check className="h-4 w-4 mr-1" />
                   Select All
                 </Button>
-                <Button size="sm" variant="outline" onClick={clearSelection}>
-                  Clear Selection
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-gray-100 text-gray-800"
+                  onClick={clearSelection}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
                 </Button>
-              </div>
-            </div>
-            
-            {selectedPhotoIds.size > 0 && (
-              <div className="flex items-center gap-2">
-                <Dialog open={isBulkActionOpen} onOpenChange={setIsBulkActionOpen}>
+                {selectedPhotoIds.size > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        Bulk Actions
+                      <Button size="sm" variant="secondary" className="bg-gray-100 text-gray-800">
+                        <MoreHorizontal className="h-4 w-4 mr-1" />
+                        Bulk
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setIsBulkActionOpen(true)}>
                         <MapPin className="h-4 w-4 mr-2" />
                         Assign Location
@@ -808,52 +919,55 @@ const AlbumView: React.FC = () => {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Assign Location to Photos</DialogTitle>
-                      <DialogDescription>
-                        Select a location to assign to {selectedPhotoIds.size} selected photo{selectedPhotoIds.size !== 1 ? 's' : ''}.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="bulk-location">Location</Label>
-                        <Select 
-                          value={bulkLocationId} 
-                          onValueChange={(val) => setBulkLocationId(val === 'no-location' ? '' : val)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-location">No location</SelectItem>
-                            {availableProjectLocations.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => {
-                        setIsBulkActionOpen(false);
-                        setBulkLocationId("");
-                      }}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleBulkAssignLocation}>
-                        Assign Location
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
+
+        {/* Inline Bulk Assign Location Dialog */}
+        <Dialog open={isBulkActionOpen} onOpenChange={setIsBulkActionOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Assign Location to Photos</DialogTitle>
+              <DialogDescription>
+                Select a location to assign to {selectedPhotoIds.size} selected photo{selectedPhotoIds.size !== 1 ? 's' : ''}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="bulk-location">Location</Label>
+                <Select 
+                  value={bulkLocationId} 
+                  onValueChange={(val) => setBulkLocationId(val === 'no-location' ? '' : val)}
+                >
+                  <SelectTrigger id="bulk-location">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-location">No location</SelectItem>
+                    {availableProjectLocations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsBulkActionOpen(false);
+                setBulkLocationId("");
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleBulkAssignLocation}>
+                Assign Location
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
 
         {/* Upload Progress */}
@@ -900,7 +1014,7 @@ const AlbumView: React.FC = () => {
 
         {/* Photos Grid */}
         {photosLoading && photos.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-square bg-gray-200 rounded-lg animate-pulse"></div>
             ))}
@@ -918,7 +1032,7 @@ const AlbumView: React.FC = () => {
                 </p>
               </div>
               {canUpload && (
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
                   <ActionButton
                     text="Add your first photo"
                     variant="primary"
@@ -933,7 +1047,7 @@ const AlbumView: React.FC = () => {
         ) : (
           <div className={cn(
             viewMode === 'grid' 
-              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+              ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
               : "space-y-3"
           )}>
             {filteredAndSortedPhotos.map((photo) => (
@@ -952,20 +1066,24 @@ const AlbumView: React.FC = () => {
                       />
                     </div>
                     
-                    {/* Selection Checkbox */}
+                    {/* Selection Overlay */}
                     {isSelectionMode && (
                       <div className="absolute top-2 left-2">
-                        <Button
-                          size="sm"
-                          variant={selectedPhotoIds.has(photo.id) ? "default" : "secondary"}
-                          className="h-6 w-6 p-0 rounded-full"
+                        <div
+                          className={cn(
+                            "h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition",
+                            selectedPhotoIds.has(photo.id)
+                              ? "bg-blue-600 text-white shadow"
+                              : "bg-white/90 text-transparent border border-gray-300"
+                          )}
                           onClick={(e) => {
                             e.stopPropagation();
                             togglePhotoSelection(photo.id);
                           }}
+                          aria-pressed={selectedPhotoIds.has(photo.id)}
                         >
-                          {selectedPhotoIds.has(photo.id) && <Check className="h-3 w-3" />}
-                        </Button>
+                          <Check className="h-4 w-4" />
+                        </div>
                       </div>
                     )}
                     
@@ -1013,20 +1131,24 @@ const AlbumView: React.FC = () => {
                     className="flex items-center gap-4 p-3 bg-white rounded-lg border hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}
                   >
-                    {/* Selection Checkbox for List View */}
+                    {/* Selection Control for List View */}
                     {isSelectionMode && (
                       <div className="flex-shrink-0">
-                        <Button
-                          size="sm"
-                          variant={selectedPhotoIds.has(photo.id) ? "default" : "secondary"}
-                          className="h-6 w-6 p-0 rounded-full"
+                        <div
+                          className={cn(
+                            "h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition",
+                            selectedPhotoIds.has(photo.id)
+                              ? "bg-blue-600 text-white shadow"
+                              : "bg-white/90 text-transparent border border-gray-300"
+                          )}
                           onClick={(e) => {
                             e.stopPropagation();
                             togglePhotoSelection(photo.id);
                           }}
+                          aria-pressed={selectedPhotoIds.has(photo.id)}
                         >
-                          {selectedPhotoIds.has(photo.id) && <Check className="h-3 w-3" />}
-                        </Button>
+                          <Check className="h-4 w-4" />
+                        </div>
                       </div>
                     )}
 
@@ -1140,17 +1262,26 @@ const AlbumView: React.FC = () => {
       <Dialog open={editPhotoId !== null} onOpenChange={(open) => {
         if (!open) {
           setEditPhotoId(null);
-          setEditPhotoData({ caption: "", tags: "", locationId: "" });
+          setEditPhotoData({ originalName: "", caption: "", tags: "", locationId: "" });
         }
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Photo</DialogTitle>
             <DialogDescription>
-              Update the caption, tags, and location for this photo.
+              Update the file name (display), caption, tags, and location.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="originalName">Display Name</Label>
+              <Input
+                id="originalName"
+                placeholder="e.g. Kitchen before renovation"
+                value={editPhotoData.originalName}
+                onChange={(e) => setEditPhotoData(prev => ({ ...prev, originalName: e.target.value }))}
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="caption">Caption</Label>
               <Textarea
@@ -1194,7 +1325,7 @@ const AlbumView: React.FC = () => {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => {
               setEditPhotoId(null);
-              setEditPhotoData({ caption: "", tags: "", locationId: "" });
+              setEditPhotoData({ originalName: "", caption: "", tags: "", locationId: "" });
             }}>
               Cancel
             </Button>

@@ -59,6 +59,7 @@ export interface UpdatePhotoData {
   tags?: string[];
   locationId?: string;
   isPublic?: boolean;
+  originalName?: string;
 }
 
 export interface AssignLocationData {

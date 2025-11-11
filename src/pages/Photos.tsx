@@ -5,7 +5,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import {
   Plus,
   Calendar,
@@ -83,11 +83,10 @@ const Photos: React.FC = () => {
     projectId: "",
   });
   const [filterProjectId, setFilterProjectId] = useState<string>("");
-  const [filterDateRange, setFilterDateRange] = useState<{
-    startDate: Date | undefined;
-    endDate: Date | undefined;
-  }>({ startDate: undefined, endDate: undefined });
+  const [filterVisitDate, setFilterVisitDate] = useState<Date | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
+  // Sorting
+  const [sortBy, setSortBy] = useState<"visitDate" | "photos" | "createdBy">("visitDate");
 
   // Check permissions
   const canView = hasPermission("photos", "read");
@@ -103,8 +102,8 @@ const Photos: React.FC = () => {
     if (selectedCompany?.id) {
       const filters = {
         projectId: filterProjectId || undefined,
-        startDate: filterDateRange.startDate?.toISOString(),
-        endDate: filterDateRange.endDate?.toISOString(),
+        fromDate: filterVisitDate ? startOfDay(filterVisitDate).toISOString() : undefined,
+        toDate: filterVisitDate ? endOfDay(filterVisitDate).toISOString() : undefined,
       };
       dispatch(fetchVisits(filters));
       dispatch(fetchProjects());
@@ -113,7 +112,7 @@ const Photos: React.FC = () => {
     return () => {
       dispatch(clearVisits());
     };
-  }, [dispatch, selectedCompany, canView, navigate, filterProjectId, filterDateRange]);
+  }, [dispatch, selectedCompany, canView, navigate, filterProjectId, filterVisitDate]);
 
   // Generate avatar initials
   const getInitials = (name: string) => {
@@ -182,16 +181,38 @@ const Photos: React.FC = () => {
 
   const clearFilters = () => {
     setFilterProjectId("");
-    setFilterDateRange({ startDate: undefined, endDate: undefined });
+    setFilterVisitDate(undefined);
   };
 
   const hasActiveFilters = () => {
-    return filterProjectId || filterDateRange.startDate;
+    return filterProjectId || filterVisitDate;
   };
 
   if (!canView) {
     return null;
   }
+
+  // Memoized sorting for visits list based on selected sort
+  const sortedVisits = React.useMemo(() => {
+    const arr = [...visits];
+    switch (sortBy) {
+      case "visitDate":
+        return arr.sort(
+          (a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
+        );
+      case "photos":
+        return arr.sort(
+          (a, b) => (b._count?.photos || 0) - (a._count?.photos || 0)
+        );
+      case "createdBy": {
+        const getName = (v: any) =>
+          v.createdBy ? `${v.createdBy.firstName} ${v.createdBy.lastName}` : "";
+        return arr.sort((a, b) => getName(a).localeCompare(getName(b)));
+      }
+      default:
+        return arr;
+    }
+  }, [visits, sortBy]);
 
   return (
     <PageContainer className="space-y-6">
@@ -199,28 +220,6 @@ const Photos: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Photos</h1>
-        </div>
-        <div className="flex items-center gap-2 lg:hidden">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(hasActiveFilters() && "bg-blue-50 border-blue-200")}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {hasActiveFilters() && (
-              <span className="ml-1 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5">
-                {[filterProjectId, filterDateRange.startDate].filter(Boolean).length}
-              </span>
-            )}
-          </Button>
-          {hasActiveFilters() && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <X className="h-4 w-4 mr-1" />
-              Clear
-            </Button>
-          )}
         </div>
       </div>
 
@@ -231,7 +230,7 @@ const Photos: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="project-filter">Project</Label>
               <Select value={filterProjectId || "all"} onValueChange={(value) => setFilterProjectId(value === "all" ? "" : value)}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="All projects" />
                 </SelectTrigger>
                 <SelectContent>
@@ -245,35 +244,46 @@ const Photos: React.FC = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-date">Start Date</Label>
+              <Label htmlFor="visit-date">Visit Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !filterDateRange.startDate && "text-muted-foreground"
+                      !filterVisitDate && "text-muted-foreground"
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {filterDateRange.startDate ? (
-                      format(filterDateRange.startDate, "PPP")
+                    {filterVisitDate ? (
+                      format(filterVisitDate, "PPP")
                     ) : (
-                      <span>Pick start date</span>
+                      <span>Pick visit date</span>
                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <CalendarComponent
                     mode="single"
-                    selected={filterDateRange.startDate}
-                    onSelect={(date) => 
-                      setFilterDateRange(prev => ({ ...prev, startDate: date }))
-                    }
+                    selected={filterVisitDate}
+                    onSelect={(date) => setFilterVisitDate(date || undefined)}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sort-by">Sort By</Label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="visitDate">Visit Date</SelectItem>
+                  <SelectItem value="photos">Photos Count</SelectItem>
+                  <SelectItem value="createdBy">Created By</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </GlassCard>
@@ -281,7 +291,7 @@ const Photos: React.FC = () => {
 
       {/* On-site visits section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               On-site visits
@@ -293,70 +303,113 @@ const Photos: React.FC = () => {
               Visits are, by default, made visible to all stakeholders.
             </p>
           </div>
-          
+        </div>
+
+        {/* Mobile controls under the title */}
+        <div className="flex items-center justify-between gap-2 lg:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(hasActiveFilters() && "bg-blue-50 border-blue-200")}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {hasActiveFilters() && (
+              <span className="ml-1 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5">
+                {[filterProjectId, filterVisitDate].filter(Boolean).length}
+              </span>
+            )}
+          </Button>
+          {hasActiveFilters() && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          )}
+          {canManage && (
+            <ActionButton
+              text="Create a visit"
+              variant="primary"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setIsCreateDialogOpen(true)}
+            />
+          )}
+        </div>
+
+        {/* Desktop controls below the title */}
+        <div className="hidden lg:flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Desktop Filters */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Select value={filterProjectId || "all"} onValueChange={(value) => setFilterProjectId(value === "all" ? "" : value)}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All projects</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={filterProjectId || "all"} onValueChange={(value) => setFilterProjectId(value === "all" ? "" : value)}>
+              <SelectTrigger className="min-w-[180px]">
+                <SelectValue placeholder="All projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All projects</SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-48 justify-start text-left font-normal",
-                      !filterDateRange.startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {filterDateRange.startDate ? (
-                      format(filterDateRange.startDate, "PPP")
-                    ) : (
-                      <span>Pick start date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={filterDateRange.startDate}
-                    onSelect={(date) => 
-                      setFilterDateRange(prev => ({ ...prev, startDate: date }))
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {(filterProjectId || filterDateRange.startDate) && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[200px] justify-start text-left font-normal",
+                    !filterVisitDate && "text-muted-foreground"
+                  )}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {filterVisitDate ? (
+                    format(filterVisitDate, "PPP")
+                  ) : (
+                    <span>Pick visit date</span>
+                  )}
                 </Button>
-              )}
-            </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={filterVisitDate}
+                  onSelect={(date) => setFilterVisitDate(date || undefined)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
 
-            {canManage && (
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <ActionButton
-                    text="Create a visit"
-                    variant="primary"
-                    leftIcon={<Plus className="h-4 w-4" />}
-                  />
-                </DialogTrigger>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+              <SelectTrigger className="min-w-[160px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visitDate">Visit Date</SelectItem>
+                <SelectItem value="photos">Photos Count</SelectItem>
+                <SelectItem value="createdBy">Created By</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(filterProjectId || filterVisitDate) && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {canManage && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <ActionButton
+                  text="Create a visit"
+                  variant="primary"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="inline-flex"
+                />
+              </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Create a new visit</DialogTitle>
@@ -434,9 +487,8 @@ const Photos: React.FC = () => {
                   </Button>
                 </div>
               </DialogContent>
-              </Dialog>
-            )}
-          </div>
+            </Dialog>
+          )}
         </div>
 
         {/* Visits Grid */}
@@ -482,7 +534,7 @@ const Photos: React.FC = () => {
           </GlassCard>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visits.map((visit) => {
+            {sortedVisits.map((visit) => {
               const createdBy = visit.createdBy 
                 ? `${visit.createdBy.firstName} ${visit.createdBy.lastName}` 
                 : "Unknown";
