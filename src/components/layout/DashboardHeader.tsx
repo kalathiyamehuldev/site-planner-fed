@@ -14,6 +14,7 @@ import {
   markAllAsRead,
   selectNotifications,
   selectUnreadCount,
+  selectUnreadNotifications,
 } from "@/redux/slices/notificationsSlice";
 import { cn } from "@/lib/utils";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
@@ -35,6 +36,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const notifications = useAppSelector(selectNotifications);
+  const unreadNotifications = useAppSelector(selectUnreadNotifications);
   const unreadCount = useAppSelector(selectUnreadCount);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -80,10 +82,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
     return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
   };
 
-  const unreadNotifications = notifications.filter((n) => !n.isRead);
-  const displayNotifications = notificationDropdownOpen
-    ? unreadNotifications.slice(0, 5)
-    : notifications;
+  // Remove the inline filter - now using memoized selector
 
   return (
     <>
@@ -163,7 +162,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
                         key={notification.id}
                         className={cn(
                           "p-4 hover:bg-gray-50 cursor-pointer transition-colors",
-                          !notification.isRead && "bg-blue-50/50"
+                          !notification.read && "bg-blue-50/50"
                         )}
                         onClick={() =>
                           handleNotificationClick(
@@ -184,7 +183,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
                               {getTimeAgo(notification.createdAt)}
                             </p>
                           </div>
-                          {!notification.isRead && (
+                          {!notification.read && (
                             <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
                           )}
                         </div>
@@ -249,7 +248,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
                     key={notification.id}
                     className={cn(
                       "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border",
-                      !notification.isRead
+                      !notification.read
                         ? "bg-blue-50/50 border-blue-100"
                         : "bg-white border-gray-200"
                     )}
@@ -263,7 +262,7 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
                           <p className="text-sm font-medium text-gray-900">
                             {notification.title}
                           </p>
-                          {!notification.isRead && (
+                          {!notification.read && (
                             <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
                               New
                             </span>

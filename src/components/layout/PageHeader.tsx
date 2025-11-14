@@ -10,10 +10,20 @@ import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchNotifications,
+  fetchNotificationCounts,
+  fetchUnreadCount,
   markAsRead,
   markAllAsRead,
+  markAsUnread,
+  createTestNotification,
   selectNotifications,
+  selectUnreadNotifications,
+  selectReadNotifications,
   selectUnreadCount,
+  selectTotalCount,
+  selectActiveFilter,
+  selectFilteredNotifications,
+  setActiveFilter,
 } from "@/redux/slices/notificationsSlice";
 import { cn } from "@/lib/utils";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
@@ -39,7 +49,12 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const notifications = useAppSelector(selectNotifications);
+  const unreadNotifications = useAppSelector(selectUnreadNotifications);
+  const readNotifications = useAppSelector(selectReadNotifications);
   const unreadCount = useAppSelector(selectUnreadCount);
+  const totalCount = useAppSelector(selectTotalCount);
+  const activeFilter = useAppSelector(selectActiveFilter);
+  const filteredNotifications = useAppSelector(selectFilteredNotifications);
 
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
@@ -49,6 +64,13 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
   useEffect(() => {
     dispatch(fetchNotifications());
   }, [dispatch]);
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (notificationDropdownOpen) {
+      dispatch(fetchNotifications());
+    }
+  }, [notificationDropdownOpen, dispatch]);
 
   const handleNotificationClick = (notificationId: string, link?: string) => {
     dispatch(markAsRead(notificationId));
@@ -61,6 +83,15 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
 
   const handleMarkAllAsRead = () => {
     dispatch(markAllAsRead());
+  };
+
+  const handleFilterChange = (filter: 'all' | 'unread' | 'read') => {
+    dispatch(setActiveFilter(filter));
+    // No need to fetch again - filtering happens on frontend
+  };
+
+  const handleCreateTestNotification = () => {
+    dispatch(createTestNotification());
   };
 
   const handleViewAll = () => {
@@ -83,8 +114,6 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
     const weeks = Math.floor(days / 7);
     return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
   };
-
-  const unreadNotifications = notifications.filter((n) => !n.isRead);
 
   return (
     <>
@@ -157,33 +186,72 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-0">
+            <DropdownMenuContent align="end" className="w-80 max-w-[90vw] p-0">
               <div className="flex items-center justify-between p-4 border-b">
                 <h3 className="font-semibold text-sm">Notifications</h3>
-                {unreadCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
-                    onClick={handleMarkAllAsRead}
-                  >
-                    Mark all as read
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
+                      onClick={handleMarkAllAsRead}
+                    >
+                      Mark all as read
+                    </Button>
+                  )}
+                </div>
               </div>
-              <ScrollArea className="h-[300px]">
-                {unreadNotifications.length === 0 ? (
+              
+              {/* Tabs */}
+              <div className="border-b border-gray-200 overflow-x-auto">
+                <div className="flex items-center min-w-fit px-3 py-2 text-sm font-medium text-gray-600">
+                  {[
+                    { label: "All", count: totalCount, filter: 'all' },
+                    { label: "Unread", count: unreadCount, filter: 'unread' },
+                    { label: "Read", count: totalCount - unreadCount, filter: 'read' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.label}
+                      onClick={() => handleFilterChange(tab.filter as 'all' | 'unread' | 'read')}
+                      className={`flex items-center gap-1.5 rounded-md transition px-3 py-1.5 whitespace-nowrap flex-shrink-0 ${
+                        activeFilter === tab.filter
+                          ? "text-blue-600 font-semibold"
+                          : "hover:text-gray-900 font-normal"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`min-w-[18px] h-[18px] rounded-full text-xs transition flex items-center justify-center ${
+                          activeFilter === tab.filter
+                            ? "bg-blue-600 text-white font-normal"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <ScrollArea className="h-[400px]">
+                {filteredNotifications.length === 0 ? (
                   <div className="p-4 text-center text-sm text-gray-500">
-                    No new notifications
+                    {activeFilter === 'unread' && 'No unread notifications'}
+                    {activeFilter === 'read' && 'No read notifications'}
+                    {activeFilter === 'all' && 'No notifications'}
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {unreadNotifications.slice(0, 5).map((notification) => (
+                  <div className="space-y-2 p-2">
+                    {filteredNotifications.map((notification) => (
                       <div
                         key={notification.id}
                         className={cn(
-                          "p-4 hover:bg-gray-50 cursor-pointer transition-colors",
-                          !notification.isRead && "bg-blue-50/50"
+                          "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border group relative",
+                          !notification.read
+                            ? "bg-blue-50/50 border-blue-100"
+                            : "bg-white border-gray-200"
                         )}
                         onClick={() =>
                           handleNotificationClick(
@@ -193,38 +261,76 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                         }
                       >
                         <div className="flex items-start gap-3">
+                          <div className="mt-1 bg-gray-200 w-10 h-10 flex items-center justify-center rounded-full">
+                            <Bell className="h-5 w-5 text-gray-400" />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {notification.title}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {notification.title}
+                              </p>
+                              {!notification.read && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                  New
+                                </span>
+                              )}
+                              {notification.category && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                                  {notification.category}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
                               {notification.message}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">
+                            
+                            {/* Show related project/task info if available */}
+                            {(notification.project || notification.task) && (
+                              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                {notification.project && (
+                                  <span className="flex items-center gap-1">
+                                    📁 {notification.project.name}
+                                  </span>
+                                )}
+                                {notification.task && (
+                                  <span className="flex items-center gap-1">
+                                    📋 {notification.task.title}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            
+                            <p className="text-xs text-gray-400 mt-2">
                               {getTimeAgo(notification.createdAt)}
                             </p>
                           </div>
-                          {!notification.isRead && (
-                            <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
-                          )}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (notification.read) {
+                                  dispatch(markAsUnread(notification.id));
+                                } else {
+                                  dispatch(markAsRead(notification.id));
+                                }
+                              }}
+                            >
+                              {notification.read ? (
+                                <span className="text-xs">↩</span>
+                              ) : (
+                                <span className="text-xs">✓</span>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </ScrollArea>
-              {unreadNotifications.length > 0 && (
-                <div className="p-3 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-sm text-blue-600 hover:text-blue-700"
-                    onClick={handleViewAll}
-                  >
-                    View all notifications
-                  </Button>
-                </div>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -264,31 +370,72 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>All Notifications</DialogTitle>
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all as read
+                  </Button>
+                )}
+                {/* <Button
+                  variant="outline"
                   size="sm"
-                  className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
-                  onClick={handleMarkAllAsRead}
+                  className="h-auto py-1 px-2 text-xs"
+                  onClick={handleCreateTestNotification}
                 >
-                  Mark all as read
+                  Test Notification
+                </Button> */}
+              </div>
+            </div>
+            {/* Filter Tabs */}
+            <div className="overflow-x-auto mt-4">
+              <div className="flex items-center gap-1 min-w-fit">
+                <Button
+                  variant={activeFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('all')}
+                >
+                  All ({totalCount})
                 </Button>
-              )}
+                <Button
+                  variant={activeFilter === 'unread' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('unread')}
+                >
+                  Unread ({unreadCount})
+                </Button>
+                <Button
+                  variant={activeFilter === 'read' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('read')}
+                >
+                  Read ({totalCount - unreadCount})
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           <ScrollArea className="h-[500px] pr-4">
-            {notifications.length === 0 ? (
+            {filteredNotifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No notifications yet
+                {activeFilter === 'unread' && 'No unread notifications'}
+                {activeFilter === 'read' && 'No read notifications'}
+                {activeFilter === 'all' && 'No notifications yet'}
               </div>
             ) : (
               <div className="space-y-2">
-                {notifications.map((notification) => (
+                {filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border",
-                      !notification.isRead
+                      "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border group relative",
+                      !notification.read
                         ? "bg-blue-50/50 border-blue-100"
                         : "bg-white border-gray-200"
                     )}
@@ -298,22 +445,65 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-medium text-gray-900">
                             {notification.title}
                           </p>
-                          {!notification.isRead && (
+                          {!notification.read && (
                             <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
                               New
+                            </span>
+                          )}
+                          {notification.category && (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                              {notification.category}
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
                           {notification.message}
                         </p>
+                        
+                        {/* Show related project/task info if available */}
+                        {(notification.project || notification.task) && (
+                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                            {notification.project && (
+                              <span className="flex items-center gap-1">
+                                📁 {notification.project.name}
+                              </span>
+                            )}
+                            {notification.task && (
+                              <span className="flex items-center gap-1">
+                                📋 {notification.task.title}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        
                         <p className="text-xs text-gray-400 mt-2">
                           {getTimeAgo(notification.createdAt)}
                         </p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (notification.read) {
+                              dispatch(markAsUnread(notification.id));
+                            } else {
+                              dispatch(markAsRead(notification.id));
+                            }
+                          }}
+                        >
+                          {notification.read ? (
+                            <span className="text-xs">↩</span>
+                          ) : (
+                            <span className="text-xs">✓</span>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </div>

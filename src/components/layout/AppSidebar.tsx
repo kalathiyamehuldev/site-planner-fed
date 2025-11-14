@@ -5,8 +5,21 @@ import { cn } from "@/lib/utils";
 import { LogOut, Menu, User, ChevronDown, ChevronRight, Plus, Bell } from "lucide-react";
 import { logout, selectUser } from "@/redux/slices/authSlice";
 import { 
-  fetchNotifications, 
-  selectUnreadCount 
+  fetchNotifications,
+  fetchNotificationCounts,
+  fetchUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  markAsUnread,
+  createTestNotification,
+  selectNotifications,
+  selectUnreadNotifications,
+  selectReadNotifications,
+  selectUnreadCount,
+  selectTotalCount,
+  selectActiveFilter,
+  selectFilteredNotifications,
+  setActiveFilter
 } from "@/redux/slices/notificationsSlice";
 import {
   Sidebar,
@@ -42,11 +55,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  selectNotifications,
-  markAsRead,
-  markAllAsRead 
-} from "@/redux/slices/notificationsSlice";
 import { useNavigate } from "react-router-dom";
 
 type SidebarItem = {
@@ -113,7 +121,12 @@ const AppSidebar: React.FC = () => {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
   const unreadCount = useAppSelector(selectUnreadCount);
+  const totalCount = useAppSelector(selectTotalCount);
   const notifications = useAppSelector(selectNotifications);
+  const unreadNotifications = useAppSelector(selectUnreadNotifications);
+  const readNotifications = useAppSelector(selectReadNotifications);
+  const activeFilter = useAppSelector(selectActiveFilter);
+  const filteredNotifications = useAppSelector(selectFilteredNotifications);
   const { hasPermission } = usePermission();
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const isCollapsed = !isMobile && state === "collapsed";
@@ -123,7 +136,7 @@ const AppSidebar: React.FC = () => {
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
 
-  // Fetch notifications on mount
+  // Fetch notifications on mount - single API call, counts computed from data
   useEffect(() => {
     dispatch(fetchNotifications());
   }, [dispatch]);
@@ -138,6 +151,15 @@ const AppSidebar: React.FC = () => {
 
   const handleMarkAllAsRead = () => {
     dispatch(markAllAsRead());
+  };
+
+  const handleFilterChange = (filter: 'all' | 'unread' | 'read') => {
+    dispatch(setActiveFilter(filter));
+    // No need to fetch again - filtering happens on frontend
+  };
+
+  const handleCreateTestNotification = () => {
+    dispatch(createTestNotification());
   };
 
   const getTimeAgo = (dateString: string) => {
@@ -669,31 +691,72 @@ const AppSidebar: React.FC = () => {
           <SheetHeader>
             <div className="flex items-center justify-between">
               <SheetTitle>Notifications</SheetTitle>
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all as read
+                  </Button>
+                )}
+                {/* <Button
+                  variant="outline"
                   size="sm"
-                  className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
-                  onClick={handleMarkAllAsRead}
+                  className="h-auto py-1 px-2 text-xs"
+                  onClick={handleCreateTestNotification}
                 >
-                  Mark all as read
+                  Test 
+                </Button> */}
+              </div>
+            </div>
+            {/* Filter Tabs */}
+            <div className="overflow-x-auto mt-4">
+              <div className="flex items-center gap-1 min-w-fit">
+                <Button
+                  variant={activeFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('all')}
+                >
+                  All ({totalCount})
                 </Button>
-              )}
+                <Button
+                  variant={activeFilter === 'unread' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('unread')}
+                >
+                  Unread ({unreadCount})
+                </Button>
+                <Button
+                  variant={activeFilter === 'read' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-auto py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
+                  onClick={() => handleFilterChange('read')}
+                >
+                  Read ({totalCount - unreadCount})
+                </Button>
+              </div>
             </div>
           </SheetHeader>
-          <ScrollArea className="h-[calc(80vh-80px)] mt-4">
-            {notifications.length === 0 ? (
+          <ScrollArea className="h-[calc(80vh-120px)] mt-4">
+            {filteredNotifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No notifications yet
+                {activeFilter === 'unread' && 'No unread notifications'}
+                {activeFilter === 'read' && 'No read notifications'}
+                {activeFilter === 'all' && 'No notifications yet'}
               </div>
             ) : (
               <div className="space-y-2">
-                {notifications.map((notification) => (
+                {filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border",
-                      !notification.isRead
+                      "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border group relative",
+                      !notification.read
                         ? "bg-blue-50/50 border-blue-100"
                         : "bg-white border-gray-200"
                     )}
@@ -703,22 +766,65 @@ const AppSidebar: React.FC = () => {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-medium text-gray-900">
                             {notification.title}
                           </p>
-                          {!notification.isRead && (
+                          {!notification.read && (
                             <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
                               New
+                            </span>
+                          )}
+                          {notification.category && (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                              {notification.category}
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
                           {notification.message}
                         </p>
+                        
+                        {/* Show related project/task info if available */}
+                        {(notification.project || notification.task) && (
+                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                            {notification.project && (
+                              <span className="flex items-center gap-1">
+                                📁 {notification.project.name}
+                              </span>
+                            )}
+                            {notification.task && (
+                              <span className="flex items-center gap-1">
+                                📋 {notification.task.title}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        
                         <p className="text-xs text-gray-400 mt-2">
                           {getTimeAgo(notification.createdAt)}
                         </p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (notification.read) {
+                              dispatch(markAsUnread(notification.id));
+                            } else {
+                              dispatch(markAsRead(notification.id));
+                            }
+                          }}
+                        >
+                          {notification.read ? (
+                            <span className="text-xs">↩</span>
+                          ) : (
+                            <span className="text-xs">✓</span>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </div>
