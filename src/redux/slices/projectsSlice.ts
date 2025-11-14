@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 
 // API Response interface
 interface ApiResponse<T = any> {

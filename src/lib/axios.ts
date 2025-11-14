@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 
 // Environment-specific API configuration
 const getApiBaseUrl = () => {

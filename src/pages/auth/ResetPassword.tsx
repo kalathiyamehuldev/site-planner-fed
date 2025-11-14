@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppDispatch } from '@/redux/hooks';
 import { resetPassword } from '@/redux/slices/authSlice';
-import { ResetPasswordDto } from '@/common/types/auth.types';
+import { ResetPasswordDto, UserType } from '@/common/types/auth.types';
 import ActionButton from '@/components/ui/ActionButton';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,14 +31,14 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   const email = searchParams.get('email') || '';
-  const role = (searchParams.get('role') as 'root' | 'team_member') || 'team_member';
+  const userType = (searchParams.get('userType') as UserType) || 'USER';
 
   const form = useForm<ResetPasswordDto>({
     defaultValues: {
       email,
       otp: '',
       newPassword: '',
-      role
+      
     }
   });
 

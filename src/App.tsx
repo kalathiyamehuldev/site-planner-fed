@@ -1,6 +1,5 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -41,6 +40,7 @@ import Profile from "./pages/Profile";
 import Photos from "./pages/Photos";
 import AlbumView from "./components/photos/AlbumView";
 import PhotoViewer from "./components/photos/PhotoViewer";
+import ToastContainer from "./components/ui/toastContainer";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +63,6 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
         <AppInitializer>
           <BrowserRouter>
             <Routes>
@@ -137,6 +136,7 @@ const App = () => (
             />
             </Routes>
           </BrowserRouter>
+          <ToastContainer />
         </AppInitializer>
       </TooltipProvider>
     </QueryClientProvider>

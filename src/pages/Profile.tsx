@@ -22,7 +22,9 @@ type ProfileFormValues = {
   companyPhone?: string;
   companyAddress?: string;
   accountEmail?: string;
+  currentPassword?: string;
   newPassword?: string;
+  confirmNewPassword?: string;
 };
 
 const Profile = () => {
@@ -111,6 +113,11 @@ const Profile = () => {
           .max(100, "Email must be at most 100 characters")
           .email("Please enter a valid email address")
           .required("Email is required"),
+        currentPassword: yup
+          .string()
+          .trim()
+          .max(20, "Current Password must be at most 20 characters")
+          .optional(),
         newPassword: yup
           .string()
           .trim()
@@ -121,6 +128,11 @@ const Profile = () => {
             "New Password must be at least 8 characters",
             (val) => !val || val.length >= 8
           ),
+        confirmNewPassword: yup
+          .string()
+          .trim()
+          .max(20, "Confirm Password must be at most 20 characters")
+          .optional()
       })
     : yup.object({
         // Personal details required for non-company accounts
@@ -175,6 +187,11 @@ const Profile = () => {
           .max(254, "Email must be at most 254 characters")
           .email("Please enter a valid email address")
           .required("Email is required"),
+        currentPassword: yup
+          .string()
+          .trim()
+          .max(20, "Current Password must be at most 20 characters")
+          .optional(),
         newPassword: yup
           .string()
           .trim()
@@ -185,6 +202,11 @@ const Profile = () => {
             "New Password must be at least 8 characters",
             (val) => !val || val.length >= 8
           ),
+        confirmNewPassword: yup
+          .string()
+          .trim()
+          .max(20, "Confirm Password must be at most 20 characters")
+          .optional()
       })) as yup.ObjectSchema<ProfileFormValues>;
 
   const form = useForm<ProfileFormValues>({
@@ -199,7 +221,9 @@ const Profile = () => {
       companyPhone: selectedCompany?.phone || user?.company?.phone || "",
       companyAddress: selectedCompany?.address || user?.company?.address || "",
       accountEmail: user?.email || "",
-      newPassword: "",
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
     },
     values: {
       firstName: user?.firstName || "",
@@ -211,7 +235,9 @@ const Profile = () => {
       companyPhone: selectedCompany?.phone || user?.company?.phone || "",
       companyAddress: selectedCompany?.address || user?.company?.address || "",
       accountEmail: user?.email || "",
+      currentPassword: "",
       newPassword: "",
+      confirmNewPassword: "",
     }
   });
 
@@ -229,7 +255,14 @@ const Profile = () => {
       };
       // Company accounts can also update admin credentials
       if (values.accountEmail) payload.email = values.accountEmail;
-      if (values.newPassword) payload.newPassword = values.newPassword;
+      if (values.newPassword) {
+        if (values.newPassword !== values.confirmNewPassword) {
+          toast({ title: "Error", description: "New password and confirm password do not match", variant: "destructive" });
+          return;
+        }
+        payload.newPassword = values.newPassword;
+        payload.currentPassword = values.currentPassword;
+      }
     } else {
       // Personal updates
       payload.firstName = values.firstName;
@@ -237,7 +270,14 @@ const Profile = () => {
       payload.phone = values.phone;
       payload.address = values.address;
       if (values.accountEmail) payload.email = values.accountEmail;
-      if (values.newPassword) payload.newPassword = values.newPassword;
+      if (values.newPassword) {
+        if (values.newPassword !== values.confirmNewPassword) {
+          toast({ title: "Error", description: "New password and confirm password do not match", variant: "destructive" });
+          return;
+        }
+        payload.newPassword = values.newPassword;
+        payload.currentPassword = values.currentPassword;
+      }
       // Admin-like users may also update company profile
       if (isAdminLike) {
         payload.company = {
@@ -252,17 +292,7 @@ const Profile = () => {
     
     try {
       await dispatch(updateProfile(payload)).unwrap();
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    }
+    } catch (error) {}
   };
 
   return (
@@ -574,6 +604,31 @@ const Profile = () => {
                       
                       <FormField
                         control={form.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel><h5>Current Password</h5></FormLabel>
+                            <FormControl>
+                              <div className="relative flex items-center">
+                                <Input 
+                                  placeholder="Enter current password" 
+                                  type="password" 
+                                  {...field} 
+                                  className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                  style={{ paddingRight: '36px' }}
+                                />
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <Lock className="h-4 w-4 text-gray-400" />
+                                </div>
+                              </div>
+                            </FormControl>
+                            <FormMessage className="text-red-500" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
                         name="newPassword"
                         render={({ field }) => (
                           <FormItem>
@@ -582,6 +637,31 @@ const Profile = () => {
                               <div className="relative flex items-center">
                                 <Input 
                                   placeholder="Enter new password" 
+                                  type="password" 
+                                  {...field} 
+                                  className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"
+                                  style={{ paddingRight: '36px' }}
+                                />
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <Lock className="h-4 w-4 text-gray-400" />
+                                </div>
+                              </div>
+                            </FormControl>
+                            <FormMessage className="text-red-500" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="confirmNewPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel><h5>Confirm New Password</h5></FormLabel>
+                            <FormControl>
+                              <div className="relative flex items-center">
+                                <Input 
+                                  placeholder="Confirm new password" 
                                   type="password" 
                                   {...field} 
                                   className="pl-3 pr-3 py-2 text-xs transition-all duration-200 border-gray-200 focus:border-blue-500 focus:ring-blue-200 flex-1"

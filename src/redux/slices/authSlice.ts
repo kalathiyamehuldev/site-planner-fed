@@ -10,7 +10,7 @@ import {
 } from '@/common/types/auth.types';
 import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { fetchPermissionsByRole } from './rolesSlice';
 import { forceStopTimer } from './timeTrackingSlice';
 
@@ -321,9 +321,23 @@ export const updateProfile = createAsyncThunk(
   async (data: UpdateProfilePayload, { rejectWithValue }) => {
     try {
       const response = await api.patch('/auth/profile', data);
+      const msg = (response as any)?.data?.message?.[0]
+        || (response as any)?.message?.[0]
+        || (response as any)?.data?.message
+        || (response as any)?.message;
+      if (msg) {
+        toast.success(msg);
+      }
       return response;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to update profile');
+      const msg = error?.data?.message?.[0]
+        || error?.response?.data?.message?.[0]
+        || error?.data?.message
+        || error?.response?.data?.message
+        || (typeof error === 'string' ? error : error?.message)
+        || 'Failed to update profile';
+      toast.error(msg);
+      return rejectWithValue(msg);
     }
   }
 );

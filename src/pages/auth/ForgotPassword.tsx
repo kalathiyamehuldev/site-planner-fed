@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { useAppDispatch } from '@/redux/hooks';
 import { forgotPassword } from '@/redux/slices/authSlice';
-import { ForgotPasswordDto } from '@/common/types/auth.types';
+import { ForgotPasswordDto, UserType } from '@/common/types/auth.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,17 +27,16 @@ import { Mail } from 'lucide-react';
 
 const ForgotPassword = () => {
   const dispatch = useAppDispatch();
-  const [role, setRole] = React.useState<'root' | 'team_member'>('team_member');
+  const [userType, setUserType] = React.useState<UserType>(UserType.USER);
 
   const form = useForm<ForgotPasswordDto>({
     defaultValues: {
       email: '',
-      role: 'team_member'
+      
     }
   });
 
   const onSubmit = async (data: ForgotPasswordDto) => {
-    data.role = role;
     await dispatch(forgotPassword(data));
   };
 
@@ -47,27 +46,14 @@ const ForgotPassword = () => {
         <CardHeader>
           <CardTitle>Forgot Password</CardTitle>
           <CardDescription>
-            Enter your email to reset your {role === 'root' ? 'admin' : 'team member'} password
+            Enter your email to reset your {userType === 'USER' ? 'user' : userType.toLowerCase()} password
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 flex rounded-lg overflow-hidden">
-            <Button
-              type="button"
-              variant={role === 'team_member' ? 'default' : 'outline'}
-              className="flex-1 rounded-none"
-              onClick={() => setRole('team_member')}
-            >
-              Team Member
-            </Button>
-            <Button
-              type="button"
-              variant={role === 'root' ? 'default' : 'outline'}
-              className="flex-1 rounded-none"
-              onClick={() => setRole('root')}
-            >
-              Admin
-            </Button>
+          <div className="mb-6 grid grid-cols-3 gap-2">
+            <Button type="button" variant={userType === UserType.USER ? 'default' : 'outline'} onClick={() => setUserType(UserType.USER)}>User</Button>
+            <Button type="button" variant={userType === UserType.CUSTOMER ? 'default' : 'outline'} onClick={() => setUserType(UserType.CUSTOMER)}>Customer</Button>
+            <Button type="button" variant={userType === UserType.VENDOR ? 'default' : 'outline'} onClick={() => setUserType(UserType.VENDOR)}>Vendor</Button>
           </div>
 
           <Form {...form}>
