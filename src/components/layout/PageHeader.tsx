@@ -149,10 +149,10 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                 size="icon"
                 className="h-9 w-9 rounded-full hover:bg-gray-100 relative"
               >
-                <Bell className="h-5 w-5 text-gray-700" />
+                <Bell className="text-[#3a3a3a] w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                  <span className="absolute top-2  right-1.5 bg-red-500 text-white font-light text-[9px] rounded-full w-2.5 h-2.5 flex items-center justify-center">
+                    {unreadCount}
                   </span>
                 )}
               </Button>

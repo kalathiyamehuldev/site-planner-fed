@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { RiArrowRightSLine } from "@remixicon/react";
 
 import usePermission from "@/hooks/usePermission";
 
@@ -106,6 +107,8 @@ const KanbanCard = ({
 
   const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
   const avatarData = getAvatarData(assignedName);
+  const hasSubtasks = (Array.isArray(task?.subtasks) && task.subtasks.length > 0) || (typeof task?.subtaskCount === 'number' && task.subtaskCount > 0);
+  const subtaskCount = Array.isArray(task?.subtasks) ? task.subtasks.length : (typeof task?.subtaskCount === 'number' ? task.subtaskCount : 0);
 
   return (
     <GlassCard
@@ -189,11 +192,21 @@ const KanbanCard = ({
           </div>
         </div>
 
-        {/* Action buttons - only show on hover for desktop, always visible for mobile */}
+        {/* Subtasks info and Action buttons row */}
         <div className={cn(
-          "flex items-center justify-end gap-1 pt-2",
+          "flex pt-2",
+          hasSubtasks ? "items-center justify-between" : "items-end justify-end",
           !isMobile && "opacity-0 group-hover:opacity-100 transition-opacity"
         )}>
+          {hasSubtasks && (
+            <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-3 justify-between w-full cursor-pointer hover:bg-blue-100 transition-colors">
+              <>
+                <span className={cn("text-gray-600", isMobile ? "text-xs" : "text-sm")}>Subtasks {subtaskCount}</span>
+              </>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-1">
           {hasPermission(resource, 'update') && (
             <TooltipProvider>
               <Tooltip>
@@ -245,6 +258,7 @@ const KanbanCard = ({
               </Tooltip>
             </TooltipProvider>
           )}
+          </div>
         </div>
       </div>
     </GlassCard>

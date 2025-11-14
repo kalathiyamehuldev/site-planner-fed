@@ -127,6 +127,13 @@ const Tasks = () => {
     return result;
   }, [allTasks, filter, searchTerm, currentUser?.id]);
 
+  const kanbanTasks = useMemo(() => {
+    const accessibleIds = new Set((projects || []).map(p => p.id));
+    return allTasks
+      .filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)))
+      .filter(taskMatchesFilter);
+  }, [allTasks, projects, filter, searchTerm, currentUser?.id]);
+
   const FilterButton = ({
     label,
     value,
@@ -299,7 +306,7 @@ const Tasks = () => {
                   <>Showing {filter === "mine" ? "your tasks" : filter === "high-priority" ? "high priority tasks" : "upcoming tasks"}</>
                 )}
                 {viewMode === "kanban" 
-                  ? " (Kanban shows only subtasks)" 
+                  ? " (Kanban groups tasks by status)" 
                   : " (includes parent tasks when subtasks match)"
                 }
               </span>
@@ -309,7 +316,8 @@ const Tasks = () => {
 
         {viewMode === "kanban" ? (
            <KanbanBoard
-             tasks={filteredTasks}
+             tasks={kanbanTasks}
+             allTasks={allTasks}
              onTaskClick={handleTaskClick}
              onEditTask={handleEditTask}
              onDeleteTask={handleDeleteTask}

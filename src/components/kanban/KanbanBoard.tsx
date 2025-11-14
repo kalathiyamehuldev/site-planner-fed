@@ -11,6 +11,7 @@ import solar from "@solar-icons/react";
 
 interface KanbanBoardProps {
   tasks: any[];
+  allTasks?: any[];
   onTaskClick?: (taskId: string) => void;
   onEditTask?: (task: any) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -30,6 +31,7 @@ interface KanbanBoardProps {
 
 const KanbanBoard = ({
   tasks,
+  allTasks,
   onTaskClick,
   onEditTask,
   onDeleteTask,
@@ -117,26 +119,21 @@ const KanbanBoard = ({
     // { id: "CANCELLED", title: "Cancelled" },
   ];
 
-  // Filter to show only subtasks (tasks with parentId) for Kanban view
-  const subtasks = tasks.filter(task => !!task.parentId);
-  
-  const tasksByStatus = subtasks.reduce((acc: Record<string, any[]>, task) => {
+  // Group provided tasks by status (showing parent tasks)
+  const tasksByStatus = tasks.reduce((acc: Record<string, any[]>, task) => {
     const status = task.status || "TODO";
     if (!acc[status]) acc[status] = [];
     acc[status].push(task);
     return acc;
   }, {});
 
-  if (subtasks.length === 0) {
+  if (tasks.length === 0) {
     return (
       <GlassCard className={cn("p-8 text-center", className)}>
         <div className="text-3xl mb-4">✨</div>
-        <h3 className="text-xl font-medium mb-2">No subtasks found</h3>
+        <h3 className="text-xl font-medium mb-2">No tasks found</h3>
         <p className="text-muted-foreground">
-          {tasks.length > 0 
-            ? "The filtered tasks don't have subtasks to display in Kanban view." 
-            : "No tasks match the current filters."
-          }
+          {"No tasks match the current filters."}
         </p>
       </GlassCard>
     );
@@ -148,6 +145,18 @@ const KanbanBoard = ({
       <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {columns.map((column) => {
           const columnTasks = tasksByStatus[column.id] || [];
+          const subtasksByParent: Record<string, any[]> = (allTasks || []).reduce((acc: Record<string, any[]>, t: any) => {
+            if (t.parentId) {
+              acc[t.parentId] = acc[t.parentId] || [];
+              acc[t.parentId].push(t);
+            }
+            return acc;
+          }, {});
+          const enriched = columnTasks.map((t) => ({
+            ...t,
+            subtaskCount: (subtasksByParent[t.id]?.length || 0),
+            subtasks: (subtasksByParent[t.id]?.slice(0, 2) || [])
+          }));
           const count = columnTasks.length;
 
           return (
@@ -184,7 +193,7 @@ const KanbanBoard = ({
                 onDrop={(e) => handleDrop(e, column.id)}
               >
                 <div className="space-y-3">
-                  {columnTasks.map((task) => (
+                  {enriched.map((task) => (
                     <div key={task.id} className="group">
                       <KanbanCard
                         task={task}
@@ -300,7 +309,7 @@ const KanbanBoard = ({
                     ) : (
                       <>Showing {filter === "mine" ? "your tasks" : filter === "high-priority" ? "high priority tasks" : "upcoming tasks"}</>
                     )}
-                    {" (Kanban shows only subtasks)"}
+                    {" (Kanban groups tasks by status)"}
                   </span>
                 </div>
               </div>
@@ -311,6 +320,18 @@ const KanbanBoard = ({
             <div className="flex h-full w-max">
               {columns.map((column) => {
                 const columnTasks = tasksByStatus[column.id] || [];
+                const subtasksByParent: Record<string, any[]> = (allTasks || []).reduce((acc: Record<string, any[]>, t: any) => {
+                  if (t.parentId) {
+                    acc[t.parentId] = acc[t.parentId] || [];
+                    acc[t.parentId].push(t);
+                  }
+                  return acc;
+                }, {});
+                const enriched = columnTasks.map((t) => ({
+                  ...t,
+                  subtaskCount: (subtasksByParent[t.id]?.length || 0),
+                  subtasks: (subtasksByParent[t.id]?.slice(0, 2) || [])
+                }));
                 const count = columnTasks.length;
 
                 return (
@@ -351,7 +372,7 @@ const KanbanBoard = ({
                       onDrop={(e) => handleDrop(e, column.id)}
                     >
                       <div className="space-y-3">
-                        {columnTasks.map((task) => (
+                        {enriched.map((task) => (
                           <div key={task.id} className="group">
                             <KanbanCard
                               task={task}
