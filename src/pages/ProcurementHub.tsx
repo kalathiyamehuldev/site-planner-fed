@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -22,18 +23,17 @@ const ProcurementHub = () => {
     <PageContainer>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Procurement Hub</h1>
-            <p className="text-muted-foreground">Manage your materials, furniture, and vendor orders</p>
-          </div>
+        <PageHeader 
+          title="Procurement Hub" 
+          subtitle="Manage your materials, furniture, and vendor orders"
+        >
           <ActionButton 
             variant="primary" 
             motion="subtle"
             text="Create Order"
             leftIcon={<Plus size={18} />}
           />
-        </div>
+        </PageHeader>
 
         {/* Coming Soon Message */}
         <GlassCard className="p-12 text-center animate-scale-in">

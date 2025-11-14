@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -163,13 +164,12 @@ const ImageLibrary = () => {
     <PageContainer>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Image Library</h1>
-            <p className="text-muted-foreground">Store and organize design images and inspiration</p>
-          </div>
+        <PageHeader 
+          title="Image Library" 
+          subtitle="Store and organize design images and inspiration"
+        >
           <ActionButton variant="primary" motion="subtle" text="Upload Images" leftIcon={<ArrowUpToLine size={18} />} />
-        </div>
+        </PageHeader>
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">

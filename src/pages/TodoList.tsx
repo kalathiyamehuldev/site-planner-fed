@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -125,22 +126,12 @@ const TodoList = () => {
   };
 
   return (
-    <PageContainer>
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
-          <div>
-            <h2 className="font-light mb-2">To-Do List</h2>
-            <p className="text-muted-foreground">
-              Keep track of your project tasks
-            </p>
-            {error && (
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded-md">
-                {error}
-              </div>
-            )}
-          </div>
-
+    <PageContainer className="space-y-6">
+      {/* Header */}
+      <PageHeader 
+        title="To-Do List" 
+        subtitle="Keep track of your project tasks"
+      >
           <div className="flex items-center gap-4">
               <div className="relative">
                 <select
@@ -170,8 +161,14 @@ const TodoList = () => {
               Show completed
             </label>
           </div>
-        </div>
+          {error && (
+            <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
+      </PageHeader>
 
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
         {/* Add Todo Form */}
         <GlassCard className="p-4 animate-scale-in">
           <div className="flex flex-col space-y-3">

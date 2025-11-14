@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 
 import { cn } from "@/lib/utils";
@@ -596,15 +597,14 @@ const Documents = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8 w-full max-w-full overflow-hidden">
+      <div className="space-y-4 md:space-y-8 w-full max-w-full overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-center lg:justify-between animate-fade-in">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-light mb-2 truncate">Documents</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Store and organize all your project files</p>
-          </div>
+        <PageHeader 
+          title="Documents" 
+          subtitle="Store and organize all your project files"
+        >
           {hasPermission('folders', 'create') && (
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <ActionButton 
                 variant="primary" 
                 motion="subtle" 
@@ -616,7 +616,7 @@ const Documents = () => {
               </ActionButton>
             </div>
           )}
-        </div>
+        </PageHeader>
 
         {/* Search and Filters - Single Line */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 animate-fade-in animation-delay-[0.1s] w-full">

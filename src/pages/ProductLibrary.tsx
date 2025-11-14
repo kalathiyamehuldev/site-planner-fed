@@ -1,6 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -183,20 +184,19 @@ const ProductLibrary = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Product Library</h1>
-            <p className="text-muted-foreground">Manage your catalog of furniture, fixtures, and materials</p>
-          </div>
+        <PageHeader 
+          title="Product Library" 
+          subtitle="Manage your catalog of furniture, fixtures, and materials"
+        >
           <ActionButton 
             variant="primary" 
             motion="subtle"
             text="Add Product"
             leftIcon={<Plus size={18} />}
           />
-        </div>
+        </PageHeader>
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">

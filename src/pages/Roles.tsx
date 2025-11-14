@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import usePermission from '@/hooks/usePermission';
 import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import RoleCard from '@/components/roles/RoleCard';
 import { cn } from '@/lib/utils';
 import ActionButton from '@/components/ui/ActionButton';
@@ -104,15 +105,12 @@ const RolesPage: React.FC = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Role Management</h1>
-            <p className="text-muted-foreground">
-              Manage user roles and permissions
-            </p>
-          </div>
+        <PageHeader 
+          title="Role Management" 
+          subtitle="Manage user roles and permissions"
+        >
           {hasPermission('roles', 'create') && (
             <ActionButton
               variant="primary"
@@ -123,7 +121,7 @@ const RolesPage: React.FC = () => {
             >
             </ActionButton>
           )}
-        </div>
+        </PageHeader>
 
         {/* Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">

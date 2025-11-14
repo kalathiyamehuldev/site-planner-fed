@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { ChevronDown, User, LogOut } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Plus, Bell } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,138 +7,299 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { logout, getProfile, selectUser } from "@/redux/slices/authSlice";
+import {
+  fetchNotifications,
+  markAsRead,
+  markAllAsRead,
+  selectNotifications,
+  selectUnreadCount,
+} from "@/redux/slices/notificationsSlice";
 import { cn } from "@/lib/utils";
+import AddTaskDialog from "@/components/tasks/AddTaskDialog";
+import AddProjectDialog from "@/components/projects/AddProjectDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
   title?: string;
-  showProfile?: boolean;
 }
 
-const DashboardHeader = ({ 
-  title = "Dashboard",
-  showProfile = false
-}: DashboardHeaderProps) => {
-  const navigate = useNavigate();
+const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
   const dispatch = useAppDispatch();
-  const user = useAppSelector(selectUser);
+  const navigate = useNavigate();
+  const notifications = useAppSelector(selectNotifications);
+  const unreadCount = useAppSelector(selectUnreadCount);
+
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // If user not loaded yet but token exists, fetch profile
-    const token = localStorage.getItem('token');
-    if (!user && token) {
-      dispatch(getProfile());
+    dispatch(fetchNotifications());
+  }, [dispatch]);
+
+  const handleNotificationClick = (notificationId: string, link?: string) => {
+    dispatch(markAsRead(notificationId));
+    if (link) {
+      navigate(link);
     }
-  }, [dispatch, user]);
-
-  // User data from Redux or fallback
-  const userData = {
-    name: user ? `${user.firstName} ${user.lastName}` : "User",
-    role: user?.role?.name || "User"
+    setNotificationDropdownOpen(false);
+    setShowAllNotifications(false);
   };
 
-  // Generate avatar initials
-  const getInitials = (name: string) => {
-    const words = name.trim().split(' ');
-    return words.length >= 2 
-      ? `${words[0][0]}${words[1][0]}`.toUpperCase()
-      : name.substring(0, 2).toUpperCase();
+  const handleMarkAllAsRead = () => {
+    dispatch(markAllAsRead());
   };
 
-  // Generate avatar colors based on user name
-  const getAvatarColors = (name: string) => {
-    const colors = [
-      { bg: 'bg-blue-100', text: 'text-blue-700' },
-      { bg: 'bg-green-100', text: 'text-green-700' },
-      { bg: 'bg-purple-100', text: 'text-purple-700' },
-      { bg: 'bg-pink-100', text: 'text-pink-700' },
-      { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-      { bg: 'bg-red-100', text: 'text-red-700' },
-      { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-      { bg: 'bg-teal-100', text: 'text-teal-700' },
-      { bg: 'bg-orange-100', text: 'text-orange-700' },
-      { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-    ];
-    
-    // Generate a consistent index based on the name
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % colors.length;
-    
-    return colors[index];
+  const handleViewAll = () => {
+    setNotificationDropdownOpen(false);
+    setShowAllNotifications(true);
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+    const weeks = Math.floor(days / 7);
+    return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
   };
+
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
+  const displayNotifications = notificationDropdownOpen
+    ? unreadNotifications.slice(0, 5)
+    : notifications;
 
   return (
-    // Show title on all devices, profile only on desktop
-    <div className="flex items-center justify-between mb-4 sm:mb-10 w-full">
-      {/* Page Title - Always visible */}
-      <div className="flex items-center gap-1 sm:gap-2 text-gray-500 min-w-0 flex-1">
-        <h1 className="typography-common font-semibold leading-[100%] text-gray-900">
-          {title}
-        </h1>
-      </div>
+    <>
+      <div className="hidden md:flex items-center justify-between mb-4 sm:mb-10 w-full">
+        {/* Page Title */}
+        <div className="flex items-center gap-1 sm:gap-2 text-gray-500 min-w-0 flex-1">
+          <h1 className="typography-common font-semibold leading-[100%] text-gray-900">
+            {title}
+          </h1>
+        </div>
 
-      {/* Right side - User Profile (only show if showProfile is true and on desktop) */}
-      {showProfile && (
-        <div className="hidden md:flex flex-shrink-0 ml-2">
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Quick Add Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg min-w-0"
+                size="icon"
+                className="h-9 w-9 rounded-full hover:bg-gray-100"
               >
-                {/* Avatar */}
-                <div className={cn(
-                  "w-7 h-7 sm:w-8 sm:h-8 rounded-sm flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0",
-                  getAvatarColors(userData.name).bg,
-                  getAvatarColors(userData.name).text
-                )}>
-                  {getInitials(userData.name)}
-                </div>
-                
-                {/* User Info - Show on desktop */}
-                <div className="text-left min-w-0">
-                  <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                    {userData.name}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-gray-500 truncate">
-                    {userData.role}
-                  </div>
-                </div>
-                
-                {/* Dropdown Arrow */}
-                <ChevronDown size={14} className="text-gray-500 flex-shrink-0 sm:w-4 sm:h-4" />
+                <Plus className="h-5 w-5 text-gray-700" />
               </Button>
             </DropdownMenuTrigger>
-            
-            <DropdownMenuContent align="end" className="w-40 sm:w-48">
-              <DropdownMenuItem
-                onClick={() => navigate('/profile')}
-                className="flex items-center gap-2"
-              >
-                <User size={14} className="sm:w-4 sm:h-4" />
-                Profile
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setShowTaskDialog(true)}>
+                Create Task
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-red-600 focus:text-red-600"
-              >
-                <LogOut size={14} className="sm:w-4 sm:h-4" />
-                Logout
+              <DropdownMenuItem onClick={() => setShowProjectDialog(true)}>
+                Create Project
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Notifications Dropdown */}
+          <DropdownMenu
+            open={notificationDropdownOpen}
+            onOpenChange={setNotificationDropdownOpen}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full hover:bg-gray-100 relative"
+              >
+                <Bell className="h-5 w-5 text-gray-700" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="font-semibold text-sm">Notifications</h3>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all as read
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-[300px]">
+                {unreadNotifications.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    No new notifications
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {unreadNotifications.slice(0, 5).map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={cn(
+                          "p-4 hover:bg-gray-50 cursor-pointer transition-colors",
+                          !notification.isRead && "bg-blue-50/50"
+                        )}
+                        onClick={() =>
+                          handleNotificationClick(
+                            notification.id,
+                            notification.link
+                          )
+                        }
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {getTimeAgo(notification.createdAt)}
+                            </p>
+                          </div>
+                          {!notification.isRead && (
+                            <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+              {unreadNotifications.length > 0 && (
+                <div className="p-3 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-sm text-blue-600 hover:text-blue-700"
+                    onClick={handleViewAll}
+                  >
+                    View all notifications
+                  </Button>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* Mobile Header - Visible only on mobile */}
+      <div className="md:hidden mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-lg font-semibold text-gray-900">
+            {title}
+          </h1>
+        </div>
+      </div>
+
+      {/* All Notifications Modal */}
+      <Dialog open={showAllNotifications} onOpenChange={setShowAllNotifications}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>All Notifications</DialogTitle>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
+                  onClick={handleMarkAllAsRead}
+                >
+                  Mark all as read
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+          <ScrollArea className="h-[500px] pr-4">
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                No notifications yet
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      "p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border",
+                      !notification.isRead
+                        ? "bg-blue-50/50 border-blue-100"
+                        : "bg-white border-gray-200"
+                    )}
+                    onClick={() =>
+                      handleNotificationClick(notification.id, notification.link)
+                    }
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </p>
+                          {!notification.isRead && (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                              New
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {getTimeAgo(notification.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Dialog */}
+      <AddTaskDialog
+        open={showTaskDialog}
+        onOpenChange={setShowTaskDialog}
+        projectId=""
+        fromProject={false}
+      />
+
+      {/* Project Dialog */}
+      <AddProjectDialog
+        open={showProjectDialog}
+        onOpenChange={setShowProjectDialog}
+        mode="create"
+      />
+    </>
   );
 };
 

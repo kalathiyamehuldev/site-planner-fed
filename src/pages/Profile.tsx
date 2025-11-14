@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
-import DashboardHeader from "@/components/layout/DashboardHeader";
+import PageHeader from "@/components/layout/PageHeader";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { getProfile, updateProfile, selectUser, selectSelectedCompany } from "@/redux/slices/authSlice";
 import { Input } from "@/components/ui/input";
@@ -267,11 +267,8 @@ const Profile = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-6 w-full min-w-0">
-        {/* <DashboardHeader /> */}
-        <div className="mb-2 sm:hidden">
-          <h1>Profile Settings</h1>
-        </div>
+      <div className="md:space-y-6 w-full min-w-0">
+        <PageHeader title="Profile Settings" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Overview Card */}

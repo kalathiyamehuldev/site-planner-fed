@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -78,25 +79,22 @@ const Projects = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Projects</h1>
-            <p className="text-muted-foreground">
-              Manage all your interior design projects
-            </p>
-            </div>
-            {hasPermission(resource, 'create') && (
-              <ActionButton
-                variant="primary"
-                motion="subtle"
-                onClick={() => setIsAddDialogOpen(true)}
-                leftIcon={<Plus size={18} className="mr-2" />}
-                text="New Project"
-              />
-            )}
-        </div>
+        <PageHeader 
+          title="Projects" 
+          subtitle="Manage all your interior design projects"
+        >
+          {hasPermission(resource, 'create') && (
+            <ActionButton
+              variant="primary"
+              motion="subtle"
+              onClick={() => setIsAddDialogOpen(true)}
+              leftIcon={<Plus size={18} className="mr-2" />}
+              text="New Project"
+            />
+          )}
+        </PageHeader>
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">

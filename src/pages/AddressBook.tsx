@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -222,13 +223,10 @@ const AddressBook = () => {
     <PageContainer>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-light mb-1">Address Book</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage clients, vendors, and other contacts
-            </p>
-          </div>
+        <PageHeader 
+          title="Address Book" 
+          subtitle="Manage clients, vendors, and other contacts"
+        >
           <ActionButton
             variant="primary"
             motion="subtle"
@@ -237,7 +235,7 @@ const AddressBook = () => {
             text="Add Contact"
             leftIcon={<Plus size={16} />}
           />
-        </div>
+        </PageHeader>
 
         {/* Filters and Search */}
         <div className="space-y-3 animate-fade-in animation-delay-[0.1s]">

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import TaskTable from "@/components/TaskTable";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
@@ -211,15 +212,12 @@ const Tasks = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
-        {/* Desktop Controls */}
-        <div className="hidden md:flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Tasks</h1>
-            <p className="text-muted-foreground">
-              Manage and track all your project tasks
-            </p>
-          </div>
+      <div className="space-y-4 md:space-y-8">
+        {/* Desktop Header */}
+        <PageHeader 
+          title="Tasks" 
+          subtitle="Manage and track all your project tasks"
+        >
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-secondary rounded-lg p-1">
               <ActionButton
@@ -260,7 +258,7 @@ const Tasks = () => {
             </ActionButton>
             )}
           </div>
-        </div>
+        </PageHeader>
 
         <div className="hidden md:flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">

@@ -1,6 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -186,15 +187,14 @@ const Invoices = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Invoices</h1>
-            <p className="text-muted-foreground">Manage and track project invoices</p>
-          </div>
+        <PageHeader 
+          title="Invoices" 
+          subtitle="Manage and track project invoices"
+        >
           <ActionButton variant="primary" motion="subtle" text="Create Invoice" leftIcon={<Plus size={18} />} />
-        </div>
+        </PageHeader>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.1s]">

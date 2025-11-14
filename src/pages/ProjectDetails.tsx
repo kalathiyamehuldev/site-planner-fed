@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { MotionButton } from "@/components/ui/motion-button";
@@ -136,6 +137,7 @@ const ProjectDetails = () => {
   const taskResource = 'tasks';
   const documentResource = 'documents';
   const locationResource = 'projects';
+  const navigate = useNavigate();
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
@@ -336,31 +338,23 @@ const ProjectDetails = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div className="space-y-1">
-            <Link
-              to="/projects"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2 max-lg:hidden"
-            >
-              <ArrowLeft size={16} className="mr-1" /> <span className="md:inline hidden">Back to Projects</span>
-              <span className="inline md:hidden">Back</span>
-            </Link>
-            <div className="flex items-center flex-wrap gap-3">
-              <h1 className="text-3xl font-light">{projectDetails.title}</h1>
-              <span
-                className={cn(
-                  "text-sm px-3 py-1 rounded-full font-medium",
-                  statusColors[projectDetails.status]
+        <PageHeader 
+          title={projectDetails.title} 
+          subtitle={`Client: ${projectDetails.client}`}
+          showBackButton={true}
+          onBackClick={() => navigate('/projects')}
+        >
+          <div className="flex items-center flex-wrap gap-3">
+            <span
+              className={cn(
+                "text-sm px-3 py-1 rounded-full font-medium",
+                statusColors[projectDetails.status]
                 )}
               >
                 {projectDetails.status}
               </span>
-            </div>
-            <p className="text-muted-foreground">
-              Client: {projectDetails.client}
-            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             {hasPermission(resource, 'update') && (
@@ -386,7 +380,7 @@ const ProjectDetails = () => {
               </ActionButton>
             )}
           </div>
-        </div>
+        </PageHeader>
 
         {/* Project Tabs */}
         <Tabs

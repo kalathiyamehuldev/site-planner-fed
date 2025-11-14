@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
@@ -158,15 +159,14 @@ const PurchaseOrders = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-light mb-2">Purchase Orders</h1>
-            <p className="text-muted-foreground">Manage orders for materials, furniture, and fixtures</p>
-          </div>
+        <PageHeader 
+          title="Purchase Orders" 
+          subtitle="Manage orders for materials, furniture, and fixtures"
+        >
           <ActionButton variant="primary" motion="subtle" text="Create Purchase Order" leftIcon={<Plus size={18} />} />
-        </div>
+        </PageHeader>
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">

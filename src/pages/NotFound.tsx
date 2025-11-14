@@ -30,13 +30,14 @@ const NotFound = () => {
         <div className="flex flex-col gap-2 items-center">
           {/* Desktop version with arrow */}
           <Link to="/">
-            <ActionButton variant="primary" motion="subtle" className="w-full sm:w-auto hidden md:flex" text="Return to Dashboard" leftIcon={<ArrowLeft size={18} />} />
+            <ActionButton
+              variant="primary"
+              motion="subtle"
+              className="w-full sm:w-auto flex"
+              text="Return to Dashboard"
+              leftIcon={<ArrowLeft size={18} />} 
+            />
           </Link>
-          
-          {/* Mobile version without arrow */}
-          {/* <Link to="/">
-            <ActionButton variant="primary" motion="subtle" className="w-full sm:w-auto flex md:hidden" text="Return to Dashboard" />
-          </Link> */}
           <p className="text-sm text-muted-foreground mt-4">
             If you believe this is an error, please contact support.
           </p>

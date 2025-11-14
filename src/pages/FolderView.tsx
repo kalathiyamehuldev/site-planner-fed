@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import PageHeader from '@/components/layout/PageHeader';
 import {
   fetchDocumentsByFolder,
   deleteDocument,
@@ -30,6 +31,7 @@ import {
 import PageContainer from '@/components/layout/PageContainer';
 import { GlassCard } from '@/components/ui/glass-card';
 import ActionButton from '@/components/ui/ActionButton';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -784,24 +786,15 @@ const FolderView: React.FC = () => {
 
   return (
     <PageContainer>
-      <div className="space-y-8 w-full max-w-full overflow-hidden">
+      <div className="space-y-4 md:space-y-8 w-full max-w-full overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-center lg:justify-between animate-fade-in">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-4 mb-2 max-lg:hidden">
-              <ActionButton
-                variant="gray"
-                motion="subtle"
-                onClick={handleBackClick}
-                className="flex items-center gap-2"
-                text="Back"
-                leftIcon={<ArrowLeft className="h-4 w-4" />}
-              />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-light mb-2 truncate">{currentFolder?.name}</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Manage files and folders in this directory</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
+        <PageHeader 
+          title={currentFolder?.name || "Folder"} 
+          showBackButton={true}
+          subtitle='Manage files and folders in this directory'
+          onBackClick={handleBackClick}
+        >
+          <div className="flex flex-row gap-1 sm:gap-2">
             {hasPermission('folders', 'create') && (
               <ActionButton
                 variant="secondary"
@@ -823,7 +816,7 @@ const FolderView: React.FC = () => {
               />
             )}
           </div>
-        </div>
+        </PageHeader>
 
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in animation-delay-[0.1s]">
@@ -968,6 +961,7 @@ const FolderView: React.FC = () => {
             />
           )}
         </div>
+
         {/* Content Area */}
         {viewMode === 'grid' ? (
           <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
