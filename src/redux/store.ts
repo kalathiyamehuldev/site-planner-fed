@@ -17,6 +17,7 @@ import rolesReducer from './slices/rolesSlice';
 import locationsReducer from './slices/locationsSlice';
 import visitsReducer from './slices/visitsSlice';
 import photosReducer from './slices/photosSlice';
+import dashboardReducer from './slices/dashboardSlice';
 
 export const store = configureStore({
   reducer: {
@@ -38,6 +39,7 @@ export const store = configureStore({
     locations: locationsReducer,
     visits: visitsReducer,
     photos: photosReducer,
+    dashboard: dashboardReducer,
   },
 });
 

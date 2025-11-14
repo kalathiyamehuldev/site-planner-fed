@@ -31,10 +31,11 @@ import { useNavigate } from "react-router-dom";
 import usePermission from "@/hooks/usePermission";
 import solar from "@solar-icons/react";
 import { 
-  fetchTimeEntries,
-  selectTotalHours 
+  fetchTimeEntries
 } from "@/redux/slices/timeTrackingSlice";
 import { formatDuration as formatHoursDuration } from "@/lib/timeUtils";
+ 
+import { fetchDashboardStats, selectDashboardStats } from "@/redux/slices/dashboardSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -42,7 +43,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const allProjects = useAppSelector(selectAllProjects);
   const allTasks = useAppSelector(selectAllTasks);
-  const totalHours = useAppSelector(selectTotalHours);
+  const stats = useAppSelector(selectDashboardStats);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const { hasPermission, isSuperAdmin } = usePermission();
@@ -54,6 +55,7 @@ const Dashboard = () => {
     dispatch(fetchProjects());
     dispatch(fetchAllTasksByCompany());
     dispatch(fetchTimeEntries({})); // Fetch time entries to populate totalHours
+    dispatch(fetchDashboardStats());
   }, [dispatch]);
 
   // Get recent projects (3 most recent)
@@ -75,6 +77,8 @@ const Dashboard = () => {
     }
     return acc;
   }, {} as Record<string, typeof allTasks>);
+
+  // Projects returned from API are already restricted to those assigned to the current user
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
@@ -220,9 +224,7 @@ const Dashboard = () => {
             {(isSuperAdmin || hasPermission('projects', 'read')) && (<StatCard
               icon={solar.Tools.Layers}
               label="Active Projects"
-              value={allProjects
-                .filter((p) => p.status === "In Progress")
-                .length.toString()}
+              value={String(stats?.activeProjects ?? 0)}
               trend={{ value: "84.2%", positive: true }}
               className="animation-delay-[0.1s]"
               iconBgColor="#00c2ff"
@@ -231,7 +233,7 @@ const Dashboard = () => {
             <StatCard
               icon={solar.Time.Hourglass}
               label="Pending Tasks"
-              value={allTasks.length.toString()}
+              value={String(stats?.pendingTasks ?? 0)}
               trend={{ value: "3%", positive: false }}
               className="animation-delay-[0.2s]"
               iconBgColor="#ffb547"
@@ -240,7 +242,7 @@ const Dashboard = () => {
             <StatCard
               icon={solar.Time.ClockCircle}
               label="Tasked Hours"
-              value={formatHoursDuration(totalHours)}
+              value={formatHoursDuration(stats?.totalHours ?? 0)}
               trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.3s]"
               iconBgColor="#ff6b6b"
@@ -249,9 +251,7 @@ const Dashboard = () => {
             <StatCard
               icon={solar.Ui.CheckCircle}
               label="Completed Project"
-              value={allProjects
-                .filter((p) => p.status === "Completed")
-                .length.toString()}
+              value={String(stats?.completedProjects ?? 0)}
               trend={{ value: "12.2%", positive: true }}
               className="animation-delay-[0.4s]"
               iconBgColor="#29c499"

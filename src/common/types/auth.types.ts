@@ -81,7 +81,7 @@ export interface AuthState {
     availableCompanies: Company[];
     isAuthenticated: boolean;
     needsCompanySelection: boolean;
-    permissions: [];
+    permissions: any[];
     isLoading: boolean;
     error: string | null;
 }

@@ -7,7 +7,7 @@ import { ApiPermission } from '../redux/slices/rolesSlice';
 /**
  * Custom hook to check user permissions
  * Provides utility functions to check if the current user has specific permissions
- * Company users bypass permission checks and have full access
+ * Company users, Customers, and Vendors have static permissions that bypass database checks
  */
 export const usePermission = () => {
   const permissions = useSelector<RootState, ApiPermission[] | undefined>(
@@ -16,14 +16,20 @@ export const usePermission = () => {
   
   const user = useSelector<RootState, any>((state) => state.auth.user);
   const isCompanyUser = user?.isCompany === true;
-    const isSuperAdmin = useCallback(() => {
+  const userType = user?.userType;
+  
+  const isSuperAdmin = useCallback(() => {
     // Company users are treated as super admins
     if (isCompanyUser) {
       return true;
     }
+    // Customers and Vendors are not super admins but have their own static permissions
+    if (userType === 'CUSTOMER' || userType === 'VENDOR') {
+      return false;
+    }
     const result = isSuperAdminUtil(permissions);
     return result;
-  }, [permissions, isCompanyUser]);
+  }, [permissions, isCompanyUser, userType]);
 
   const hasPermission = useCallback(
     (resource: Resource, action: Action): boolean => {
@@ -31,10 +37,17 @@ export const usePermission = () => {
       if (isCompanyUser) {
         return true;
       }
+      
+      // Customers and Vendors use their static permissions
+      if (userType === 'CUSTOMER' || userType === 'VENDOR') {
+        return hasPermissionUtil(permissions, resource, action);
+      }
+      
+      // Regular users use database permissions
       const result = hasPermissionUtil(permissions, resource, action);
       return result;
     },
-    [permissions, isCompanyUser]
+    [permissions, isCompanyUser, userType]
   );
 
   const hasAnyPermission = useCallback(
@@ -43,10 +56,17 @@ export const usePermission = () => {
       if (isCompanyUser) {
         return true;
       }
+      
+      // Customers and Vendors use their static permissions
+      if (userType === 'CUSTOMER' || userType === 'VENDOR') {
+        return hasAnyPermissionUtil(permissions, permissionRequirements);
+      }
+      
+      // Regular users use database permissions
       const result = hasAnyPermissionUtil(permissions, permissionRequirements);
       return result;
     },
-    [permissions, isCompanyUser]
+    [permissions, isCompanyUser, userType]
   );
 
   const hasAllPermissions = useCallback(
@@ -55,10 +75,17 @@ export const usePermission = () => {
       if (isCompanyUser) {
         return true;
       }
+      
+      // Customers and Vendors use their static permissions
+      if (userType === 'CUSTOMER' || userType === 'VENDOR') {
+        return hasAllPermissionsUtil(permissions, permissionRequirements);
+      }
+      
+      // Regular users use database permissions
       const result = hasAllPermissionsUtil(permissions, permissionRequirements);
       return result;
     },
-    [permissions, isCompanyUser]
+    [permissions, isCompanyUser, userType]
   );
 
   return {
@@ -66,7 +93,8 @@ export const usePermission = () => {
     hasAnyPermission,
     hasAllPermissions,
     isSuperAdmin,
-    permissions
+    permissions,
+    userType
   };
 };
 

@@ -99,8 +99,9 @@ const Tasks = () => {
 
   // Enhanced filtering that considers both parent tasks and subtasks
   const filteredTasks = useMemo(() => {
-    const parentTasks = allTasks.filter(task => !task.parentId);
-    const subtasks = allTasks.filter(task => task.parentId);
+    const accessibleIds = new Set((projects || []).map(p => p.id));
+    const parentTasks = allTasks.filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
+    const subtasks = allTasks.filter(task => task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
     
     const result: any[] = [];
 

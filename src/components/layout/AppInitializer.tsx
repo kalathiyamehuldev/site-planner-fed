@@ -21,25 +21,30 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       const selectedCompany = localStorage.getItem('selectedCompany');
       const storedPermissions = localStorage.getItem('userPermissions');
 
-      if (token && selectedCompany) {
+      if (token) {
         try {
           // Restore permissions from localStorage immediately
           if (storedPermissions) {
             dispatch(setPermissions(JSON.parse(storedPermissions)));
           }
 
-          // Fetch fresh user profile to get current role
+          // Fetch fresh user profile to get current role and permissions
           const profileResult = await dispatch(getProfile());
           
           if (getProfile.fulfilled.match(profileResult)) {
-            const user = profileResult.payload?.user || profileResult.payload;
+            const payload: any = profileResult.payload;
+            const user = payload?.user || payload?.data?.user || null;
+            const permissions = payload?.permissions || payload?.data?.permissions;
             
-            // If user has a role, fetch fresh permissions
-            if (user?.role?.id) {
+            // If permissions are already provided in profile response (static permissions for Customer/Vendor), use them
+            if (permissions && permissions.length > 0) {
+              dispatch(setPermissions(permissions));
+            } else if (user?.role?.id) {
+              // If user has a role, fetch fresh permissions (for USER type)
               await dispatch(fetchUserPermissions(user.role.id));
-            } else if (user?.userCompanies?.length > 0) {
+            } else if (selectedCompany && user?.userCompanies?.length > 0) {
               // Handle case where user has multiple companies
-              const company = JSON.parse(selectedCompany);
+              const company = JSON.parse(selectedCompany as string);
               const userCompany = user.userCompanies.find((uc: any) => uc.companyId === company.id);
               if (userCompany?.roleId) {
                 await dispatch(fetchUserPermissions(userCompany.roleId));

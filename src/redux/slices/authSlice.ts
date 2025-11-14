@@ -11,18 +11,10 @@ import {
 import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
 import { toast } from "sonner";
-import { fetchPermissionsByRole, ApiPermission } from './rolesSlice';
+import { fetchPermissionsByRole } from './rolesSlice';
 import { forceStopTimer } from './timeTrackingSlice';
 
-// Define Company interface if not already imported
-interface Company {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
-  updatedAt: string;
-  // Add any other required properties
-}
+import { Company } from '@/common/types/auth.types';
 
 
 
@@ -117,12 +109,19 @@ export const login = createAsyncThunk<
             }
             const { data } = response;
             localStorage.setItem('token', data.access_token);
+            // Persist static permissions immediately if provided (e.g., Customer/Vendor)
+            if (Array.isArray(data?.permissions)) {
+                localStorage.setItem('userPermissions', JSON.stringify(data.permissions));
+            }
             // Check if user has multiple companies and needs to select one
             if (data.companies && data.companies.length > 1) {
+                await dispatch(getProfile());
                 return {
                     user: data.user,
                     companies: data.companies,
-                    needsCompanySelection: true
+                    needsCompanySelection: true,
+                    permissions: data.permissions,
+                    role: data.role,
                 };
             } else if (data.companies && data.companies.length === 1) {
                 // Auto-select the only company
@@ -130,23 +129,25 @@ export const login = createAsyncThunk<
                 const result: LoginResponseWithSelectedCompany = {
                     user: data.user,
                     selectedCompany: data.companies[0],
-                    needsCompanySelection: false
+                    needsCompanySelection: false,
                 };
                 // If user has a role, fetch permissions
                 if (data.role && data.role.id) {
                     await dispatch(fetchUserPermissions(data.role.id));
                 }
-                return result;
+                await dispatch(getProfile());
+                return { ...result, permissions: data.permissions, role: data.role } as any;
             }
             const result: LoginResponseBasic = {
                     user: data.user,
-                    needsCompanySelection: false
+                    needsCompanySelection: false,
                 };
-                // If user has a role, fetch permissions
-                if (data.role && data.role.id) {
-                    await dispatch(fetchUserPermissions(data.role.id));
-                }
-                return result as LoginResponseBasic;
+            // If user has a role, fetch permissions
+            if (data.role && data.role.id) {
+                await dispatch(fetchUserPermissions(data.role.id));
+            }
+            await dispatch(getProfile());
+            return { ...result, permissions: data.permissions, role: data.role } as any;
         } catch (error: any) {
             console.log("error", error)
             return rejectWithValue(error.message || 'Login failed');
@@ -157,7 +158,7 @@ export const login = createAsyncThunk<
 // Register company
 interface RegisterCompanyResponse {
     success: boolean;
-    company: Company;
+    company: Company | null;
     user: any;
     needsCompanySelection: boolean;
 }
@@ -187,20 +188,20 @@ export const registerCompany = createAsyncThunk<
             };
             // If user has a role, fetch permissions
             if (data.user.role && data.user.role.id) {
-                const role = await dispatch(fetchUserPermissions(data.user.role.id));
+                await dispatch(fetchUserPermissions(data.user.role.id));
             }
             return result;
             }
 
             const result: RegisterCompanyResponse = {
                 success: true,
-                company: null as any, // No company selected in this case
+                company: null,
                 user: data.user,
                 needsCompanySelection: false
             };
             // If user has a role, fetch permissions
             if (data.user.role && data.user.role.id) {
-                const role = await dispatch(fetchUserPermissions(data.user.role.id));
+                await dispatch(fetchUserPermissions(data.user.role.id));
             }
             return result;
         } catch (error: any) {
@@ -229,11 +230,27 @@ export const selectCompany = createAsyncThunk<
             if (!selectedCompany) {
                 throw new Error('Company not found');
             }
+
+            // Request a new JWT scoped to the selected company
+            const response: any = await api.post('/auth/switch-company', { companyId: selectedCompany.id });
+            if (response.status === 'error') {
+                return rejectWithValue(response.error || response.message || 'Failed to switch company');
+            }
+
+            const { data } = response;
+            // Persist new token and selected company
+            if (data?.access_token) {
+                localStorage.setItem('token', data.access_token);
+            }
             localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
-            const permission = auth?.user?.userCompanies?.find(c => c.companyId === selectedCompany.id);
-            // After selecting a company, fetch user permissions
-            if(permission) await dispatch(fetchUserPermissions(permission.roleId));
-            
+
+            // Update permissions using returned role or fallback to userCompanies mapping
+            const roleId = data?.role?.id
+                || auth?.user?.userCompanies?.find(c => c.companyId === selectedCompany.id)?.roleId;
+            if (roleId) {
+                await dispatch(fetchUserPermissions(roleId));
+            }
+
             return {
                 selectedCompany,
                 needsCompanySelection: false
@@ -268,9 +285,14 @@ export const resetPassword = createAsyncThunk(
 );
 export const getProfile = createAsyncThunk(
     'auth/getProfile',
-    async (_, { rejectWithValue }) => {
+    async (_, { rejectWithValue, dispatch }) => {
         try {
             const response = await api.get('/auth/profile');
+            const payload: any = response;
+            const user = payload?.user ?? payload;
+            if (user?.userType === 'USER' && user?.role?.id) {
+              await dispatch(fetchUserPermissions(user.role.id));
+            }
             return response;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to get profile');
@@ -366,6 +388,12 @@ const authSlice = createSlice({
                     state.needsCompanySelection = false;
                 }
 
+                const permsFromLogin = (response as any)?.permissions;
+                if (Array.isArray(permsFromLogin)) {
+                    state.permissions = permsFromLogin;
+                    localStorage.setItem('userPermissions', JSON.stringify(permsFromLogin));
+                }
+
                 //toast.success('Login successful');
             })
             .addCase(fetchUserPermissions.pending, (state) => {
@@ -373,9 +401,9 @@ const authSlice = createSlice({
             })
             .addCase(fetchUserPermissions.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.permissions = action.payload || [];
+                state.permissions = (action.payload as any[]) || [];
                 // Persist permissions to localStorage
-                localStorage.setItem('userPermissions', JSON.stringify(action.payload || []));
+                localStorage.setItem('userPermissions', JSON.stringify((action.payload as any[]) || []));
                 state.error = null;
             })
             .addCase(fetchUserPermissions.rejected, (state) => {
@@ -394,12 +422,28 @@ const authSlice = createSlice({
             .addCase(getProfile.fulfilled, (state, action) => {
               state.isLoading = false;
               const payload: any = action.payload;
-              // Profile endpoint returns { user, message }
+              // Profile endpoint returns { user, message, permissions? }
               const user = payload?.user ?? payload;
               state.user = user || state.user;
+              
+              const permsFromProfile = (payload as any)?.permissions;
+              if (Array.isArray(permsFromProfile)) {
+                state.permissions = permsFromProfile;
+                localStorage.setItem('userPermissions', JSON.stringify(permsFromProfile));
+              }
+              
               // Sync selected company from payload or user
               const company = payload?.company ?? user?.company;
-              if (company) {
+              // Preserve existing selectedCompany from state/localStorage to avoid overriding
+              const existingSelectedCompany = state.selectedCompany || (() => {
+                try {
+                  return JSON.parse(localStorage.getItem('selectedCompany') || 'null');
+                } catch {
+                  return null;
+                }
+              })();
+              if (!existingSelectedCompany && company) {
+                // Only set if nothing is currently selected
                 state.selectedCompany = company;
                 localStorage.setItem('selectedCompany', JSON.stringify(company));
               }
