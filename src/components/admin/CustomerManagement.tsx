@@ -519,6 +519,13 @@ const CustomerManagement: React.FC = () => {
                 )}
               </div>
               <DialogFooter>
+                <ActionButton
+                  variant="secondary"
+                  motion="subtle"
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={loading}
+                  text="Cancel"
+                />
                 <ActionButton 
                   variant="primary" 
                   motion="subtle" 

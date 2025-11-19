@@ -794,12 +794,12 @@ const FolderView: React.FC = () => {
           subtitle='Manage files and folders in this directory'
           onBackClick={handleBackClick}
         >
-          <div className="flex flex-row gap-1 sm:gap-2">
+          <div className="flex w-full justify-between sm:w-auto sm:justify-start gap-1 sm:gap-2">
             {hasPermission('folders', 'create') && (
               <ActionButton
                 variant="secondary"
                 motion="subtle"
-                className="w-auto sm:w-auto"
+                className="w-auto"
                 onClick={handleCreateFolder}
                 text="New Folder"
                 leftIcon={<Plus size={16} />}
@@ -810,7 +810,7 @@ const FolderView: React.FC = () => {
                 variant="primary"
                 motion="subtle"
                 onClick={() => setIsUploadDialogOpen(true)}
-                className="w-auto sm:w-auto"
+                className="w-auto"
                 text="Upload Files"
                 leftIcon={<Upload size={16} />}
               />
@@ -846,8 +846,8 @@ const FolderView: React.FC = () => {
           ]).flat()}
         </div>
         {/* Search and Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4 animate-fade-in animation-delay-[0.15s]">
-          <div className="flex-1 min-w-[180px] max-w-full relative order-1 lg:order-none">
+        <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4 lg:justify-start animate-fade-in animation-delay-[0.15s]">
+          <div className="flex-1 min-w-[180px] max-w-full relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
@@ -862,7 +862,7 @@ const FolderView: React.FC = () => {
           <select
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0 max-lg:hidden"
+            className="hidden sm:block rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
           >
             <option value="All">All Tasks</option>
             {tasks.map(task => (
@@ -876,7 +876,7 @@ const FolderView: React.FC = () => {
           <select
             value={selectedFileType}
             onChange={(e) => setSelectedFileType(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0 max-lg:hidden"
+            className="hidden sm:block rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[90px] max-w-[120px] flex-shrink-0"
           >
             {fileTypeCategories.map(type => (
               <option key={type} value={type}>
@@ -884,82 +884,82 @@ const FolderView: React.FC = () => {
               </option>
             ))}
           </select>
-          {/* Unified Filter Dropdown */}
-          <FilterDropdown
-            filters={[
-              {
-                id: 'task',
-                label: 'Tasks',
-                options: [
-                  { value: 'All', label: 'All Tasks' },
-                  { value: 'no-task', label: 'No Task Assigned' },
-                  ...tasks.map(task => ({ value: task.id, label: task.title }))
-                ]
-              },
-              {
-                id: 'fileType',
-                label: 'File Types',
-                options: fileTypeCategories.map(type => ({
-                  value: type,
-                  label: type === "All" ? "All Types" : type
-                }))
-              }
-            ]}
-            selectedFilters={{
-              task: selectedTask !== 'All' ? [selectedTask] : [],
-              fileType: selectedFileType !== 'All' ? [selectedFileType] : []
-            }}
-            onFilterChange={(filterId, values) => {
-              if (filterId === 'task') {
-                setSelectedTask(values.length > 0 ? values[0] : 'All');
-              } else if (filterId === 'fileType') {
-                setSelectedFileType(values.length > 0 ? values[0] : 'All');
-              }
-            }}
-            className="flex-shrink-0"
-          />
-
-          {/* View Mode Toggle */}
-          <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                viewMode === "grid"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background hover:bg-muted"
-              )}
-            >
-              <Grid3X3 size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "px-3 py-2 text-sm transition-colors",
-                viewMode === "list"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background hover:bg-muted"
-              )}
-            >
-              <List size={16} />
-            </button>
-          </div>
-
-          {/* Clear Filters Button */}
-          {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
-            <ActionButton
-              variant="secondary"
-              motion="subtle"
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedTask("All");
-                setSelectedFileType("All");
+          {/* Unified Controls Row (mobile: single line) */}
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto pb-1 flex-shrink-0">
+            <FilterDropdown
+              filters={[
+                {
+                  id: 'task',
+                  label: 'Tasks',
+                  options: [
+                    { value: 'All', label: 'All Tasks' },
+                    { value: 'no-task', label: 'No Task Assigned' },
+                    ...tasks.map(task => ({ value: task.id, label: task.title }))
+                  ]
+                },
+                {
+                  id: 'fileType',
+                  label: 'File Types',
+                  options: fileTypeCategories.map(type => ({
+                    value: type,
+                    label: type === "All" ? "All Types" : type
+                  }))
+                }
+              ]}
+              selectedFilters={{
+                task: selectedTask !== 'All' ? [selectedTask] : [],
+                fileType: selectedFileType !== 'All' ? [selectedFileType] : []
               }}
-              className="whitespace-nowrap"
-              text="Clear"
-              leftIcon={<X size={16} />}
+              onFilterChange={(filterId, values) => {
+                if (filterId === 'task') {
+                  setSelectedTask(values.length > 0 ? values[0] : 'All');
+                } else if (filterId === 'fileType') {
+                  setSelectedFileType(values.length > 0 ? values[0] : 'All');
+                }
+              }}
+              className="flex-shrink-0"
             />
-          )}
+
+            <div className="flex border border-input rounded-lg overflow-hidden flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  viewMode === "grid"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                )}
+              >
+                <Grid3X3 size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "px-3 py-2 text-sm transition-colors",
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                )}
+              >
+                <List size={16} />
+              </button>
+            </div>
+
+            {(searchTerm || selectedTask !== "All" || selectedFileType !== "All") && (
+              <ActionButton
+                variant="secondary"
+                motion="subtle"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedTask("All");
+                  setSelectedFileType("All");
+                }}
+                className="whitespace-nowrap"
+                text="Clear"
+                leftIcon={<X size={16} />}
+              />
+            )}
+          </div>
         </div>
 
         {/* Content Area */}

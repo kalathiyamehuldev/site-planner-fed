@@ -36,10 +36,12 @@ import usePermission from "@/hooks/usePermission";
 
 interface ProjectMemberManagementProps {
   projectId: string;
+  hideHeader?: boolean;
 }
 
 const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
   projectId,
+  hideHeader = false,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
@@ -194,68 +196,69 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Project Members</h3>
-        {hasPermission(resource, 'create') && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <ActionButton 
-                variant="primary" 
-                motion="subtle"
-                text="Add Member"
-                leftIcon={<Plus className="h-4 w-4" />}
-              />
-            </DialogTrigger>
-              <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add Member to Project</DialogTitle>
-                <DialogDescription>
-                  Select a team member to add to this project.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium pb-2">Select Member</label>
-                <Select
-                  value={selectedUserId}
-                  onValueChange={(value) => {
-                    setSelectedUserId(value);
-                    const member = companyMembers.find(m => m.id === value);
-                    setSelectedMember(member || null);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.firstName} {member.lastName} ({member.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {!hideHeader && (
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Project Members</h3>
+          {hasPermission(resource, 'create') && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle"
+                  text="Add Member"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                />
+              </DialogTrigger>
+                <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Member to Project</DialogTitle>
+                  <DialogDescription>
+                    Select a team member to add to this project.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium pb-2">Select Member</label>
+                  <Select
+                    value={selectedUserId}
+                    onValueChange={(value) => {
+                      setSelectedUserId(value);
+                      const member = companyMembers.find(m => m.id === value);
+                      setSelectedMember(member || null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.firstName} {member.lastName} ({member.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {/* Role selection is handled automatically based on the member's existing role */}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddMember}
-                disabled={memberLoading || !selectedUserId}
-              >
-                {memberLoading ? "Adding..." : "Add Member"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        )}
-      </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddMember}
+                  disabled={memberLoading || !selectedUserId}
+                >
+                  {memberLoading ? "Adding..." : "Add Member"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          )}
+        </div>
+      )}
 
       {memberLoading && projectMembers.length === 0 ? (
         <div className="text-center py-8">
@@ -274,7 +277,49 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         </div>
       ) : (
         <div className="w-full bg-white rounded-md overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="sm:hidden">
+            <ul className="divide-y">
+              {sortedProjectMembers.map((member, index) => (
+                <li key={member.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
+                        {member.user.firstName} {member.user.lastName}
+                      </div>
+                      <div className="text-[#1a2624]/70 text-xs font-normal font-['Manrope'] leading-none truncate">
+                        {member.user.email}
+                      </div>
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {member.role.name}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {hasPermission(resource, 'delete') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleRemoveMember(
+                              member.user.id,
+                              `${member.user.firstName} ${member.user.lastName}`
+                            )
+                          }
+                          disabled={memberLoading}
+                          className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                          aria-label="Remove member"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
               <thead className="h-12">
                 <tr className="border-b border-[#1a2624]/10">

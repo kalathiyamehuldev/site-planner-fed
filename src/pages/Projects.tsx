@@ -97,8 +97,8 @@ const Projects = () => {
         </PageHeader>
 
         {/* Filters and Search */}
-        <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
-          <div className="flex-1 relative">
+        <div className="flex flex-row items-center gap-2 sm:gap-3 animate-fade-in animation-delay-[0.1s] w-full mb-4">
+          <div className="flex-1 min-w-[180px] max-w-full relative">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
               size={18}
@@ -112,7 +112,31 @@ const Projects = () => {
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 max-lg:hidden">
+          <FilterDropdown
+            filters={[
+              {
+               id: "status",
+                label: "Status",
+                options: [
+                  {value: "all", label: "All Projects" },
+                  { value: "active", label: "Active" },
+                  { value: "inprogress", label: "In Progress" },
+                  { value: "completed", label: "Completed" },
+                  { value: "onhold", label: "On Hold" },
+                ],
+              },
+            ]}
+            selectedFilters={{
+              status: filter !== "all" ? [filter] : [],
+            }}
+            onFilterChange={(filterId, values) => {
+              if (filterId === "status") {
+                setFilter(values.length > 0 ? values[0] as "all" | "active" | "completed" | "onhold" | "inprogress" : "all");
+              }
+            }}
+          />
+
+          <div className="gap-2 overflow-x-auto pb-1 md:pb-0 hidden lg:flex">
             <button
               onClick={() => setFilter("all")}
               className={cn(
@@ -162,29 +186,6 @@ const Projects = () => {
               <span>On Hold</span>
             </button>
           </div>
-          <FilterDropdown
-            filters={[
-              {
-               id: "status",
-                label: "Status",
-                options: [
-                  {value: "all", label: "All Projects" },
-                  { value: "active", label: "Active" },
-                  { value: "inprogress", label: "In Progress" },
-                  { value: "completed", label: "Completed" },
-                  { value: "onhold", label: "On Hold" },
-                ],
-              },
-            ]}
-            selectedFilters={{
-              status: filter !== "all" ? [filter] : [],
-            }}
-            onFilterChange={(filterId, values) => {
-              if (filterId === "status") {
-                setFilter(values.length > 0 ? values[0] as "all" | "active" | "completed" | "onhold" | "inprogress" : "all");
-              }
-            }}
-          />
         </div>
 
         {/* Loading State */}

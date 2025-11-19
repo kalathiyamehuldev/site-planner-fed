@@ -27,6 +27,7 @@ interface KanbanBoardProps {
   filter?: "all" | "mine" | "high-priority" | "upcoming";
   onFilterChange?: (filter: "all" | "mine" | "high-priority" | "upcoming") => void;
   hasCreatePermission?: boolean;
+  hideMobileControls?: boolean;
 }
 
 const KanbanBoard = ({
@@ -46,6 +47,7 @@ const KanbanBoard = ({
   filter = "all",
   onFilterChange,
   hasCreatePermission = false,
+  hideMobileControls = false,
 }: KanbanBoardProps) => {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const { hasPermission } = usePermission();
@@ -127,17 +129,7 @@ const KanbanBoard = ({
     return acc;
   }, {});
 
-  if (tasks.length === 0) {
-    return (
-      <GlassCard className={cn("p-8 text-center", className)}>
-        <div className="text-3xl mb-4">✨</div>
-        <h3 className="text-xl font-medium mb-2">No tasks found</h3>
-        <p className="text-muted-foreground">
-          {"No tasks match the current filters."}
-        </p>
-      </GlassCard>
-    );
-  }
+  // Do not early return on empty tasks; keep controls visible
 
   return (
     <div className={cn("w-full", className)}>
@@ -227,6 +219,7 @@ const KanbanBoard = ({
         {/* Fixed container that takes full viewport height minus header */}
         <div className="fixed top-16 left-0 right-0 bottom-0 flex flex-col">
           {/* Mobile Controls Header */}
+          {!hideMobileControls && (
           <div className="bg-white border-b border-gray-200 p-4 space-y-4 flex-shrink-0">
             {/* Title and View Mode Controls */}
             <div className="flex flex-col gap-4">
@@ -315,6 +308,7 @@ const KanbanBoard = ({
               </div>
             )}
           </div>
+          )}
           {/* Horizontal scrollable columns container */}
           <div className="flex-1 overflow-x-auto overflow-y-hidden kanban-mobile-scroll">
             <div className="flex h-full w-max">

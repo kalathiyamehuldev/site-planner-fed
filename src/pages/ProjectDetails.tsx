@@ -62,6 +62,15 @@ import { DocumentsMinimalistic, DownloadMinimalistic } from "@solar-icons/react"
 import { calculateProjectProgress, formatProjectDate } from "@/utils/projectUtils";
 import DocumentSidebar from "@/components/documents/DocumentSidebar";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   fetchLocationsByProject,
   createLocation,
@@ -148,6 +157,7 @@ const ProjectDetails = () => {
   const [membersLoading, setMembersLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showDocumentSidebar, setShowDocumentSidebar] = useState(false);
+  const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
 
   // Handle task creation success - refetch project tasks
   const handleTaskCreated = () => {
@@ -555,13 +565,12 @@ const ProjectDetails = () => {
               <h2 className="text-xl font-medium">Locations</h2>
               {hasPermission(locationResource, 'create') && (
                 <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="New location name"
-                    value={newLocationName}
-                    onChange={(e) => setNewLocationName(e.target.value)}
-                    className="w-64"
+                  <ActionButton 
+                    onClick={() => setAddLocationDialogOpen(true)} 
+                    variant="primary" 
+                    text="Add New Location" 
+                    leftIcon={<Plus size={18} />}
                   />
-                  <ActionButton onClick={handleAddLocation} variant="primary" text="Add New Location" leftIcon={<Plus size={18} />}/>
                 </div>
               )}
             </div>
@@ -578,51 +587,100 @@ const ProjectDetails = () => {
                   No locations found for this project
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {projectLocations.map((loc) => (
-                    <div key={loc.id} className="flex items-center justify-between border rounded-md p-3">
-                      {editingLocationId === loc.id ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <Input
-                            value={editingLocationName}
-                            onChange={(e) => setEditingLocationName(e.target.value)}
-                            className="w-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{loc.name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
+                <div>
+                <div className="sm:hidden">
+                  <ul className="divide-y rounded-md border">
+                    {projectLocations.map((loc) => (
+                      <li key={loc.id} className="p-3">
                         {editingLocationId === loc.id ? (
-                          <>
-                            {hasPermission(locationResource, 'update') && (
-                              <Button size="icon" variant="ghost" onClick={saveEditLocation} aria-label="Save location">
-                                <Check size={18} className="text-blue-600" />
+                          <div className="space-y-2">
+                            <Input
+                              value={editingLocationName}
+                              onChange={(e) => setEditingLocationName(e.target.value)}
+                              className="w-full"
+                            />
+                            <div className="flex items-center gap-2">
+                              {hasPermission(locationResource, 'update') && (
+                                <Button size="icon" variant="ghost" onClick={saveEditLocation} aria-label="Save location">
+                                  <Check size={18} className="text-blue-600" />
+                                </Button>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={cancelEditLocation} aria-label="Cancel edit">
+                                <X size={18} className="text-red-600" />
                               </Button>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={cancelEditLocation} aria-label="Cancel edit">
-                              <X size={18} className="text-red-600" />
-                            </Button>
-                          </>
+                            </div>
+                          </div>
                         ) : (
-                          <>
-                            {hasPermission(locationResource, 'update') && (
-                              <Button size="icon" variant="ghost" onClick={() => startEditLocation(loc)} aria-label="Edit location">
-                                <Edit size={18} className="text-blue-600" />
-                              </Button>
-                            )}
-                            {hasPermission(locationResource, 'delete') && (
-                              <Button size="icon" variant="ghost" onClick={() => handleDeleteLocation(loc.id)} aria-label="Delete location">
-                                <Trash2 size={18} className="text-red-600" />
-                              </Button>
-                            )}
-                          </>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-medium truncate" title={loc.name}>{loc.name}</div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {hasPermission(locationResource, 'update') && (
+                                <Button size="icon" variant="ghost" onClick={() => startEditLocation(loc)} aria-label="Edit location">
+                                  <Edit size={18} className="text-blue-600" />
+                                </Button>
+                              )}
+                              {hasPermission(locationResource, 'delete') && (
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteLocation(loc.id)} aria-label="Delete location">
+                                  <Trash2 size={18} className="text-red-600" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="hidden sm:block">
+                  <div className="space-y-3">
+                    {projectLocations.map((loc) => (
+                      <div key={loc.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded-md p-3">
+                        {editingLocationId === loc.id ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              value={editingLocationName}
+                              onChange={(e) => setEditingLocationName(e.target.value)}
+                              className="w-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium truncate" title={loc.name}>{loc.name}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 sm:self-auto self-end">
+                          {editingLocationId === loc.id ? (
+                            <>
+                              {hasPermission(locationResource, 'update') && (
+                                <Button size="icon" variant="ghost" onClick={saveEditLocation} aria-label="Save location">
+                                  <Check size={18} className="text-blue-600" />
+                                </Button>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={cancelEditLocation} aria-label="Cancel edit">
+                                <X size={18} className="text-red-600" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              {hasPermission(locationResource, 'update') && (
+                                <Button size="icon" variant="ghost" onClick={() => startEditLocation(loc)} aria-label="Edit location">
+                                  <Edit size={18} className="text-blue-600" />
+                                </Button>
+                              )}
+                              {hasPermission(locationResource, 'delete') && (
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteLocation(loc.id)} aria-label="Delete location">
+                                  <Trash2 size={18} className="text-red-600" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
                 </div>
               )}
             </GlassCard>
@@ -684,7 +742,69 @@ const ProjectDetails = () => {
                 </div>
               ) : (
                 <div className="w-full bg-white rounded-md overflow-hidden">
-                  <div className="overflow-x-auto">
+                  <div className="sm:hidden">
+                    <ul className="divide-y">
+                      {projectDocuments.map((doc, index) => (
+                        <li
+                          key={doc.id}
+                          className="p-3 animate-fade-in cursor-pointer"
+                          style={{
+                            animationDelay: `${index * 0.05}s`,
+                            animationFillMode: "forwards",
+                          }}
+                          onClick={() => {
+                            setSelectedDocument(doc);
+                            setShowDocumentSidebar(true);
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <FileText size={16} className="text-primary flex-shrink-0" />
+                                <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
+                                  {doc.name}
+                                </div>
+                              </div>
+                              {doc.description && (
+                                <div className="mt-0.5 text-[#1a2624]/70 text-xs truncate">
+                                  {doc.description}
+                                </div>
+                              )}
+                              <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                                <div>{formatFileType(doc.type)}</div>
+                                <div className="flex items-center gap-1">
+                                  <Calendar size={12} />
+                                  <span>
+                                    {new Date(doc.createdAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              {hasPermission(documentResource, 'read') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadDocument(doc.url, doc.name);
+                                  }}
+                                  className="w-6 h-6 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                                >
+                                  <DownloadMinimalistic size={16} />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
                       <thead className="h-12">
                         <tr className="border-b border-[#1a2624]/10">
@@ -697,9 +817,7 @@ const ProjectDetails = () => {
                           <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
                             Date
                           </th>
-                          <th className="w-12 px-3 border-b border-[#1a2624]/10">
-                            {/* Actions column - empty header */}
-                          </th>
+                          <th className="w-12 px-3 border-b border-[#1a2624]/10"></th>
                         </tr>
                       </thead>
                       <tbody className="bg-white">
@@ -776,9 +894,12 @@ const ProjectDetails = () => {
           </TabsContent>
 
           <TabsContent value="members" className="space-y-6">
-            <GlassCard className="p-6 animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium">Members</h2>
+            </div>
+            <GlassCard className="overflow-hidden animate-scale-in">
               {project?.id && (
-                <ProjectMemberManagement projectId={project.id} />
+                <ProjectMemberManagement projectId={project.id} hideHeader={true} />
               )}
             </GlassCard>
           </TabsContent>
@@ -860,6 +981,38 @@ const ProjectDetails = () => {
           // Documents will be automatically refreshed by the dialog
         }}
       />
+
+      <Dialog open={addLocationDialogOpen} onOpenChange={setAddLocationDialogOpen}>
+        <DialogContent className="w-5/6 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Location</DialogTitle>
+            <DialogDescription>Enter a name for the new location.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="locationName">Location Name</Label>
+            <Input
+              id="locationName"
+              placeholder="e.g., Living Room"
+              value={newLocationName}
+              onChange={(e) => setNewLocationName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <ActionButton
+              variant="secondary"
+              motion="subtle"
+              onClick={() => setAddLocationDialogOpen(false)}
+              text="Cancel"
+            />
+            <ActionButton
+              variant="primary"
+              motion="subtle"
+              onClick={async () => { await handleAddLocation(); setAddLocationDialogOpen(false); }}
+              text="Save"
+            />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Document Sidebar */}
       <DocumentSidebar
         document={selectedDocument}

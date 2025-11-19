@@ -146,13 +146,13 @@ const Tasks = () => {
     <button
       onClick={() => setFilter(value)}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors",
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors border",
         filter === value
-          ? "bg-primary/10 text-primary font-medium"
-          : "text-muted-foreground hover:bg-secondary"
+          ? "bg-primary text-white border-primary shadow-sm"
+          : "bg-transparent border-input text-muted-foreground"
       )}
     >
-      <Icon size={16} />
+      <span className="hidden md:inline-block"><Icon size={14} /></span>
       <span>{label}</span>
     </button>
   );
@@ -267,6 +267,31 @@ const Tasks = () => {
           </div>
         </PageHeader>
 
+        {/* Mobile Search & Filters (List/Timeline only) */}
+        {viewMode !== "kanban" && (
+        <div className="md:hidden animate-fade-in animation-delay-[0.1s] w-full space-y-2">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <FilterButton label="All Tasks" value="all" icon={Filter} />
+            <FilterButton label="My Tasks" value="mine" icon={User} />
+            <FilterButton label="High Priority" value="high-priority" icon={Clock} />
+            <FilterButton label="Upcoming" value="upcoming" icon={Calendar} />
+          </div>
+        </div>
+        )}
+
         <div className="hidden md:flex flex-col md:flex-row md:items-center gap-4 animate-fade-in animation-delay-[0.1s]">
           <div className="flex-1 relative">
             <Search
@@ -315,7 +340,7 @@ const Tasks = () => {
         )}
 
         {viewMode === "kanban" ? (
-           <KanbanBoard
+          <KanbanBoard
              tasks={kanbanTasks}
              allTasks={allTasks}
              onTaskClick={handleTaskClick}

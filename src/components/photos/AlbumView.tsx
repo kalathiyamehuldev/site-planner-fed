@@ -665,7 +665,7 @@ const AlbumView: React.FC = () => {
 
       {/* Photos Section */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             Photos
             <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
@@ -679,7 +679,7 @@ const AlbumView: React.FC = () => {
           </h2>
           
           {canUpload && (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <ActionButton
                 text="Add pictures"
                 variant="primary"
@@ -694,69 +694,69 @@ const AlbumView: React.FC = () => {
 
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Mobile: Search + Add on same line */}
-          <div className="flex w-full items-center justify-between gap-2 sm:hidden">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              <Input
+          <div className="sm:hidden flex items-center gap-2 w-full flex-nowrap overflow-x-auto justify-between">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
                 placeholder="Search photos by name, caption, or tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="w-full h-10 rounded-lg border border-input bg-background px-10 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            {canUpload && (
-              <ActionButton
-                text="Add pictures"
-                variant="primary"
-                leftIcon={<Plus className="h-4 w-4" />}
-                disabled={isUploading}
-                onClick={() => document.getElementById('photo-upload')?.click()}
-                className="flex-shrink-0"
-              />
-            )}
-          </div>
-
-          {/* Mobile: Filters icon + View toggle */}
-          <div className="flex sm:hidden items-center justify-between w-full">
-            <div className="flex items-center gap-2">
+            <div className="flex rounded-md border flex-shrink-0">
               <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                aria-expanded={showMobileFilters}
-                aria-label="Toggle filters"
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="px-3 rounded-r-none"
+                aria-pressed={viewMode === 'grid'}
               >
-                <Filter className="h-4 w-4" />
+                <Grid className="h-4 w-4" />
               </Button>
-              <div className="flex rounded-md border">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="px-3 rounded-r-none"
-                  aria-pressed={viewMode === 'grid'}
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="px-3 rounded-l-none border-l"
-                  aria-pressed={viewMode === 'list'}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="px-3 rounded-l-none border-l"
+                aria-pressed={viewMode === 'list'}
+              >
+                <List className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          {/* Mobile filter panel */}
+          <div className="sm:hidden flex items-center justify-between w-full">
+            {canManage && (
+              <Button
+                variant={isSelectionMode ? 'default' : 'outline'}
+                size="sm"
+                onClick={toggleSelectionMode}
+                className={cn(
+                  "px-3",
+                  !isSelectionMode && "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                )}
+              >
+                {isSelectionMode ? <Check className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                <span className="ml-2">Select</span>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              aria-expanded={showMobileFilters}
+              aria-label="Toggle filters"
+              className="flex-shrink-0"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+
           {showMobileFilters && (
             <GlassCard className="p-4 sm:hidden w-full">
               <div className="grid grid-cols-1 gap-4">
-                {/* Location Filter */}
                 <div>
                   <Label htmlFor="mobile-location" className="block mb-1 text-sm text-gray-700">Location</Label>
                   <Select value={locationFilter} onValueChange={(val) => setLocationFilter(val === 'all' ? '' : val)}>
@@ -774,7 +774,6 @@ const AlbumView: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {/* Sort By */}
                 <div>
                   <Label htmlFor="mobile-sort" className="block mb-1 text-sm text-gray-700">Sort By</Label>
                   <Select value={sortBy} onValueChange={(value: 'date' | 'name' | 'location') => setSortBy(value)}>
@@ -791,20 +790,20 @@ const AlbumView: React.FC = () => {
               </div>
             </GlassCard>
           )}
-
+        
           {/* Desktop: Search only (Add lives in header) */}
-          <div className="relative w-full sm:flex-1 sm:max-w-md hidden sm:block">
+          <div className="relative hidden sm:block sm:flex-1 sm:min-w-[260px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
               placeholder="Search photos by name, caption, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-12"
             />
           </div>
 
           {/* Filters & Selection (desktop + shared) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0">
             {/* Selection Mode Toggle - positioned first for visibility */}
             {canManage && (
               <Button
@@ -812,7 +811,7 @@ const AlbumView: React.FC = () => {
                 size="sm"
                 onClick={toggleSelectionMode}
                 className={cn(
-                  "px-3",
+                  "px-3 hidden sm:inline-flex",
                   !isSelectionMode && "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
                 )}
               >
