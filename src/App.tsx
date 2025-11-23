@@ -38,8 +38,8 @@ import RolesPage from "./pages/Roles";
 import CreateRolePage from "./components/roles/CreateRole";
 import EditRolePage from "./components/roles/EditRole";
 import Profile from "./pages/Profile";
-import Photos from "./pages/Photos";
-import AlbumView from "./components/photos/AlbumView";
+import Photos from "./pages/PhotoGallery";
+import AlbumView from "./components/photos/VisitView";
 import PhotoViewer from "./components/photos/PhotoViewer";
 
 const queryClient = new QueryClient();

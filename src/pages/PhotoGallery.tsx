@@ -50,6 +50,7 @@ import {
 import {
   selectUser,
   selectSelectedCompany,
+  selectAuthLoading,
 } from "@/redux/slices/authSlice";
 import {
   fetchProjects,
@@ -62,7 +63,7 @@ interface CreateVisitFormData {
   projectId: string;
 }
 
-const Photos: React.FC = () => {
+const PhotoGallery: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { hasPermission } = usePermission();
@@ -74,6 +75,7 @@ const Photos: React.FC = () => {
   const pagination = useAppSelector(selectVisitsPagination);
   const user = useAppSelector(selectUser);
   const selectedCompany = useAppSelector(selectSelectedCompany);
+  const authLoading = useAppSelector(selectAuthLoading);
   const projects = useAppSelector(selectAllProjects);
 
   // Local state
@@ -94,26 +96,14 @@ const Photos: React.FC = () => {
   const canManage = hasPermission("photos", "manage");
 
   useEffect(() => {
-    if (!canView) {
-      navigate("/");
-      return;
-    }
-
-    // Fetch data for the current company
-    if (selectedCompany?.id) {
-      const filters = {
-        projectId: filterProjectId || undefined,
-        fromDate: filterVisitDate ? startOfDay(filterVisitDate).toISOString() : undefined,
-        toDate: filterVisitDate ? endOfDay(filterVisitDate).toISOString() : undefined,
-      };
-      dispatch(fetchVisits(filters));
-      dispatch(fetchProjects());
-    }
-
-    return () => {
-      dispatch(clearVisits());
+    const filters = {
+      projectId: filterProjectId || undefined,
+      fromDate: filterVisitDate ? startOfDay(filterVisitDate).toISOString() : undefined,
+      toDate: filterVisitDate ? endOfDay(filterVisitDate).toISOString() : undefined,
     };
-  }, [dispatch, selectedCompany, canView, navigate, filterProjectId, filterVisitDate]);
+    dispatch(fetchVisits(filters));
+    dispatch(fetchProjects());
+  }, [dispatch, selectedCompany, filterProjectId, filterVisitDate]);
 
   // Generate avatar initials
   const getInitials = (name: string) => {
@@ -189,8 +179,26 @@ const Photos: React.FC = () => {
     return filterProjectId || filterVisitDate;
   };
 
-  if (!canView) {
-    return null;
+  if (!canView && authLoading) {
+    return (
+      <PageContainer className="space-y-6">
+        <PageHeader title="Photos" />
+        <GlassCard className="p-6">
+          <div className="space-y-4 animate-pulse">
+            <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  <div className="h-24 bg-gray-100 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+      </PageContainer>
+    );
   }
 
   // Memoized sorting for visits list based on selected sort
@@ -532,46 +540,55 @@ const Photos: React.FC = () => {
             </div>
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {sortedVisits.map((visit) => {
               const createdBy = visit.createdBy 
                 ? `${visit.createdBy.firstName} ${visit.createdBy.lastName}` 
                 : "Unknown";
               const avatarColors = getAvatarColors(createdBy);
-              
+
               return (
-                <GlassCard 
-                  key={visit.id} 
-                  className="p-4 sm:p-6 cursor-pointer hover:shadow-lg transition-shadow group"
+                <GlassCard
+                  key={visit.id}
+                  className="p-3 sm:p-6 cursor-pointer transition-shadow group hover:shadow-lg hover:border-blue-200"
                   onClick={() => handleVisitClick(visit.id)}
                 >
-                  <div className="space-y-3 sm:space-y-4">
-                    {/* Visit Date Title */}
+                  <div className="block sm:hidden">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
+                        <Image className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-semibold text-gray-900 truncate">
+                          {visit.title?.trim() ? visit.title : formatVisitDate(visit.visitDate)}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium flex-shrink-0",
+                            avatarColors.bg,
+                            avatarColors.text
+                          )}>
+                            {getInitials(createdBy)}
+                          </div>
+                          <div className="text-xs text-gray-700 truncate">
+                            {createdBy}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-2">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate pr-2">
                         {formatVisitDate(visit.visitDate)}
                       </h3>
                       <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
                     </div>
-
-                    {/* Preview Area */}
-                    <div className="h-20 sm:h-24 bg-gray-50 rounded-lg flex items-center justify-center border">
-                      {visit._count && visit._count.photos > 0 ? (
-                        <div className="text-center">
-                          <Image className="h-6 sm:h-8 w-6 sm:w-8 text-gray-400 mx-auto mb-1" />
-                          <span className="text-xs text-gray-500">
-                            {visit._count.photos} photo{visit._count.photos !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <Image className="h-6 sm:h-8 w-6 sm:w-8 text-gray-300 mx-auto mb-1" />
-                          <span className="text-xs text-gray-400">No photos yet</span>
-                        </div>
-                      )}
+                    <div className="h-24 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
+                      <Image className="h-8 w-8 text-blue-400 mx-auto" />
                     </div>
-
-                    {/* Created By */}
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0",
@@ -581,12 +598,8 @@ const Photos: React.FC = () => {
                         {getInitials(createdBy)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          Created by
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {createdBy}
-                        </div>
+                        <div className="text-sm font-medium text-gray-900 truncate">Created by</div>
+                        <div className="text-xs text-gray-600 truncate">{createdBy}</div>
                       </div>
                     </div>
                   </div>
@@ -618,4 +631,4 @@ const Photos: React.FC = () => {
   );
 };
 
-export default Photos;
+export default PhotoGallery;

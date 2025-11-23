@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,7 +75,7 @@ import {
   selectLocationsByProject,
 } from "@/redux/slices/locationsSlice";
 
-const AlbumView: React.FC = () => {
+const VisitView: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -117,6 +118,8 @@ const AlbumView: React.FC = () => {
   const [isBulkActionOpen, setIsBulkActionOpen] = useState(false);
   const [bulkLocationId, setBulkLocationId] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [pendingUploadLocationId, setPendingUploadLocationId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   
 
   // Permissions
@@ -253,6 +256,7 @@ const AlbumView: React.FC = () => {
             file,
             data: {
               isPublic: false,
+              locationId: pendingUploadLocationId || undefined,
             }
           }));
 
@@ -522,6 +526,17 @@ const AlbumView: React.FC = () => {
     return filtered;
   }, [photos, searchTerm, locationFilter, sortBy]);
 
+  const photosByLocation = React.useMemo(() => {
+    const map = new Map<string, typeof photos>();
+    filteredAndSortedPhotos.forEach((p) => {
+      const key = p.locationId || '__no_location__';
+      const arr = map.get(key) || [];
+      arr.push(p);
+      map.set(key, arr);
+    });
+    return map;
+  }, [filteredAndSortedPhotos]);
+
   // Get unique locations for filter
   const availableLocations = React.useMemo(() => {
     const locationMap = new Map();
@@ -585,7 +600,7 @@ const AlbumView: React.FC = () => {
             onClick={handleBack}
             className="hover:bg-gray-100 flex-shrink-0"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 sm:h-9 sm:w-9" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
@@ -599,7 +614,7 @@ const AlbumView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start flex-shrink-0">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start flex-shrink-0">
           {canUpload && (
             <>
               {/* Regular file upload */}
@@ -616,7 +631,7 @@ const AlbumView: React.FC = () => {
                 variant="secondary"
                 leftIcon={<Upload className="h-4 w-4" />}
                 disabled={isUploading}
-                onClick={() => document.getElementById('photo-upload')?.click()}
+                onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
                 className="cursor-pointer"
               />
             </>
@@ -685,11 +700,35 @@ const AlbumView: React.FC = () => {
                 variant="primary"
                 leftIcon={<Plus className="h-4 w-4" />}
                 disabled={isUploading}
-                onClick={() => document.getElementById('photo-upload')?.click()}
+                onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
                 className="cursor-pointer"
               />
             </div>
           )}
+        </div>
+
+        
+        {/* Location anchors */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => document.getElementById('section-all-site-pictures')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="rounded-full"
+          >
+            All site pictures
+          </Button>
+          {availableProjectLocations.map((location) => (
+            <Button
+              key={location.id}
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById(`section-${location.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="rounded-full"
+            >
+              {location.name}
+            </Button>
+          ))}
         </div>
 
         {/* Search and Filters */}
@@ -792,18 +831,18 @@ const AlbumView: React.FC = () => {
           )}
         
           {/* Desktop: Search only (Add lives in header) */}
-          <div className="relative hidden sm:block sm:flex-1 sm:min-w-[260px]">
+          <div className="relative hidden sm:block sm:flex-1 sm:min-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
               placeholder="Search photos by name, caption, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12"
+              className="pl-12 pr-4"
             />
           </div>
 
           {/* Filters & Selection (desktop + shared) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0 mb-4 sm:mb-6">
             {/* Selection Mode Toggle - positioned first for visibility */}
             {canManage && (
               <Button
@@ -1011,7 +1050,7 @@ const AlbumView: React.FC = () => {
           </div>
         )}
 
-        {/* Photos Grid */}
+        {/* Grouped by Location */}
         {photosLoading && photos.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
             {[...Array(8)].map((_, i) => (
@@ -1044,197 +1083,128 @@ const AlbumView: React.FC = () => {
             </div>
           </GlassCard>
         ) : (
-          <div className={cn(
-            viewMode === 'grid' 
-              ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4"
-              : "space-y-3"
-          )}>
-            {filteredAndSortedPhotos.map((photo) => (
-              <div key={photo.id} className="group relative">
-                {viewMode === 'grid' ? (
-                  // Grid View
-                  <>
-                    <div
-                      className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                      onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}
-                    >
-                      <img
-                        src={photo.fileUrl}
-                        alt={photo.caption || photo.originalName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
-                    </div>
-                    
-                    {/* Selection Overlay */}
-                    {isSelectionMode && (
-                      <div className="absolute top-2 left-2">
-                        <div
-                          className={cn(
-                            "h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition",
-                            selectedPhotoIds.has(photo.id)
-                              ? "bg-blue-600 text-white shadow"
-                              : "bg-white/90 text-transparent border border-gray-300"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePhotoSelection(photo.id);
-                          }}
-                          aria-pressed={selectedPhotoIds.has(photo.id)}
-                        >
-                          <Check className="h-4 w-4" />
+          <div className="space-y-8">
+            {/* Location sections */}
+            {availableProjectLocations.map((location) => {
+              const locPhotos = photosByLocation.get(location.id) || [];
+              if (locPhotos.length === 0) return null;
+              return (
+                <div key={location.id} id={`section-${location.id}`} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div className="sm:col-span-1 sm:flex sm:flex-col sm:justify-center sm:items-start sm:text-left">
+                      <div className="flex items-center justify-between gap-2 w-full">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-600" />
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900">{location.name}</h3>
                         </div>
-                      </div>
-                    )}
-                    
-                    {/* Grid Photo Actions */}
-                    {!isSelectionMode && (
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
+                        {isMobile && canUpload && (
+                          <ActionButton
+                            text="Add pictures"
                             variant="secondary"
-                            size="icon"
-                            className="h-8 w-8 bg-white/90 hover:bg-white shadow-sm"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(photo.fileUrl, '_blank')}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </DropdownMenuItem>
-                          {canManage && (
-                            <DropdownMenuItem onClick={() => handleEditPhoto(photo.id)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDeletePhoto(photo.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  // List View
-                  <div 
-                    className="flex items-center gap-4 p-3 bg-white rounded-lg border hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}
-                  >
-                    {/* Selection Control for List View */}
-                    {isSelectionMode && (
-                      <div className="flex-shrink-0">
-                        <div
-                          className={cn(
-                            "h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition",
-                            selectedPhotoIds.has(photo.id)
-                              ? "bg-blue-600 text-white shadow"
-                              : "bg-white/90 text-transparent border border-gray-300"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePhotoSelection(photo.id);
-                          }}
-                          aria-pressed={selectedPhotoIds.has(photo.id)}
-                        >
-                          <Check className="h-4 w-4" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Thumbnail */}
-                    <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
-                      <img
-                        src={photo.fileUrl}
-                        alt={photo.caption || photo.originalName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    
-                    {/* Photo Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {photo.originalName}
-                          </p>
-                          {photo.caption && (
-                            <p className="text-xs text-gray-500 truncate mt-1">
-                              {photo.caption}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                            <span>{format(new Date(photo.createdAt), "MMM d, yyyy")}</span>
-                            {photo.location && (
-                              <>
-                                <span>•</span>
-                                <span>{photo.location.name}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* List Photo Actions */}
-                        {!isSelectionMode && (
-                          <div className="flex-shrink-0 ml-2">
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(photo.fileUrl, '_blank');
-                              }}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </DropdownMenuItem>
-                              {canManage && (
-                                <DropdownMenuItem onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditPhoto(photo.id);
-                                }}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                              )}
-                              {canDelete && (
-                                <DropdownMenuItem 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeletePhoto(photo.id);
-                                  }}
-                                  className="text-red-600 focus:text-red-600"
-                                >
-                                  <X className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          </div>
+                            leftIcon={<Plus className="h-4 w-4" />}
+                            disabled={isUploading}
+                            onClick={() => { setPendingUploadLocationId(location.id); document.getElementById('photo-upload')?.click(); }}
+                            className="cursor-pointer"
+                          />
                         )}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">{locPhotos.length} Photos</div>
+                      {!isMobile && canUpload && (
+                        <ActionButton
+                          text="Add pictures"
+                          variant="secondary"
+                          leftIcon={<Plus className="h-4 w-4" />}
+                          disabled={isUploading}
+                          onClick={() => { setPendingUploadLocationId(location.id); document.getElementById('photo-upload')?.click(); }}
+                          className="cursor-pointer mt-2"
+                        />
+                      )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4")}> 
+                        {locPhotos.map((photo) => (
+                          <div key={photo.id} className="group relative">
+                            <div
+                            className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                            onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}
+                          >
+                            <img src={photo.fileUrl} alt={photo.caption || photo.originalName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                          </div>
+                          {isSelectionMode && (
+                            <div className="absolute top-2 left-2">
+                              <div className={cn("h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition", selectedPhotoIds.has(photo.id) ? "bg-blue-600 text-white shadow" : "bg-white/90 text-transparent border border-gray-300")} onClick={(e) => { e.stopPropagation(); togglePhotoSelection(photo.id); }} aria-pressed={selectedPhotoIds.has(photo.id)}>
+                                <Check className="h-4 w-4" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
+
+            {/* Unassigned photos */}
+            {(() => {
+              const unassigned = photosByLocation.get('__no_location__') || [];
+              return (
+                <div id="section-all-site-pictures" className="space-y-3">
+                  {isMobile && (
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">All site pictures</h3>
+                      {canUpload && (
+                        <ActionButton
+                          text="Add pictures"
+                          variant="secondary"
+                          leftIcon={<Plus className="h-4 w-4" />}
+                          disabled={isUploading}
+                          onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
+                          className="cursor-pointer"
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div className="sm:col-span-1 sm:flex sm:flex-col sm:justify-center sm:items-start sm:text-left">
+                      {!isMobile && (
+                        <h3 className="text-lg font-semibold text-gray-900">All site pictures</h3>
+                      )}
+                      <div className="text-sm text-gray-600 mt-1">{unassigned.length} Photos</div>
+                      {!isMobile && canUpload && (
+                        <ActionButton
+                          text="Add pictures"
+                          variant="secondary"
+                          leftIcon={<Plus className="h-4 w-4" />}
+                          disabled={isUploading}
+                          onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
+                          className="cursor-pointer mt-2"
+                        />
+                      )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4"> 
+                        {unassigned.map((photo) => (
+                          <div key={photo.id} className="group relative">
+                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}>
+                              <img src={photo.fileUrl} alt={photo.caption || photo.originalName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                            </div>
+                            {isSelectionMode && (
+                              <div className="absolute top-2 left-2">
+                                <div className={cn("h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition", selectedPhotoIds.has(photo.id) ? "bg-blue-600 text-white shadow" : "bg-white/90 text-transparent border border-gray-300")} aria-pressed={selectedPhotoIds.has(photo.id)} onClick={(e) => { e.stopPropagation(); togglePhotoSelection(photo.id); }}>
+                                  <Check className="h-4 w-4" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1370,4 +1340,4 @@ const AlbumView: React.FC = () => {
   );
 };
 
-export default AlbumView;
+export default VisitView;

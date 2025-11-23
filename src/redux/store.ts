@@ -18,6 +18,7 @@ import notificationsReducer from './slices/notificationsSlice';
 import locationsReducer from './slices/locationsSlice';
 import visitsReducer from './slices/visitsSlice';
 import photosReducer from './slices/photosSlice';
+import albumsReducer from './slices/albumsSlice';
 import dashboardReducer from './slices/dashboardSlice';
 
 export const store = configureStore({
@@ -42,6 +43,7 @@ export const store = configureStore({
     visits: visitsReducer,
     photos: photosReducer,
     dashboard: dashboardReducer,
+    albums: albumsReducer,
   },
 });
 
