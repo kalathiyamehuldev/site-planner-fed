@@ -121,32 +121,21 @@ const Dashboard = () => {
     dispatch(fetchAllTasksByCompany());
   };
 
-  // Get upcoming tasks (3 most urgent)
+  // Get upcoming tasks (3 most urgent) limited to accessible projects (matches Tasks page)
+  const accessibleIds = new Set((allProjects || []).map(p => p.id));
   const upcomingTasks = [...allTasks]
+    .filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)))
     .sort((a, b) => {
-      // Simple sorting based on priority and due date keywords
-      const priorityOrder = { High: 0, Medium: 1, Low: 2 };
-      const dueDateOrder = {
-        Today: 0,
-        Tomorrow: 1,
-        "This week": 2,
-        "Next Monday": 3,
-        "Next week": 4,
-        "In 2 weeks": 5,
-        "Next month": 6,
-      };
-
-      const aPriority = priorityOrder[a.priority] || 999;
-      const bPriority = priorityOrder[b.priority] || 999;
-
+      const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as Record<string, number>;
+      const aPriority = priorityOrder[a.priority] ?? 999;
+      const bPriority = priorityOrder[b.priority] ?? 999;
       if (aPriority !== bPriority) return aPriority - bPriority;
 
-      const aDueDate =
-        dueDateOrder[a.dueDate as keyof typeof dueDateOrder] || 999;
-      const bDueDate =
-        dueDateOrder[b.dueDate as keyof typeof dueDateOrder] || 999;
-
-      return aDueDate - bDueDate;
+      const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const aValid = isNaN(aTime) ? Number.POSITIVE_INFINITY : aTime;
+      const bValid = isNaN(bTime) ? Number.POSITIVE_INFINITY : bTime;
+      return aValid - bValid;
     })
     .slice(0, 3);
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
+import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
-  ArrowLeft,
   Plus,
   Download,
   Upload,
@@ -78,6 +78,7 @@ import {
 const VisitView: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const dispatch = useAppDispatch();
   const { hasPermission } = usePermission();
 
@@ -160,6 +161,11 @@ const VisitView: React.FC = () => {
   }, [dispatch, visit?.projectId]);
 
   const handleBack = () => {
+    const fromAlbumId = searchParams.get('fromAlbumId');
+    if (fromAlbumId) {
+      navigate(`/albums/${fromAlbumId}`);
+      return;
+    }
     navigate("/photos");
   };
 
@@ -442,15 +448,15 @@ const VisitView: React.FC = () => {
   };
 
   const handleBulkExport = async () => {
-    if (photos.length === 0) return;
+    if (!isSelectionMode || selectedPhotoIds.size === 0) return;
 
     try {
-      // Create a zip file with all photos
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
+      const selected = photos.filter(p => selectedPhotoIds.has(p.id));
       const promises: Promise<void>[] = [];
 
-      photos.forEach((photo, index) => {
+      selected.forEach((photo, index) => {
         promises.push(
           fetch(photo.fileUrl)
             .then(response => response.blob())
@@ -458,15 +464,12 @@ const VisitView: React.FC = () => {
               const fileName = `${String(index + 1).padStart(3, '0')}_${photo.originalName}`;
               zip.file(fileName, blob);
             })
-            .catch(error => {
-              console.warn(`Failed to download ${photo.originalName}:`, error);
-            })
+            .catch(() => void 0)
         );
       });
 
       await Promise.all(promises);
 
-      // Generate and download the zip file
       const content = await zip.generateAsync({ type: 'blob' });
       const url = window.URL.createObjectURL(content);
       const link = document.createElement('a');
@@ -478,7 +481,7 @@ const VisitView: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to export photos:', error);
-      alert('Failed to export photos. Please try again.');
+      alert('Failed to export photos.');
     }
   };
 
@@ -591,62 +594,40 @@ const VisitView: React.FC = () => {
 
   return (
     <PageContainer className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="hover:bg-gray-100 flex-shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5 sm:h-9 sm:w-9" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-              {formatVisitDate(visit.visitDate)}
-            </h1>
-            {visit.project && (
-              <p className="text-sm text-gray-500 truncate">
-                {visit.project.name}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start flex-shrink-0">
-          {canUpload && (
-            <>
-              {/* Regular file upload */}
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
-                id="photo-upload"
-              />
-              <ActionButton
-                text="Import"
-                variant="secondary"
-                leftIcon={<Upload className="h-4 w-4" />}
-                disabled={isUploading}
-                onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
-                className="cursor-pointer"
-              />
-            </>
-          )}
-          
-          {photos.length > 0 && (
-            <ActionButton
-              text="Export"
-              variant="secondary"
-              leftIcon={<Download className="h-4 w-4" />}
-              onClick={handleBulkExport}
+      <PageHeader
+        title={formatVisitDate(visit.visitDate)}
+        subtitle={visit.project ? visit.project.name : undefined}
+        showBackButton
+        onBackClick={handleBack}
+      >
+        {canUpload && (
+          <>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+              id="photo-upload"
             />
-          )}
-        </div>
-      </div>
+            <ActionButton
+              text="Import"
+              variant="secondary"
+              leftIcon={<Upload className="h-4 w-4" />}
+              disabled={isUploading}
+              onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
+              className="cursor-pointer"
+            />
+          </>
+        )}
+        <ActionButton
+          text="Export"
+          variant="secondary"
+          leftIcon={<Download className="h-4 w-4" />}
+          onClick={handleBulkExport}
+          disabled={!isSelectionMode || selectedPhotoIds.size === 0}
+        />
+      </PageHeader>
 
       {/* General Description */}
       <GlassCard className="p-6">
@@ -734,14 +715,14 @@ const VisitView: React.FC = () => {
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="sm:hidden flex items-center gap-2 w-full flex-nowrap overflow-x-auto justify-between">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white flex-1 min-w-[180px]">
+              <Search className="h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search photos by name, caption, or tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 rounded-lg border border-input bg-background px-10 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-10 border-0 bg-transparent p-0 outline-none focus:ring-0"
               />
             </div>
             <div className="flex rounded-md border flex-shrink-0">
@@ -831,14 +812,16 @@ const VisitView: React.FC = () => {
           )}
         
           {/* Desktop: Search only (Add lives in header) */}
-          <div className="relative hidden sm:block sm:flex-1 sm:min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <Input
-              placeholder="Search photos by name, caption, or tags..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-4"
-            />
+          <div className="hidden sm:block sm:flex-1 sm:min-w-[300px]">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+              <Search className="h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search photos by name, caption, or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border-0 focus-visible:ring-0 focus:ring-0 outline-none p-0 w-full"
+              />
+            </div>
           </div>
 
           {/* Filters & Selection (desktop + shared) */}

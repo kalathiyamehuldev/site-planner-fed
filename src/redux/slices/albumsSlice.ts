@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
 import { toast } from '@/hooks/use-toast';
@@ -43,11 +43,11 @@ export const fetchCompanyRootAlbums = createAsyncThunk<Album[], void, { rejectVa
   'albums/fetchCompanyRoot',
   async (_, { rejectWithValue }) => {
     try {
-      const res = await api.get<ApiResponse<Album[]>>('/albums/root');
-      if (res.data.status === 'success') {
-        return res.data.data || [];
+      const payload: ApiResponse<Album[]> = (await api.get<ApiResponse<Album[]>>('/albums/root')) as any;
+      if (payload.status === 'success') {
+        return (payload.data ?? ([] as Album[]));
       }
-      return rejectWithValue(res.data.error || 'Failed to fetch root albums');
+      return rejectWithValue(payload.error || 'Failed to fetch root albums');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -58,11 +58,11 @@ export const fetchChildrenAlbums = createAsyncThunk<Album[], string, { rejectVal
   'albums/fetchChildren',
   async (parentId, { rejectWithValue }) => {
     try {
-      const res = await api.get<ApiResponse<Album[]>>(`/albums/${parentId}/children`);
-      if (res.data.status === 'success') {
-        return res.data.data || [];
+      const payload: ApiResponse<Album[]> = (await api.get<ApiResponse<Album[]>>(`/albums/${parentId}/children`)) as any;
+      if (payload.status === 'success') {
+        return (payload.data ?? ([] as Album[]));
       }
-      return rejectWithValue(res.data.error || 'Failed to fetch child albums');
+      return rejectWithValue(payload.error || 'Failed to fetch child albums');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -73,11 +73,11 @@ export const fetchAlbum = createAsyncThunk<Album, string, { rejectValue: string 
   'albums/fetchOne',
   async (id, { rejectWithValue }) => {
     try {
-      const res = await api.get<ApiResponse<Album>>(`/albums/${id}`);
-      if (res.data.status === 'success' && res.data.data) {
-        return res.data.data;
+      const payload: ApiResponse<Album> = (await api.get<ApiResponse<Album>>(`/albums/${id}`)) as any;
+      if (payload.status === 'success' && payload.data) {
+        return payload.data;
       }
-      return rejectWithValue(res.data.error || 'Failed to fetch album');
+      return rejectWithValue(payload.error || 'Failed to fetch album');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -88,12 +88,12 @@ export const createAlbum = createAsyncThunk<Album, { name: string; projectId: st
   'albums/create',
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await api.post<ApiResponse<Album>>('/albums', payload);
-      if (res.data.status === 'success' && res.data.data) {
+      const response: ApiResponse<Album> = (await api.post<ApiResponse<Album>>('/albums', payload)) as any;
+      if (response.status === 'success' && response.data) {
         toast({ title: 'Album created' });
-        return res.data.data;
+        return response.data;
       }
-      return rejectWithValue(res.data.error || 'Failed to create album');
+      return rejectWithValue(response.error || 'Failed to create album');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -104,12 +104,12 @@ export const updateAlbum = createAsyncThunk<Album, { id: string; name?: string; 
   'albums/update',
   async ({ id, ...data }, { rejectWithValue }) => {
     try {
-      const res = await api.put<ApiResponse<Album>>(`/albums/${id}`, data);
-      if (res.data.status === 'success' && res.data.data) {
+      const response: ApiResponse<Album> = (await api.put<ApiResponse<Album>>(`/albums/${id}`, data)) as any;
+      if (response.status === 'success' && response.data) {
         toast({ title: 'Album updated' });
-        return res.data.data;
+        return response.data;
       }
-      return rejectWithValue(res.data.error || 'Failed to update album');
+      return rejectWithValue(response.error || 'Failed to update album');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -120,12 +120,12 @@ export const deleteAlbum = createAsyncThunk<string, string, { rejectValue: strin
   'albums/delete',
   async (id, { rejectWithValue }) => {
     try {
-      const res = await api.delete<ApiResponse<Album>>(`/albums/${id}`);
-      if (res.data.status === 'success') {
+      const response: ApiResponse<Album> = (await api.delete<ApiResponse<Album>>(`/albums/${id}`)) as any;
+      if (response.status === 'success') {
         toast({ title: 'Album deleted' });
         return id;
       }
-      return rejectWithValue(res.data.error || 'Failed to delete album');
+      return rejectWithValue(response.error || 'Failed to delete album');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -136,11 +136,11 @@ export const fetchAlbumPhotos = createAsyncThunk<Photo[], string, { rejectValue:
   'albums/fetchPhotos',
   async (albumId, { rejectWithValue }) => {
     try {
-      const res = await api.get<ApiResponse<Photo[]>>(`/albums/${albumId}/photos`);
-      if (res.data.status === 'success') {
-        return res.data.data || [];
+      const payload: ApiResponse<Photo[]> = (await api.get<ApiResponse<Photo[]>>(`/albums/${albumId}/photos`)) as any;
+      if (payload.status === 'success') {
+        return (payload.data ?? ([] as Photo[]));
       }
-      return rejectWithValue(res.data.error || 'Failed to fetch album photos');
+      return rejectWithValue(payload.error || 'Failed to fetch album photos');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -151,12 +151,12 @@ export const addPhotoToAlbum = createAsyncThunk<Photo, { albumId: string; photoI
   'albums/addPhoto',
   async ({ albumId, photoId }, { rejectWithValue }) => {
     try {
-      const res = await api.put<ApiResponse<Photo>>(`/albums/${albumId}/add-photo/${photoId}`);
-      if (res.data.status === 'success' && res.data.data) {
+      const response: ApiResponse<Photo> = (await api.put<ApiResponse<Photo>>(`/albums/${albumId}/add-photo/${photoId}`)) as any;
+      if (response.status === 'success' && response.data) {
         toast({ title: 'Photo added to album' });
-        return res.data.data;
+        return response.data;
       }
-      return rejectWithValue(res.data.error || 'Failed to add photo');
+      return rejectWithValue(response.error || 'Failed to add photo');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -178,11 +178,12 @@ export const uploadPhotoToAlbum = createAsyncThunk<Photo, { albumId: string; fil
       const res = await api.post<ApiResponse<Photo>>('/photos/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      if (res.data.status === 'success' && res.data.data) {
+      const response: ApiResponse<Photo> = res as any;
+      if (response.status === 'success' && response.data) {
         toast({ title: 'Photo uploaded' });
-        return res.data.data;
+        return response.data;
       }
-      return rejectWithValue(res.data.error || 'Failed to upload photo');
+      return rejectWithValue(response.error || 'Failed to upload photo');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || err.message);
     }
@@ -222,7 +223,7 @@ const albumsSlice = createSlice({
       })
       .addCase(fetchCompanyRootAlbums.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload as string;
       })
       .addCase(fetchChildrenAlbums.pending, (state) => {
         state.loading = true;
@@ -234,7 +235,7 @@ const albumsSlice = createSlice({
       })
       .addCase(fetchChildrenAlbums.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload as string;
       })
       .addCase(fetchAlbum.fulfilled, (state, action) => {
         state.details[action.payload.id] = action.payload;

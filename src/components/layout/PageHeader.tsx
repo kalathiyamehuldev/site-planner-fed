@@ -120,12 +120,12 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
       {/* Desktop Header - Hidden on mobile */}
       <div className="hidden md:flex items-center justify-between mb-6 w-full">
         {/* Page Title */}
-        <div className="flex items-start gap-1 sm:gap-2 text-gray-500 min-w-0 flex-1">
+        <div className="flex items-center gap-1 sm:gap-2 text-gray-500 min-w-0 flex-1">
           {showBackButton && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full hover:bg-gray-100 mt-1"
+              className="h-9 w-9 rounded-full hover:bg-gray-100"
               onClick={onBackClick}
             >
               <ArrowLeft className="h-5 w-5 text-gray-700" />

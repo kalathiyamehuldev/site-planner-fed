@@ -39,6 +39,7 @@ import CreateRolePage from "./components/roles/CreateRole";
 import EditRolePage from "./components/roles/EditRole";
 import Profile from "./pages/Profile";
 import Photos from "./pages/PhotoGallery";
+import AlbumPhotos from "./pages/AlbumPhotos";
 import AlbumView from "./components/photos/VisitView";
 import PhotoViewer from "./components/photos/PhotoViewer";
 
@@ -123,6 +124,8 @@ const App = () => (
                           <Route path="/roles/create" element={<CreateRolePage />}/>
                           <Route path="/roles/edit/:roleId" element={<EditRolePage />}/>
                           <Route path="/photos" element={<Photos />} />
+                          
+                          <Route path="/albums/:albumId" element={<AlbumPhotos />} />
                           <Route path="/photos/album/:visitId" element={<AlbumView />} />
                           <Route path="/photos/viewer/:photoId" element={<PhotoViewer />} />
                           <Route path="/profile" element={<Profile />} />

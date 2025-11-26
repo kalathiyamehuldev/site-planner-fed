@@ -4,63 +4,35 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
-import ActionButton from "@/components/ui/ActionButton";
-import { cn } from "@/lib/utils";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import {
-  Plus,
-  Calendar,
-  User,
   Image,
-  ChevronRight,
-  Filter,
-  X,
+  MoreVertical,
+  Trash2Icon,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import usePermission from "@/hooks/usePermission";
-import {
-  fetchVisits,
-  createVisit,
-  selectAllVisits,
-  selectVisitsLoading,
-  selectVisitsError,
-  selectVisitsPagination,
-  clearVisits,
-} from "@/redux/slices/visitsSlice";
+import { fetchVisits, createVisit, selectAllVisits, selectVisitsLoading, selectVisitsError, selectVisitsPagination, clearVisits } from "@/redux/slices/visitsSlice";
 import {
   selectUser,
   selectSelectedCompany,
   selectAuthLoading,
 } from "@/redux/slices/authSlice";
-import {
-  fetchProjects,
-  selectAllProjects,
-} from "@/redux/slices/projectsSlice";
+import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
+import { fetchCompanyRootAlbums, fetchChildrenAlbums, selectCompanyRootAlbums, updateAlbum, deleteAlbum } from "@/redux/slices/albumsSlice";
+import { Search } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface CreateVisitFormData {
   description: string;
   visitDate: Date | undefined;
   projectId: string;
+  visibility?: 'ALL_USERS' | 'CUSTOMER';
 }
 
 const PhotoGallery: React.FC = () => {
@@ -69,14 +41,13 @@ const PhotoGallery: React.FC = () => {
   const { hasPermission } = usePermission();
 
   // Redux state
-  const visits = useAppSelector(selectAllVisits);
-  const loading = useAppSelector(selectVisitsLoading);
   const error = useAppSelector(selectVisitsError);
-  const pagination = useAppSelector(selectVisitsPagination);
-  const user = useAppSelector(selectUser);
   const selectedCompany = useAppSelector(selectSelectedCompany);
   const authLoading = useAppSelector(selectAuthLoading);
-  const projects = useAppSelector(selectAllProjects);
+  const rootAlbums = useAppSelector(selectCompanyRootAlbums);
+  const albumsByParent = useAppSelector((state) => state.albums.byParent);
+  const albumsLoading = useAppSelector((state) => state.albums.loading);
+  const albumsError = useAppSelector((state) => state.albums.error);
 
   // Local state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -85,25 +56,53 @@ const PhotoGallery: React.FC = () => {
     visitDate: undefined,
     projectId: "",
   });
-  const [filterProjectId, setFilterProjectId] = useState<string>("");
-  const [filterVisitDate, setFilterVisitDate] = useState<Date | undefined>(undefined);
-  const [showFilters, setShowFilters] = useState(false);
-  // Sorting
-  const [sortBy, setSortBy] = useState<"visitDate" | "photos" | "createdBy">("visitDate");
+  const [albumSearch, setAlbumSearch] = useState<string>("");
+  const [isEditAlbumOpen, setIsEditAlbumOpen] = useState(false);
+  const [editAlbumData, setEditAlbumData] = useState<{ id?: string; name: string; visibility: "ALL_USERS" | "CUSTOMER" }>({ name: "", visibility: "ALL_USERS" });
+  const [deleteAlbumId, setDeleteAlbumId] = useState<string | null>(null);
 
   // Check permissions
   const canView = hasPermission("photos", "read");
   const canManage = hasPermission("photos", "manage");
 
   useEffect(() => {
-    const filters = {
-      projectId: filterProjectId || undefined,
-      fromDate: filterVisitDate ? startOfDay(filterVisitDate).toISOString() : undefined,
-      toDate: filterVisitDate ? endOfDay(filterVisitDate).toISOString() : undefined,
-    };
-    dispatch(fetchVisits(filters));
     dispatch(fetchProjects());
-  }, [dispatch, selectedCompany, filterProjectId, filterVisitDate]);
+  }, [dispatch, selectedCompany]);
+
+  useEffect(() => {
+    dispatch(fetchCompanyRootAlbums());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const onFocus = () => dispatch(fetchCompanyRootAlbums());
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [dispatch]);
+
+  useEffect(() => {
+    rootAlbums.forEach((album) => {
+      if (!albumsByParent[album.id]) {
+        dispatch(fetchChildrenAlbums(album.id));
+      }
+    });
+  }, [dispatch, rootAlbums, albumsByParent]);
+
+  const openEditAlbum = (a: any) => {
+    setEditAlbumData({ id: a.id, name: a.name, visibility: a.visibility });
+    setIsEditAlbumOpen(true);
+  };
+
+  const saveEditAlbum = async () => {
+    if (!editAlbumData.id) return;
+    const payload: any = { id: editAlbumData.id, name: editAlbumData.name };
+    if (editAlbumData.visibility) payload.visibility = editAlbumData.visibility;
+    await dispatch(updateAlbum(payload));
+    setIsEditAlbumOpen(false);
+  };
+
+  const removeAlbum = async (id: string) => {
+    setDeleteAlbumId(id);
+  };
 
   // Generate avatar initials
   const getInitials = (name: string) => {
@@ -144,6 +143,9 @@ const PhotoGallery: React.FC = () => {
         visitDate: createFormData.visitDate.toISOString(),
         projectId: createFormData.projectId,
       };
+      if (createFormData.visibility) {
+        (visitData as any).visibility = createFormData.visibility;
+      }
 
       await dispatch(createVisit(visitData));
       
@@ -170,14 +172,6 @@ const PhotoGallery: React.FC = () => {
     return format(new Date(dateString), "MMMM d, yyyy");
   };
 
-  const clearFilters = () => {
-    setFilterProjectId("");
-    setFilterVisitDate(undefined);
-  };
-
-  const hasActiveFilters = () => {
-    return filterProjectId || filterVisitDate;
-  };
 
   if (!canView && authLoading) {
     return (
@@ -201,27 +195,11 @@ const PhotoGallery: React.FC = () => {
     );
   }
 
-  // Memoized sorting for visits list based on selected sort
-  const sortedVisits = React.useMemo(() => {
-    const arr = [...visits];
-    switch (sortBy) {
-      case "visitDate":
-        return arr.sort(
-          (a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
-        );
-      case "photos":
-        return arr.sort(
-          (a, b) => (b._count?.photos || 0) - (a._count?.photos || 0)
-        );
-      case "createdBy": {
-        const getName = (v: any) =>
-          v.createdBy ? `${v.createdBy.firstName} ${v.createdBy.lastName}` : "";
-        return arr.sort((a, b) => getName(a).localeCompare(getName(b)));
-      }
-      default:
-        return arr;
-    }
-  }, [visits, sortBy]);
+  const filteredAlbums = React.useMemo(() => {
+    const term = albumSearch.trim().toLowerCase();
+    if (!term) return rootAlbums;
+    return rootAlbums.filter(a => a.name?.toLowerCase().includes(term));
+  }, [rootAlbums, albumSearch]);
 
   return (
     <PageContainer className="space-y-6">
@@ -230,382 +208,97 @@ const PhotoGallery: React.FC = () => {
         title="Photos" 
       />
 
-      {/* Mobile Filter Panel */}
-      {showFilters && (
-        <GlassCard className="p-4 lg:hidden">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-filter">Project</Label>
-              <Select value={filterProjectId || "all"} onValueChange={(value) => setFilterProjectId(value === "all" ? "" : value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All projects</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="visit-date">Visit Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !filterVisitDate && "text-muted-foreground"
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {filterVisitDate ? (
-                      format(filterVisitDate, "PPP")
-                    ) : (
-                      <span>Pick visit date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={filterVisitDate}
-                    onSelect={(date) => setFilterVisitDate(date || undefined)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sort-by">Sort By</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="visitDate">Visit Date</SelectItem>
-                  <SelectItem value="photos">Photos Count</SelectItem>
-                  <SelectItem value="createdBy">Created By</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </GlassCard>
-      )}
+      
 
-      {/* On-site visits section */}
+      {/* Albums section */}
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              On-site visits
+              Albums
               <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                {pagination.total}
+                {rootAlbums.length}
               </span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Visits are, by default, made visible to all stakeholders.
-            </p>
+            <p className="text-sm text-gray-500 mt-1">Browse company albums and their children.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+              <Search className="h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search albums..."
+                value={albumSearch}
+                onChange={(e) => setAlbumSearch(e.target.value)}
+                className="border-0 focus-visible:ring-0 focus:ring-0 outline-none p-0 w-[220px]"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Mobile controls under the title */}
-        <div className="flex items-center justify-between gap-2 lg:hidden">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(hasActiveFilters() && "bg-blue-50 border-blue-200")}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {hasActiveFilters() && (
-              <span className="ml-1 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5">
-                {[filterProjectId, filterVisitDate].filter(Boolean).length}
-              </span>
-            )}
-          </Button>
-          {hasActiveFilters() && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <X className="h-4 w-4 mr-1" />
-              Clear
-            </Button>
-          )}
-          {canManage && (
-            <ActionButton
-              text="Create a visit"
-              variant="primary"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={() => setIsCreateDialogOpen(true)}
-            />
-          )}
-        </div>
+        
 
-        {/* Desktop controls below the title */}
-        <div className="hidden lg:flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Select value={filterProjectId || "all"} onValueChange={(value) => setFilterProjectId(value === "all" ? "" : value)}>
-              <SelectTrigger className="min-w-[180px]">
-                <SelectValue placeholder="All projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All projects</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "min-w-[200px] justify-start text-left font-normal",
-                    !filterVisitDate && "text-muted-foreground"
-                  )}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {filterVisitDate ? (
-                    format(filterVisitDate, "PPP")
-                  ) : (
-                    <span>Pick visit date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={filterVisitDate}
-                  onSelect={(date) => setFilterVisitDate(date || undefined)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-              <SelectTrigger className="min-w-[160px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="visitDate">Visit Date</SelectItem>
-                <SelectItem value="photos">Photos Count</SelectItem>
-                <SelectItem value="createdBy">Created By</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(filterProjectId || filterVisitDate) && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-1" />
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {canManage && (
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <ActionButton
-                  text="Create a visit"
-                  variant="primary"
-                  leftIcon={<Plus className="h-4 w-4" />}
-                  className="inline-flex"
-                />
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Create a new visit</DialogTitle>
-                  <DialogDescription>
-                    Create a new photo album for your site visit. You can add photos after creation.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="project">Project</Label>
-                    <Select 
-                      value={createFormData.projectId} 
-                      onValueChange={(value) => setCreateFormData(prev => ({ ...prev, projectId: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="visitDate">Visit Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !createFormData.visitDate && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {createFormData.visitDate ? (
-                            format(createFormData.visitDate, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={createFormData.visitDate}
-                          onSelect={(date) => setCreateFormData(prev => ({ ...prev, visitDate: date }))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description (Optional)</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Enter visit description..."
-                      value={createFormData.description}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleCreateVisit}
-                    disabled={!createFormData.visitDate || !createFormData.projectId}
-                  >
-                    Create Visit
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-
-        {/* Visits Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {albumsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[...Array(6)].map((_, i) => (
-              <GlassCard key={i} className="p-4 sm:p-6 animate-pulse">
-                <div className="space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-20 sm:h-24 bg-gray-200 rounded"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                    <div className="space-y-1 flex-1">
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-2 bg-gray-200 rounded w-1/3"></div>
-                    </div>
-                  </div>
-                </div>
+              <GlassCard key={`alb-skel-${i}`} className="p-4 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-2/3 mb-3"></div>
+                <div className="h-20 bg-gray-200 rounded"></div>
               </GlassCard>
             ))}
           </div>
-        ) : visits.length === 0 ? (
-          <GlassCard className="p-12 text-center">
-            <div className="space-y-4">
-              <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
-                <Image className="h-8 w-8 text-gray-400" />
+        ) : rootAlbums.length === 0 ? (
+          <div className="min-h-[40vh] flex items-center justify-center">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
+                <Image className="h-8 w-8 text-blue-400" />
               </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">No visits yet</h3>
-                <p className="text-gray-500 mt-1">
-                  Create your first site visit to start organizing photos.
-                </p>
-              </div>
-              {canManage && (
-                <ActionButton
-                  text="Create your first visit"
-                  variant="primary"
-                  leftIcon={<Plus className="h-4 w-4" />}
-                  onClick={() => setIsCreateDialogOpen(true)}
-                />
+              <p className="text-gray-600 mt-3">No projects yet</p>
+              {albumsError && (
+                <div className="mt-3">
+                  <p className="text-red-600 text-sm">{albumsError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dispatch(fetchCompanyRootAlbums())}
+                    className="mt-2"
+                  >
+                    Try Again
+                  </Button>
+                </div>
               )}
             </div>
-          </GlassCard>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {sortedVisits.map((visit) => {
-              const createdBy = visit.createdBy 
-                ? `${visit.createdBy.firstName} ${visit.createdBy.lastName}` 
-                : "Unknown";
-              const avatarColors = getAvatarColors(createdBy);
-
-              return (
-                <GlassCard
-                  key={visit.id}
-                  className="p-3 sm:p-6 cursor-pointer transition-shadow group hover:shadow-lg hover:border-blue-200"
-                  onClick={() => handleVisitClick(visit.id)}
+            {filteredAlbums.map((album) => (
+              <GlassCard key={album.id} className="p-3 sm:p-6 hover:shadow-lg">
+                <div
+                  className="h-24 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border cursor-pointer"
+                  onClick={() => navigate(`/albums/${album.id}`)}
                 >
-                  <div className="block sm:hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
-                        <Image className="h-5 w-5 text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-base font-semibold text-gray-900 truncate">
-                          {visit.title?.trim() ? visit.title : formatVisitDate(visit.visitDate)}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <div className={cn(
-                            "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium flex-shrink-0",
-                            avatarColors.bg,
-                            avatarColors.text
-                          )}>
-                            {getInitials(createdBy)}
-                          </div>
-                          <div className="text-xs text-gray-700 truncate">
-                            {createdBy}
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
-                    </div>
+                  <Image className="h-8 w-8 text-blue-400" />
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="text-base sm:text-lg font-semibold text-gray-900 truncate">{album.name}</div>
+                    {album.isDefault && <div className="text-xs text-blue-700">Default</div>}
                   </div>
-
-                  <div className="hidden sm:block space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate pr-2">
-                        {formatVisitDate(visit.visitDate)}
-                      </h3>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
-                    </div>
-                    <div className="h-24 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
-                      <Image className="h-8 w-8 text-blue-400 mx-auto" />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0",
-                        avatarColors.bg,
-                        avatarColors.text
-                      )}>
-                        {getInitials(createdBy)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">Created by</div>
-                        <div className="text-xs text-gray-600 truncate">{createdBy}</div>
-                      </div>
-                    </div>
-                  </div>
-                </GlassCard>
-              );
-            })}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {/* <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditAlbum(album); }}>Edit</DropdownMenuItem> */}
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); removeAlbum(album.id); }} className="text-red-600 flex items-center gap-2"><Trash2Icon size={14}/>Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </GlassCard>
+            ))}
           </div>
         )}
 
@@ -627,6 +320,62 @@ const PhotoGallery: React.FC = () => {
           </GlassCard>
         )}
       </div>
+      {/* Edit Album Dialog */}
+      <Dialog open={isEditAlbumOpen} onOpenChange={setIsEditAlbumOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit album</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="editAlbumName" className="text-sm font-medium">Name</Label>
+              <Input id="editAlbumName" value={editAlbumData.name} onChange={(e) => setEditAlbumData(prev => ({ ...prev, name: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="editAlbumVisibility" className="text-sm font-medium">Visibility</Label>
+              <Select value={editAlbumData.visibility} onValueChange={(v) => setEditAlbumData(prev => ({ ...prev, visibility: v as any }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL_USERS">All Users</SelectItem>
+                  <SelectItem value="CUSTOMER">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditAlbumOpen(false)}>Cancel</Button>
+            <Button onClick={saveEditAlbum} disabled={!editAlbumData.name.trim()}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Album Confirmation */}
+      <AlertDialog open={!!deleteAlbumId} onOpenChange={(open) => !open && setDeleteAlbumId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete album?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteAlbumId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteAlbumId) return;
+                await dispatch(deleteAlbum(deleteAlbumId));
+                setDeleteAlbumId(null);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </PageContainer>
   );
 };

@@ -24,6 +24,7 @@ export interface Visit {
   createdById: string;
   createdAt: string;
   updatedAt: string;
+  visibility?: 'ALL_USERS' | 'CUSTOMER';
   project?: {
     id: string;
     name: string;
@@ -53,6 +54,7 @@ export interface CreateVisitData {
   attendees?: any;
   notes?: string;
   projectId: string;
+  visibility?: 'ALL_USERS' | 'CUSTOMER';
 }
 
 export interface UpdateVisitData {
@@ -62,6 +64,7 @@ export interface UpdateVisitData {
   status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   attendees?: any;
   notes?: string;
+  visibility?: 'ALL_USERS' | 'CUSTOMER';
 }
 
 export interface VisitFilterParams {

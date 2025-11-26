@@ -253,6 +253,12 @@ const AppSidebar: React.FC = () => {
   ];
 
   const isActive = (path: string) => {
+    if (path === "/photos") {
+      return (
+        location.pathname.startsWith("/photos") ||
+        location.pathname.startsWith("/albums")
+      );
+    }
     return location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
   };
 
