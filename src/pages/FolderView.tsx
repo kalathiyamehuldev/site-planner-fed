@@ -756,6 +756,32 @@ const FolderView: React.FC = () => {
     return [];
   }, [folderPath, folderTree, currentFolder]);
 
+  const resolveFolderIdFromPath = useCallback((targetPath: string[], projectId?: string): string | null => {
+    const findFolderByPath = (folders: FolderType[], path: string[]): FolderType | null => {
+      if (!folders || path.length === 0) return null;
+      for (const f of folders) {
+        if (f.name === path[0]) {
+          if (path.length === 1) return f;
+          return findFolderByPath(f.children, path.slice(1));
+        }
+      }
+      return null;
+    };
+    const folderFromTree = findFolderByPath(folderTree, targetPath);
+    if (folderFromTree?.id) return folderFromTree.id;
+
+    let parentId: string | null = null;
+    for (let i = 0; i < targetPath.length; i++) {
+      const name = targetPath[i];
+      const candidate = folders.find(
+        (f) => f.name === name && (i === 0 ? f.parentId === null : f.parentId === parentId) && (!projectId || f.projectId === projectId)
+      );
+      if (!candidate) return null;
+      parentId = candidate.id;
+    }
+    return parentId;
+  }, [folderTree, folders]);
+
   // Show loading during initial folder fetch or when documents are loading
   if (initialLoading || documentsLoading || (foldersLoading && !currentFolder)) {
     return (
@@ -837,7 +863,15 @@ const FolderView: React.FC = () => {
               )}
               onClick={() => {
                 if (index !== breadcrumbs.length - 1) {
-                  navigate(`/documents/folder/${folder.id}`);
+                  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                  if (uuidRegex.test(folder.id)) {
+                    navigate(`/documents/folder/${folder.id}`);
+                  } else {
+                    const targetId = resolveFolderIdFromPath(folder.path.split('/'), folder.projectId);
+                    if (targetId && uuidRegex.test(targetId)) {
+                      navigate(`/documents/folder/${targetId}`);
+                    }
+                  }
                 }
               }}
             >
@@ -1051,7 +1085,6 @@ const FolderView: React.FC = () => {
               </div>
             )}
 
-            {/* Documents */}
             {filteredDocuments.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
@@ -1180,6 +1213,21 @@ const FolderView: React.FC = () => {
                 </div>
               </div>
             )}
+            {filteredDocuments.length === 0 && (
+              <div>
+                <h2 className="text-lg font-medium mb-4 text-foreground">Files</h2>
+                <GlassCard className="p-8 text-center">
+                  <File className="mx-auto mb-4 text-muted-foreground" size={48} />
+                  <h3 className="text-xl font-medium mb-2">No files found</h3>
+                  <p className="text-muted-foreground">Try uploading files or adjusting filters.</p>
+                  {hasPermission('documents', 'create') && (
+                    <div className="mt-6 flex justify-center">
+                      <ActionButton onClick={() => setIsUploadDialogOpen(true)} variant="primary" motion="subtle" text="Upload Files" leftIcon={<Upload size={18} />} />
+                    </div>
+                  )}
+                </GlassCard>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6 w-full animate-fade-in animation-delay-[0.2s]">
@@ -1294,7 +1342,6 @@ const FolderView: React.FC = () => {
                       </div>
                     ))}
 
-                    {/* Documents */}
                     {filteredDocuments.map((document) => (
                       <div
                         key={document.id}
@@ -1392,6 +1439,20 @@ const FolderView: React.FC = () => {
                         </div>
                       </div>
                     ))}
+                    {filteredDocuments.length === 0 && (
+                      <div className="py-6">
+                        <GlassCard className="p-8 text-center">
+                          <File className="mx-auto mb-4 text-muted-foreground" size={48} />
+                          <h3 className="text-xl font-medium mb-2">No files found</h3>
+                          <p className="text-muted-foreground">Try uploading files or adjusting filters.</p>
+                          {hasPermission('documents', 'create') && (
+                            <div className="mt-6 flex justify-center">
+                              <ActionButton onClick={() => setIsUploadDialogOpen(true)} variant="primary" motion="subtle" text="Upload Files" leftIcon={<Upload size={18} />} />
+                            </div>
+                          )}
+                        </GlassCard>
+                      </div>
+                    )}
                   </div>
                 </GlassCard>
               );

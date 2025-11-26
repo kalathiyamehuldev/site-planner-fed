@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
 import api from '@/lib/axios';
+import { toast } from '@/hooks/use-toast';
 
 // API Response interface
 interface ApiResponse<T = any> {
@@ -217,6 +218,11 @@ export const fetchFolderPath = createAsyncThunk(
       }>;
       
       if (response.status === 'error') {
+        toast({
+          title: 'Error',
+          description: response.error || response.message || 'Failed to fetch folder path',
+          variant: 'destructive',
+        });
         return rejectWithValue(response.error || response.message || 'Failed to fetch folder path');
       }
       
@@ -224,8 +230,18 @@ export const fetchFolderPath = createAsyncThunk(
     } catch (error: any) {
       if (error.response?.data) {
         const apiError = error.response.data as ApiResponse;
+        toast({
+          title: 'Error',
+          description: apiError.error || apiError.message || 'Failed to fetch folder path',
+          variant: 'destructive',
+        });
         return rejectWithValue(apiError.error || apiError.message || 'Failed to fetch folder path');
       }
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }

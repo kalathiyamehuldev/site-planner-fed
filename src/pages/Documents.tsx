@@ -8,20 +8,14 @@ import { GlassCard } from "@/components/ui/glass-card";
 
 import { cn } from "@/lib/utils";
 import { 
-  Plus, 
   Search, 
-  Filter, 
   FolderOpen, 
   File, 
   FileText, 
   FileImage, 
   Download,
-  Upload,
   Trash2,
   MoreVertical,
-  Calendar,
-  UserCircle,
-  Clock,
   Folder,
   Edit3,
   X,
@@ -33,14 +27,10 @@ import {
 import {
   fetchDocuments,
   fetchDocumentsByFolder,
-  fetchRootDocuments,
-  createDocument,
-  updateDocument,
   deleteDocument,
   downloadDocument,
   selectAllDocuments,
   Document,
-  DocumentFilterParams
 } from "@/redux/slices/documentsSlice";
 import { fetchProjects, selectAllProjects } from "@/redux/slices/projectsSlice";
 import {
@@ -56,7 +46,6 @@ import {
 } from "@/redux/slices/foldersSlice";
 import { useToast } from "@/hooks/use-toast";
 import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
-import DocumentPreviewModal from '@/components/documents/DocumentPreviewModal';
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
 import {
   DropdownMenu,
@@ -1338,18 +1327,6 @@ const Documents = () => {
             }
           }}
         />
-
-        {/* Document Preview Modal */}
-        {selectedDocument && (
-          <DocumentPreviewModal
-            document={selectedDocument}
-            isOpen={showDocumentPreview}
-            onClose={() => {
-              setShowDocumentPreview(false);
-              setSelectedDocument(null);
-            }}
-          />
-        )}
       </div>
     </PageContainer>
   );

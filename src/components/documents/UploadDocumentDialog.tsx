@@ -41,6 +41,7 @@ import usePermission from '@/hooks/usePermission';
 import ConflictResolutionDialog from './ConflictResolutionDialog';
 import { UserSelectionComponent } from './UserSelectionComponent';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { selectUser } from '@/redux/slices/authSlice';
 
 interface ConflictData {
   conflict: boolean;
@@ -105,7 +106,9 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
     const project = useAppSelector(selectSelectedProject);
     const projects = useAppSelector(selectAllProjects);
     const documentConflict = useAppSelector(selectDocumentConflict);
+    const currentUser = useAppSelector(selectUser);
     const projectId = propProjectId || folderProjectId || project?.id;
+    const isRestrictedUploader = !!currentUser && (currentUser as any).userType && ((currentUser as any).userType === 'CUSTOMER' || (currentUser as any).userType === 'VENDOR');
 
     // Show project selection only if no project is pre-selected AND no folder is selected
     // When a folder is selected, the project ID should come from the folder's project
@@ -273,12 +276,12 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
 
       const documentData = {
         name,
-        projectId: selectedProjectId || undefined, // Make projectId optional
+        projectId: selectedProjectId || undefined,
         taskId: taskId === 'none' ? undefined : taskId,
         folderId: folderId || undefined,
         file,
-        accessType: formData.accessType,
-        userIds: formData.accessType === 'SELECTED_USERS' ? formData.userIds : undefined,
+        accessType: isRestrictedUploader ? AccessType.EVERYONE : formData.accessType,
+        userIds: isRestrictedUploader ? undefined : (formData.accessType === 'SELECTED_USERS' ? formData.userIds : undefined),
       };
 
       console.log('Creating document with data:', documentData);
@@ -736,46 +739,49 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                 
                 {mode === 'upload' && (
                   <>
-                    <div className="space-y-2">
-                      <Label>Access Control</Label>
-                      <RadioGroup
-                        value={formData.accessType}
-                        onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
-                          setFormData(prev => ({ ...prev, accessType: value }));
-                          if (value === AccessType.EVERYONE) {
-                            setFormData(prev => ({ ...prev, userIds: [] }));
-                            clearFieldError('userIds');
-                          }
-                        }}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="EVERYONE" id="everyone" />
-                          <Label htmlFor="everyone">Everyone (All users with document permissions)</Label>
+                    {!isRestrictedUploader && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Access Control</Label>
+                          <RadioGroup
+                            value={formData.accessType}
+                            onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
+                              setFormData(prev => ({ ...prev, accessType: value }));
+                              if (value === AccessType.EVERYONE) {
+                                setFormData(prev => ({ ...prev, userIds: [] }));
+                                clearFieldError('userIds');
+                              }
+                            }}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="EVERYONE" id="everyone" />
+                              <Label htmlFor="everyone">Everyone (All users with document permissions)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="SELECTED_USERS" id="selected-users" />
+                              <Label htmlFor="selected-users">Selected Users Only</Label>
+                            </div>
+                          </RadioGroup>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="SELECTED_USERS" id="selected-users" />
-                          <Label htmlFor="selected-users">Selected Users Only</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    {formData.accessType === 'SELECTED_USERS' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="users">Select Users</Label>
-                        <UserSelectionComponent
-                          selectedUserIds={formData.userIds}
-                          onChange={(userIds) => {
-                            setFormData(prev => ({ ...prev, userIds }));
-                            if (userIds.length > 0) {
-                              clearFieldError('userIds');
-                            }
-                          }}
-                          projectId={projectId}
-                        />
-                        {formErrors.userIds && (
-                          <p className="text-sm text-red-500">{formErrors.userIds}</p>
+                        {formData.accessType === 'SELECTED_USERS' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="users">Select Users</Label>
+                            <UserSelectionComponent
+                              selectedUserIds={formData.userIds}
+                              onChange={(userIds) => {
+                                setFormData(prev => ({ ...prev, userIds }));
+                                if (userIds.length > 0) {
+                                  clearFieldError('userIds');
+                                }
+                              }}
+                              projectId={projectId as string}
+                            />
+                            {formErrors.userIds && (
+                              <p className="text-sm text-red-500">{formErrors.userIds}</p>
+                            )}
+                          </div>
                         )}
-                      </div>
+                      </>
                     )}
                   </>
                 )}

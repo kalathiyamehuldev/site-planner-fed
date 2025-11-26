@@ -119,6 +119,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   const documentVersions = useAppSelector(selectDocumentVersions);
   const versionsLoading = useAppSelector(selectVersionsLoading);
   const currentUser = useAppSelector(selectUser);
+  const isRestrictedUploader = !!currentUser && (currentUser as any).userType && ((currentUser as any).userType === 'CUSTOMER' || (currentUser as any).userType === 'VENDOR');
 
   // Initialize data when sidebar opens
   useEffect(() => {
@@ -127,8 +128,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       setDocumentName(document.name || '');
       setDescription(document.description || '');
       setSelectedTaskId(document.taskId || '');
-      setAccessType(document.accessType || AccessType.EVERYONE);
-      setSelectedUserIds(document.userAccess?.map(u => u.userId) || []);
+      setAccessType(isRestrictedUploader ? AccessType.EVERYONE : (document.accessType || AccessType.EVERYONE));
+      setSelectedUserIds(isRestrictedUploader ? [] : (document.userAccess?.map(u => u.userId) || []));
 
       // Clear previous comments
       dispatch(clearComments());
@@ -200,7 +201,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
   // Fetch comments when document changes
   const fetchCommentsForDocument = async (documentId: string) => {
     try {
-      await dispatch(fetchDocumentComments({ documentId }));
+      await dispatch(fetchDocumentComments({ documentId })).unwrap();
     } catch (error) {
       console.error('Failed to fetch comments:', error);
       toast({
@@ -229,6 +230,24 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       return sorted[0]?.id ?? null;
     }
     return null;
+  };
+
+
+  const formatUploaderType = (type?: string) => {
+    if (!type) return '';
+    const lower = type.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
+
+  const getUploaderInfo = (): { name: string; type: string } | null => {
+    const latest: any = getLatestVersion();
+    const baseUploader: any = latest?.uploader || (latest?.uploadedUser ? { ...latest.uploadedUser, type: 'USER' } : null);
+    if (!baseUploader) return null;
+    const first = baseUploader.firstName || '';
+    const last = baseUploader.lastName || '';
+    const name = `${first} ${last}`.trim() || baseUploader.email || '';
+    const typeLabel = formatUploaderType(baseUploader.type);
+    return name ? { name, type: typeLabel } : null;
   };
 
   // Update local state when documentDetails from Redux changes
@@ -290,8 +309,8 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       await dispatch(updateDocument({
         id: document.id,
         documentData: {
-          accessType: accessType,
-          userIds: accessType === AccessType.SELECTED_USERS ? selectedUserIds : []
+          accessType: isRestrictedUploader ? AccessType.EVERYONE : accessType,
+          userIds: isRestrictedUploader ? [] : (accessType === AccessType.SELECTED_USERS ? selectedUserIds : [])
         }
       })).unwrap();
       dispatch(fetchDocumentDetails(document?.id));
@@ -442,10 +461,10 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
         commentType: 'GENERAL',
         documentId: document.id,
         mentionedUserIds
-      }));
+      })).unwrap();
 
       // Refresh comments after creating new comment
-      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      await dispatch(fetchDocumentComments({ documentId: document.id })).unwrap();
 
       setNewComment('');
       setMentionedUsers([]);
@@ -473,10 +492,10 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       await dispatch(updateCommentAction({
         id: commentId,
         commentData: { content: newContent }
-      }));
+      })).unwrap();
 
       // Refresh comments after updating comment
-      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      await dispatch(fetchDocumentComments({ documentId: document.id })).unwrap();
 
       toast({
         title: 'Success',
@@ -497,10 +516,10 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
 
     setIsDeletingComment(commentId);
     try {
-      await dispatch(deleteCommentAction(commentId));
+      await dispatch(deleteCommentAction(commentId)).unwrap();
 
       // Refresh comments after deleting comment
-      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      await dispatch(fetchDocumentComments({ documentId: document.id })).unwrap();
 
       toast({
         title: 'Success',
@@ -536,7 +555,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
       await dispatch(updateCommentAction({
         id: commentId,
         commentData: { content: editingContent.trim() }
-      }));
+      })).unwrap();
 
       // Refresh comments after editing comment
       await dispatch(fetchDocumentComments({ documentId: document.id }));
@@ -587,10 +606,10 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
         documentId: document.id,
         parentId,
         mentionedUserIds
-      }));
+      })).unwrap();
 
       // Refresh comments after reply
-      await dispatch(fetchDocumentComments({ documentId: document.id }));
+      await dispatch(fetchDocumentComments({ documentId: document.id })).unwrap();
 
       setReplyingToCommentId(null);
       setReplyContent('');
@@ -1350,17 +1369,14 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                   </span>
                 </div>
 
-                {(() => {
-                  const latest = getLatestVersion();
-                  return (latest && latest.uploadedUser);
-                })() && (
+                {getUploaderInfo() && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">Uploaded by</span>
                       </div>
                       <span className="text-sm font-medium text-gray-900">
-                        {getLatestVersion()?.uploadedUser?.firstName} {getLatestVersion()?.uploadedUser?.lastName}
+                        {(() => { const info = getUploaderInfo(); return info ? `${info.type}: ${info.name}` : ''; })()}
                       </span>
                     </div>
                   )}
@@ -1452,103 +1468,96 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
             </div>
 
             {/* Accessibility */}
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-900">Access Control</h4>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveAccessibility}
-                  disabled={isUpdating}
-                  className="h-8 px-3"
-                >
-                  {isUpdating ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
-                  ) : (
-                    <span className="text-sm">Save</span>
-                  )}
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <RadioGroup
-                  value={accessType}
-                  onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
-                    setAccessType(value);
-                    if (value === AccessType.EVERYONE) {
-                      setSelectedUserIds([]);
-                    }
-                  }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value="EVERYONE" id="everyone" className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor="everyone" className="text-sm font-medium cursor-pointer">Everyone</Label>
-                      <p className="text-xs text-gray-500 mt-1">All users with document permissions can access</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value="SELECTED_USERS" id="selected-users" className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor="selected-users" className="text-sm font-medium cursor-pointer">Selected Users Only</Label>
-                      <p className="text-xs text-gray-500 mt-1">Only specific users can access this document</p>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {accessType === AccessType.SELECTED_USERS && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <Label className="text-sm font-medium mb-2 block text-blue-900">Select Users:</Label>
-                  <UserSelectionComponent
-                    selectedUserIds={selectedUserIds}
-                    onChange={setSelectedUserIds}
-                    projectId={documentDetails?.projectId || document?.projectId || ''}
-                  />
-                  
-                  {/* Show selected users */}
-                  {documentDetails?.userAccess && documentDetails.userAccess.length > 0 && (() => {
-                    const filtered = documentDetails.userAccess.filter((access) => {
-                      const currentId = currentUser?.id;
-                      const currentEmail = (currentUser as any)?.email;
-                      
-                      // Check if this access entry is for the current user
-                      const isCurrent = (access.userId && currentId && access.userId === currentId)
-                        || (access.user?.id && currentId && access.user.id === currentId)
-                        || (access.user?.email && currentEmail && access.user.email === currentEmail);
-                      
-                      // Only include if it's not the current user and has valid user data
-                      const hasValidUser = access.user && (access.user.firstName || access.user.lastName || access.user.name);
-                      return !isCurrent && hasValidUser;
-                    });
-                    
-                    if (filtered.length === 0) return null;
-                    
-                    return (
-                      <div className="mt-3">
-                        <Label className="text-xs font-medium text-blue-800 mb-2 block">Current Access:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {filtered.map((access) => {
-                            const label = access.user
-                              ? ((access.user.firstName && access.user.lastName)
-                                  ? `${access.user.firstName} ${access.user.lastName}`
-                                  : (access.user.firstName || access.user.lastName || access.user.name || access.user.email || 'Unknown User'))
-                              : 'Unknown User';
-                            
-                            return (
-                              <Badge key={access.userId} variant="secondary" className="text-xs">
-                                {label}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
+            {!isRestrictedUploader && (
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Access Control</h4>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSaveAccessibility}
+                    disabled={isUpdating}
+                    className="h-8 px-3"
+                  >
+                    {isUpdating ? (
+                      <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent" />
+                    ) : (
+                      <span className="text-sm">Save</span>
+                    )}
+                  </Button>
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-3">
+                  <RadioGroup
+                    value={accessType}
+                    onValueChange={(value: AccessType.EVERYONE | AccessType.SELECTED_USERS) => {
+                      setAccessType(value);
+                      if (value === AccessType.EVERYONE) {
+                        setSelectedUserIds([]);
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                      <RadioGroupItem value="EVERYONE" id="everyone" className="mt-0.5" />
+                      <div className="flex-1">
+                        <Label htmlFor="everyone" className="text-sm font-medium cursor-pointer">Everyone</Label>
+                        <p className="text-xs text-gray-500 mt-1">All users with document permissions can access</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                      <RadioGroupItem value="SELECTED_USERS" id="selected-users" className="mt-0.5" />
+                      <div className="flex-1">
+                        <Label htmlFor="selected-users" className="text-sm font-medium cursor-pointer">Selected Users Only</Label>
+                        <p className="text-xs text-gray-500 mt-1">Only specific users can access this document</p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {accessType === AccessType.SELECTED_USERS && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <Label className="text-sm font-medium mb-2 block text-blue-900">Select Users:</Label>
+                    <UserSelectionComponent
+                      selectedUserIds={selectedUserIds}
+                      onChange={setSelectedUserIds}
+                      projectId={documentDetails?.projectId || document?.projectId || ''}
+                    />
+                    {documentDetails?.userAccess && documentDetails.userAccess.length > 0 && (() => {
+                      const filtered = documentDetails.userAccess.filter((access) => {
+                        const currentId = currentUser?.id;
+                        const currentEmail = (currentUser as any)?.email;
+                        const isCurrent = (access.userId && currentId && access.userId === currentId)
+                          || (access.user?.id && currentId && access.user.id === currentId)
+                          || (access.user?.email && currentEmail && access.user.email === currentEmail);
+                        const hasValidUser = access.user && (access.user.firstName || access.user.lastName || access.user.name);
+                        return !isCurrent && hasValidUser;
+                      });
+                      if (filtered.length === 0) return null;
+                      return (
+                        <div className="mt-3">
+                          <Label className="text-xs font-medium text-blue-800 mb-2 block">Current Access:</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {filtered.map((access) => {
+                              const label = access.user
+                                ? ((access.user.firstName && access.user.lastName)
+                                    ? `${access.user.firstName} ${access.user.lastName}`
+                                    : (access.user.firstName || access.user.lastName || access.user.name || access.user.email || 'Unknown User'))
+                                : 'Unknown User';
+                              return (
+                                <Badge key={access.userId} variant="secondary" className="text-xs">
+                                  {label}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Task association */}
             <div className="p-4 border-b">
