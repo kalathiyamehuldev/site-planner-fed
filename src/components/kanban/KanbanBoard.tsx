@@ -53,6 +53,7 @@ const KanbanBoard = ({
   const { hasPermission } = usePermission();
   const isMobile = useIsMobile();
   const resource = "tasks";
+  const canUpdateStatus = hasPermission(resource, "update");
 
   const FilterButton = ({
     label,
@@ -88,6 +89,7 @@ const KanbanBoard = ({
   }, [isMobile]);
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    if (!canUpdateStatus) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOverColumn(columnId);
@@ -100,6 +102,7 @@ const KanbanBoard = ({
   };
 
   const handleDrop = (e: React.DragEvent, newStatus: string) => {
+    if (!canUpdateStatus) return;
     e.preventDefault();
     setDragOverColumn(null);
 

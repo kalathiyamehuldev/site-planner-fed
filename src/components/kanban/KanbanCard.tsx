@@ -38,8 +38,10 @@ const KanbanCard = ({
   const [isDragging, setIsDragging] = useState(false);
   const { hasPermission } = usePermission();
   const resource = 'tasks';
+  const canDrag = hasPermission(resource, 'update');
 
   const handleDragStart = (e: React.DragEvent) => {
+    if (!canDrag) return;
     setIsDragging(true);
     e.dataTransfer.setData('text/plain', JSON.stringify({
       taskId: task.id,
@@ -112,7 +114,7 @@ const KanbanCard = ({
 
   return (
     <GlassCard
-      draggable
+      draggable={canDrag}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       variant="clean"

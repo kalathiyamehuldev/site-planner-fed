@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
+import usePermission from "@/hooks/usePermission";
+import solar from "@solar-icons/react";
 
 interface PageHeaderProps {
   title: string;
@@ -99,6 +101,11 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
     setShowAllNotifications(true);
   };
 
+  const { hasPermission } = usePermission();
+  const canCreateProject = hasPermission('projects', 'create');
+  const canCreateTask = hasPermission('tasks', 'create');
+  const canShowPlus = canCreateProject || canCreateTask;
+
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -147,25 +154,33 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
           {children}
 
           {/* Quick Add Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-gray-100"
-              >
-                <Plus className="h-5 w-5 text-gray-700" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setShowTaskDialog(true)}>
-                Create Task
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowProjectDialog(true)}>
-                Create Project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canShowPlus && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full hover:bg-gray-100"
+                >
+                  <Plus className="h-5 w-5 text-gray-700" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {canCreateTask && (
+                  <DropdownMenuItem onClick={() => setShowTaskDialog(true)}>
+                    <solar.Notes.ArchiveMinimalistic className="h-4 w-4 mr-2" />
+                    Create Task
+                  </DropdownMenuItem>
+                )}
+                {canCreateProject && (
+                  <DropdownMenuItem onClick={() => setShowProjectDialog(true)}>
+                    <solar.Tools.Layers className="h-4 w-4 mr-2" />
+                    Create Project
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Notifications Dropdown */}
           <DropdownMenu

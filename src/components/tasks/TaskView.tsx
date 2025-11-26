@@ -99,6 +99,7 @@ const TaskView: React.FC = () => {
   const currentUser = useAppSelector(selectUser);
   const { hasPermission } = usePermission();
   const { toast } = useToast();
+  const canReadTasks = hasPermission('tasks', 'read');
   
   // Use the timer hook
   const {
@@ -444,6 +445,19 @@ const TaskView: React.FC = () => {
     setActionSheetOpen(true);
   };
 
+  if (!canReadTasks) {
+    return (
+      <PageContainer>
+        <div className="flex items-center justify-center h-full p-4">
+          <GlassCard className="p-6 text-center max-w-md w-full">
+            <h2 className="text-lg font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You do not have permission to view tasks.</p>
+          </GlassCard>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <div className="space-y-6">
@@ -696,15 +710,17 @@ const TaskView: React.FC = () => {
                 <h2 className="font-medium">Subtasks</h2>
               </div>
               {subtasks.length === 0 ? (
-                <div className="py-10 flex flex-col items-center justify-center">
-                  <div className="text-sm text-muted-foreground mb-3">No sub-task found. Add a Sub-task</div>
-                  <ActionButton
-                    variant="primary"
-                    onClick={() => setIsAddSubtaskOpen(true)}
-                    leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
-                    text="Add Subtask"
-                  />
-                </div>
+                  <div className="py-10 flex flex-col items-center justify-center">
+                    <div className="text-sm text-muted-foreground mb-3">No sub-task found. Add a Sub-task</div>
+                    {hasPermission('tasks', 'create') && (
+                      <ActionButton
+                        variant="primary"
+                        onClick={() => setIsAddSubtaskOpen(true)}
+                        leftIcon={<solar.Ui.AddSquare className="size-3" weight="Outline" />}
+                        text="Add Subtask"
+                      />
+                    )}
+                  </div>
               ) : (
                 <>
                   <div className="space-y-2">
@@ -746,6 +762,7 @@ const TaskView: React.FC = () => {
                                   const val = e.currentTarget.value.trim();
                                   toggleSubtaskEdit(st.id, 'title', false);
                                   if (val && val !== st.title) {
+                                    if (!hasPermission('tasks', 'update')) return;
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { title: val } })).unwrap()
                                       .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
@@ -760,6 +777,7 @@ const TaskView: React.FC = () => {
                                 value={st.status || 'TODO'}
                                 onValueChange={(val) => {
                                   if (val !== (st.status || 'TODO')) {
+                                    if (!hasPermission('tasks', 'update')) { toggleSubtaskEdit(st.id, 'status', false); return; }
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { status: val as TaskType['status'] } })).unwrap()
                                       .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
@@ -790,6 +808,7 @@ const TaskView: React.FC = () => {
                                 value={st.priority || 'MEDIUM'}
                                 onValueChange={(val) => {
                                   if (val !== (st.priority || 'MEDIUM')) {
+                                    if (!hasPermission('tasks', 'update')) { toggleSubtaskEdit(st.id, 'priority', false); return; }
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { priority: val as TaskType['priority'] } })).unwrap()
                                       .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
@@ -838,6 +857,7 @@ const TaskView: React.FC = () => {
                                   const updatedAssignee = selected
                                     ? `${selected.user.firstName} ${selected.user.lastName}`
                                     : undefined;
+                                  if (!hasPermission('tasks', 'update')) { toggleSubtaskEdit(st.id, 'assignee', false); return; }
                                   dispatch(updateTaskAsync({ id: st.id, taskData: { memberId } }))
                                     .unwrap()
                                     .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
@@ -889,6 +909,7 @@ const TaskView: React.FC = () => {
                                   const val = e.currentTarget.value || undefined;
                                   toggleSubtaskEdit(st.id, 'dueDate', false);
                                   if (val !== (st.dueDate ? st.dueDate.split('T')[0] : undefined)) {
+                                    if (!hasPermission('tasks', 'update')) return;
                                     dispatch(updateTaskAsync({ id: st.id, taskData: { dueDate: val } })).unwrap()
                                       .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                   }
@@ -905,9 +926,11 @@ const TaskView: React.FC = () => {
                             <button
                               aria-label="Delete subtask"
                               onClick={() => {
+                                if (!hasPermission('tasks', 'delete')) return;
                                 dispatch(deleteTaskAsync(st.id)).unwrap()
                                   .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                               }}
+                              disabled={!hasPermission('tasks', 'delete')}
                               className="opacity-70 group-hover:opacity-100 mx-auto"
                               title="Delete"
                             >
@@ -1142,9 +1165,11 @@ const TaskView: React.FC = () => {
                             <button
                                 aria-label="Delete subtask"
                                 onClick={() => {
+                                  if (!hasPermission('tasks', 'delete')) return;
                                   dispatch(deleteTaskAsync(st.id)).unwrap()
                                     .then(() => { if (id) dispatch(fetchSubtasksByParent(id)); });
                                 }}
+                                disabled={!hasPermission('tasks', 'delete')}
                                 className="opacity-70 group-hover:opacity-100 mx-auto"
                                 title="Delete"
                               >
@@ -1156,7 +1181,7 @@ const TaskView: React.FC = () => {
                     ))}
                   </div>
                   <div className="pt-3">
-                    {canAddSubtask && (
+                    {canAddSubtask && hasPermission('tasks', 'create') && (
                       <ActionButton
                         variant="primary"
                         onClick={() => setIsAddSubtaskOpen(true)}
