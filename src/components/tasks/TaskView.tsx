@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import { GlassCard } from "@/components/ui/glass-card";
-import { Button } from "@/components/ui/button";
+// Removed unused Button import
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -55,6 +55,8 @@ import { fetchVendors } from '@/redux/slices/adminSlice';
 import { assignVendorToTaskAsync, assignUsersToTaskAsync } from '@/redux/slices/tasksSlice';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const statusLabel: Record<string, string> = {
   TODO: "Not Started",
@@ -158,6 +160,7 @@ const TaskView: React.FC = () => {
   const [editingHeaderStatus, setEditingHeaderStatus] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('');
+  const [assigneeTab, setAssigneeTab] = useState<'users' | 'vendor'>('users');
   // Resolve parent task title from Redux store (no extra fetch that would override selectedTask)
   const parentTitle = useAppSelector((state) =>
     task?.parentId ? state.tasks.tasks.find((t) => t.id === task.parentId)?.title : undefined
@@ -178,6 +181,10 @@ const TaskView: React.FC = () => {
   useEffect(() => {
     dispatch(fetchVendors());
   }, [dispatch]);
+
+  useEffect(() => {
+    setAssigneeTab(task?.assigneeType === 'VENDOR' ? 'vendor' : 'users');
+  }, [task?.assigneeType]);
 
   const threaded = useMemo(() => {
     const byParent: Record<string, any[]> = {};
@@ -415,14 +422,11 @@ const TaskView: React.FC = () => {
   };
 
   const assignedName = useMemo(() => {
-    const vendorName = (task?.assigneeType === 'VENDOR' && task?.assigneeId)
-      ? (() => {
-          const v = vendors.find((vx: any) => vx.id === task.assigneeId);
-          return v ? `${v.firstName} ${v.lastName}` : undefined;
-        })()
+    const vendorName = (task?.assigneeType === 'VENDOR' && task?.vendor)
+      ? `${task.vendor.firstName} ${task.vendor.lastName}`
       : undefined;
     return task?.assignee || vendorName || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
-  }, [task?.assignee, task?.assigneeType, task?.assigneeId, task?.member, vendors]);
+  }, [task?.assignee, task?.assigneeType, task?.vendor, task?.member]);
   const canAddSubtask = !task?.parentId; // if current task is a subtask, prohibit adding subtasks
 
   // Priority border colors for mobile cards
@@ -451,7 +455,10 @@ const TaskView: React.FC = () => {
       ...subtask,
       status: statusMap[subtask.status] || 'Not Started',
       priority: priorityMap[subtask.priority] || 'Medium',
-      assignedTo: subtask.assignee || (subtask.member?.firstName && subtask.member?.lastName ? `${subtask.member.firstName} ${subtask.member.lastName}` : 'N/A'),
+      assignedTo:
+        subtask.assigneeType === 'VENDOR' && subtask.vendor
+          ? `${subtask.vendor.firstName} ${subtask.vendor.lastName}`
+          : (subtask.assignee || (subtask.member?.firstName && subtask.member?.lastName ? `${subtask.member.firstName} ${subtask.member.lastName}` : 'N/A')),
       dueDate: subtask.dueDate ? new Date(subtask.dueDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -902,18 +909,66 @@ const TaskView: React.FC = () => {
                                 onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}
                               >
                                 {(() => {
+                                  const names = typeof st.assignee === 'string' ? st.assignee.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+                                  const isMultiUser = String(st?.assigneeType || '').toUpperCase() === 'USER' && names.length > 1;
+                                  if (isMultiUser) {
+                                    const avatars = names.slice(0, 3).map((nm: string, idx: number) => {
+                                      const a = getAvatarData(nm);
+                                      return (
+                                        <div
+                                          key={`${nm}-${idx}`}
+                                          className={cn('w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium', idx > 0 && '-ml-2 border border-white')}
+                                          style={{ backgroundColor: a.bgColor, color: a.color }}
+                                        >
+                                          {a.initials}
+                                        </div>
+                                      );
+                                    });
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center">{avatars}</div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{names.join(', ')}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  }
+                                  const showEmailTooltip = String(st?.assigneeType || '').toUpperCase() === 'VENDOR' && st?.vendor?.email;
                                   const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
-                                  const avatar = getAvatarData(assignedName);
-                                  return (
+                                  const a = getAvatarData(assignedName);
+                                  const avatar = (
                                     <div
                                       className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                                      style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
+                                      style={{ backgroundColor: a.bgColor, color: a.color }}
                                     >
-                                      {avatar.initials}
+                                      {a.initials}
                                     </div>
                                   );
+                                  const nameEl = (
+                                    <span className="text-sm truncate">{assignedName || '-'}</span>
+                                  );
+                                  if (showEmailTooltip) {
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{st.vendor.email}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  }
+                                  return (
+                                    <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                                  );
                                 })()}
-                                <span className="text-sm truncate">{st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : '-')}</span>
                               </button>
                             )}
                           </div>
@@ -1165,17 +1220,71 @@ const TaskView: React.FC = () => {
                                   </Select>
                                 ) : (
                                   (() => {
+                                    const names = typeof st.assignee === 'string' ? st.assignee.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+                                    const isMultiUser = String(st?.assigneeType || '').toUpperCase() === 'USER' && names.length > 1;
+                                    if (isMultiUser) {
+                                      const avatars = names.slice(0, 3).map((nm: string, idx: number) => {
+                                        const a = getAvatarData(nm);
+                                        return (
+                                          <div
+                                            key={`${nm}-${idx}`}
+                                            className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium', idx > 0 && '-ml-2 border border-white')}
+                                            style={{ backgroundColor: a.bgColor, color: a.color }}
+                                          >
+                                            {a.initials}
+                                          </div>
+                                        );
+                                      });
+                                      return (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
+                                                {avatars}
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{names.join(', ')}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      );
+                                    }
+                                    const showEmailTooltip = String(st?.assigneeType || '').toUpperCase() === 'VENDOR' && st?.vendor?.email;
                                     const assignedName = st.assignee || (st.member ? `${st.member.firstName} ${st.member.lastName}` : undefined);
-                                    const avatar = getAvatarData(assignedName);
+                                    const a = getAvatarData(assignedName);
+                                    const avatar = (
+                                      <div
+                                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
+                                        style={{ backgroundColor: a.bgColor, color: a.color }}
+                                      >
+                                        {a.initials}
+                                      </div>
+                                    );
+                                    const nameEl = (
+                                      <span className="text-muted-foreground">{assignedName || '-'}</span>
+                                    );
+                                    if (showEmailTooltip) {
+                                      return (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
+                                                {avatar}
+                                                {nameEl}
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{st.vendor.email}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      );
+                                    }
                                     return (
                                       <button className="flex items-center gap-1" onClick={() => toggleSubtaskEdit(st.id, 'assignee', true)}>
-                                        <div
-                                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
-                                          style={{ backgroundColor: avatar.bgColor, color: avatar.color }}
-                                        >
-                                          {avatar.initials}
-                                        </div>
-                                        <span className="text-muted-foreground">{assignedName || '-'}</span>
+                                        {avatar}
+                                        {nameEl}
                                       </button>
                                     );
                                   })()
@@ -1794,91 +1903,89 @@ const TaskView: React.FC = () => {
                 <InfoRow label="Assigned">
                   {editingAssignee ? (
                     <div className="space-y-3">
-                      <Label>Assignee Type</Label>
-                      <RadioGroup className="grid grid-cols-2 gap-4" value={selectedVendorId ? 'VENDOR' : (selectedMemberIds.length ? 'USER' : undefined)} onValueChange={(val) => {
-                        const next = val as 'USER' | 'VENDOR';
-                        if (next === 'USER') { setSelectedVendorId(''); }
-                        if (next === 'VENDOR') { setSelectedMemberIds([]); }
+                      <Tabs value={assigneeTab} onValueChange={(val) => {
+                        setAssigneeTab(val as 'users' | 'vendor');
+                        if (val === 'users') { setSelectedVendorId(''); }
+                        if (val === 'vendor') { setSelectedMemberIds([]); }
                       }}>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="USER" />
-                          <span className="text-sm">Users</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="VENDOR" />
-                          <span className="text-sm">Vendor</span>
-                        </div>
-                      </RadioGroup>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium mb-1">Select Users</div>
-                          <Select
-                            value={selectedMemberIds.length ? selectedMemberIds[selectedMemberIds.length - 1] : ''}
-                            onValueChange={(value) => {
-                              if (!value) return;
-                              setSelectedVendorId('');
-                              setSelectedMemberIds((prev) => {
-                                const exists = prev.includes(value);
-                                return exists ? prev.filter((id) => id !== value) : Array.from(new Set([...prev, value]));
-                              });
-                            }}
-                            disabled={membersLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={membersLoading ? 'Loading members...' : 'Select users'} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(members || []).map((m: any) => (
-                                <SelectItem key={m.user.id} value={m.user.id}>
-                                  {m.user.firstName} {m.user.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {selectedMemberIds.length > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Selected: {
-                                selectedMemberIds
-                                  .map((uid) => {
-                                    const m = (members || []).find((mm: any) => mm.user.id === uid);
-                                    return m ? `${m.user.firstName} ${m.user.lastName}` : null;
-                                  })
-                                  .filter(Boolean)
-                                  .join(', ')
-                              }
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium mb-1">Select Vendor</div>
-                          {(() => {
-                            const pid = task?.project?.id;
-                            const projectVendors = (vendors || []).filter((v: any) => Array.isArray(v.projects) && v.projects.some((vp: any) => vp?.project?.id === pid));
-                            return (
-                              <Select
-                                value={selectedVendorId || ''}
-                                onValueChange={(value) => {
-                                  setSelectedMemberIds([]);
-                                  setSelectedVendorId(value);
-                                }}
-                                disabled={vendorsLoading}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder={vendorsLoading ? 'Loading vendors...' : 'Select vendor'} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {projectVendors.map((v: any) => (
-                                    <SelectItem key={v.id} value={v.id}>
-                                      {v.firstName} {v.lastName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            );
-                          })()}
-                        </div>
-                      </div>
+                        <TabsList className="mb-2">
+                          <TabsTrigger value="users">Users</TabsTrigger>
+                          <TabsTrigger value="vendor">Vendor</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="users">
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">Select Users</div>
+                            <Select
+                              value={selectedMemberIds.length ? selectedMemberIds[selectedMemberIds.length - 1] : ''}
+                              onValueChange={(value) => {
+                                if (!value) return;
+                                setSelectedVendorId('');
+                                setSelectedMemberIds((prev) => {
+                                  const exists = prev.includes(value);
+                                  return exists ? prev.filter((id) => id !== value) : Array.from(new Set([...prev, value]));
+                                });
+                              }}
+                              disabled={membersLoading}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={membersLoading ? 'Loading members...' : 'Select users'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(members || []).map((m: any) => (
+                                  <SelectItem key={m.user.id} value={m.user.id}>
+                                    {m.user.firstName} {m.user.lastName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {selectedMemberIds.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {selectedMemberIds.map((uid) => {
+                                  const m = (members || []).find((mm: any) => mm.user.id === uid);
+                                  const nm = m ? `${m.user.firstName} ${m.user.lastName}` : undefined;
+                                  const a = getAvatarData(nm);
+                                  return (
+                                    <div key={uid} className="flex items-center gap-1 px-2 py-1 rounded-full border">
+                                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: a.bgColor, color: a.color }}>{a.initials}</div>
+                                      <span className="text-xs">{m ? `${m.user.firstName} ${m.user.lastName}` : uid}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="vendor">
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">Select Vendor</div>
+                            {(() => {
+                              const pid = task?.project?.id;
+                              const projectVendors = (vendors || []).filter((v: any) => Array.isArray(v.projects) && v.projects.some((vp: any) => vp?.project?.id === pid));
+                              return (
+                                <Select
+                                  value={selectedVendorId || ''}
+                                  onValueChange={(value) => {
+                                    setSelectedMemberIds([]);
+                                    setSelectedVendorId(value);
+                                  }}
+                                  disabled={vendorsLoading}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={vendorsLoading ? 'Loading vendors...' : 'Select vendor'} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {projectVendors.map((v: any) => (
+                                      <SelectItem key={v.id} value={v.id}>
+                                        {v.firstName} {v.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
 
                       <div className="flex gap-2">
                         <ActionButton
@@ -1908,7 +2015,69 @@ const TaskView: React.FC = () => {
                     </div>
                   ) : (
                     <button className="flex items-center gap-2" onClick={() => hasPermission('tasks', 'update') && setEditingAssignee(true)}>
-                      <span>{assignedName || '-'}</span>
+                      {(() => {
+                        const names = typeof task?.assignee === 'string' ? task.assignee.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+                        const isMultiUser = String(task?.assigneeType || '').toUpperCase() === 'USER' && names.length > 1;
+                        if (isMultiUser) {
+                          const avatars = names.slice(0, 3).map((nm: string, idx: number) => {
+                            const a = getAvatarData(nm);
+                            return (
+                              <div
+                                key={`${nm}-${idx}`}
+                                className={cn(
+                                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium',
+                                  idx > 0 && '-ml-2 border border-white'
+                                )}
+                                style={{ backgroundColor: a.bgColor, color: a.color }}
+                              >
+                                {a.initials}
+                              </div>
+                            );
+                          });
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center">{avatars}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{names.join(', ')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
+                        const showEmailTooltip = String(task?.assigneeType || '').toUpperCase() === 'VENDOR' && task?.vendor?.email;
+                        const a = getAvatarData(assignedName);
+                        const avatar = (
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                            style={{ backgroundColor: a.bgColor, color: a.color }}
+                          >
+                            {a.initials}
+                          </div>
+                        );
+                        const nameEl = (
+                          <span className="truncate">{assignedName || '-'}</span>
+                        );
+                        if (showEmailTooltip) {
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{task.vendor.email}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
+                        return (
+                          <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                        );
+                      })()}
                     </button>
                   )}
                 </InfoRow>

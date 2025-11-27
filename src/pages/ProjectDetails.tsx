@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
@@ -17,14 +17,13 @@ import {
   FileText,
   ShoppingBag,
   Edit,
-  ArrowLeft,
   Plus,
   ChevronRight,
   Trash2,
   Check,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+// Removed unused Link import
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
 import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -185,6 +184,14 @@ const ProjectDetails = () => {
   const projectLocations = useAppSelector((state) => selectLocationsByProject(state, id || ''));
   const locationsLoading = useAppSelector(selectLocationsLoading);
   const locationsError = useAppSelector(selectLocationsError);
+
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const isVendor = currentUser?.userType === 'VENDOR';
+  const visibleProjectTasks = useMemo(() => {
+    return isVendor
+      ? (projectTasks || []).filter(t => t.assigneeType === 'VENDOR' && t.assigneeId === currentUser?.id)
+      : (projectTasks || []);
+  }, [projectTasks, currentUser?.id, isVendor]);
 
   // Fetch project data, tasks, and documents when component mounts or ID changes
   useEffect(() => {
@@ -551,7 +558,7 @@ const ProjectDetails = () => {
                 </MotionButton>
               </div>
               <TaskTable
-                tasks={projectTasks.slice(0, 3)}
+                tasks={visibleProjectTasks.slice(0, 3)}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 className="animate-scale-in"
@@ -706,7 +713,7 @@ const ProjectDetails = () => {
               </div>
             ) : (
               <TaskTable
-                tasks={projectTasks}
+                tasks={visibleProjectTasks}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 className="animate-scale-in"
@@ -1021,7 +1028,7 @@ const ProjectDetails = () => {
           setShowDocumentSidebar(false);
           setSelectedDocument(null);
         }}
-        onDelete={(documentId) => {
+        onDelete={() => {
           // Close sidebar and refresh documents
           setShowDocumentSidebar(false);
           setSelectedDocument(null);

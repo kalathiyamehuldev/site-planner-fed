@@ -107,7 +107,7 @@ const KanbanCard = ({
     URGENT: "border-l-[#ff6e0d]"
   };
 
-  const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
+  const assignedName = task?.assignee || (task?.vendor ? `${task.vendor.firstName} ${task.vendor.lastName}` : (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined));
   const avatarData = getAvatarData(assignedName);
   const hasSubtasks = (Array.isArray(task?.subtasks) && task.subtasks.length > 0) || (typeof task?.subtaskCount === 'number' && task.subtaskCount > 0);
   const subtaskCount = Array.isArray(task?.subtasks) ? task.subtasks.length : (typeof task?.subtaskCount === 'number' ? task.subtaskCount : 0);
@@ -176,21 +176,74 @@ const KanbanCard = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "rounded-full flex items-center justify-center font-medium",
-                isMobile ? "w-5 h-5 text-xs" : "w-6 h-6 text-xs"
-              )}
-              style={{
-                backgroundColor: avatarData.bgColor,
-                color: avatarData.color
-              }}
-            >
-              {avatarData.initials}
-            </div>
-            <span className={cn("text-gray-700 font-medium truncate", isMobile ? "text-xs" : "text-sm")}>
-              {assignedName || 'Unassigned'}
-            </span>
+            {(() => {
+              const names = typeof task?.assignee === 'string' ? task.assignee.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+              const isMultiUser = String(task?.assigneeType || '').toUpperCase() === 'USER' && names.length > 1;
+              if (isMultiUser) {
+                const avatars = names.slice(0, 3).map((nm: string, idx: number) => {
+                  const a = getAvatarData(nm);
+                  return (
+                    <div
+                      key={`${nm}-${idx}`}
+                      className={cn(
+                        "rounded-full flex items-center justify-center font-medium",
+                        isMobile ? "w-5 h-5 text-[10px]" : "w-6 h-6 text-xs",
+                        idx > 0 && "-ml-2 border border-white"
+                      )}
+                      style={{ backgroundColor: a.bgColor, color: a.color }}
+                    >
+                      {a.initials}
+                    </div>
+                  );
+                });
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">{avatars}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{names.join(', ')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+              const showEmailTooltip = String(task?.assigneeType || '').toUpperCase() === 'VENDOR' && task?.vendor?.email;
+              const avatar = (
+                <div
+                  className={cn(
+                    "rounded-full flex items-center justify-center font-medium",
+                    isMobile ? "w-5 h-5 text-xs" : "w-6 h-6 text-xs"
+                  )}
+                  style={{ backgroundColor: avatarData.bgColor, color: avatarData.color }}
+                >
+                  {avatarData.initials}
+                </div>
+              );
+              const nameEl = (
+                <span className={cn("text-gray-700 font-medium truncate", isMobile ? "text-xs" : "text-sm")}>
+                  {assignedName || 'Unassigned'}
+                </span>
+              );
+              if (showEmailTooltip) {
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{task.vendor.email}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+              return (
+                <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+              );
+            })()}
           </div>
         </div>
 

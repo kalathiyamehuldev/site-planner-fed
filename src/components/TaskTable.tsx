@@ -198,7 +198,10 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
       status: statusMap[task.status] || 'Not Started',
       priority: priorityMap[task.priority] || 'Medium',
       projectName: task.project?.name || 'Unknown Project',
-      assignedTo: task.assignee || (task.member?.firstName && task.member?.lastName ? `${task.member.firstName} ${task.member.lastName}` : 'N/A'),
+      assignedTo:
+        task.assigneeType === 'VENDOR' && task.vendor
+          ? `${task.vendor.firstName} ${task.vendor.lastName}`
+          : (task.assignee || (task.member?.firstName && task.member?.lastName ? `${task.member.firstName} ${task.member.lastName}` : 'N/A')),
       dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -648,22 +651,70 @@ const TaskTable = ({ tasks, onTaskClick, onEditTask, onDeleteTask, className, sh
                   <td className="px-3 hidden lg:table-cell">
                     <div className="flex items-center gap-2">
                       {(() => {
+                        const names = typeof task?.assignee === 'string' ? task.assignee.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+                        const isMultiUser = String(task?.assigneeType || '').toUpperCase() === 'USER' && names.length > 1;
+                        if (isMultiUser) {
+                          const avatars = names.slice(0, 3).map((nm: string, idx: number) => {
+                            const a = getAvatarData(nm);
+                            return (
+                              <div
+                                key={`${nm}-${idx}`}
+                                className={cn(
+                                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                                  idx > 0 && "-ml-2 border border-white"
+                                )}
+                                style={{ backgroundColor: a.bgColor, color: a.color }}
+                              >
+                                {a.initials}
+                              </div>
+                            );
+                          });
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center">{avatars}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{names.join(', ')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
                         const avatarData = getAvatarData(transformedTask.assignedTo);
-                        return (
+                        const avatar = (
                           <div
                             className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                            style={{
-                              backgroundColor: avatarData.bgColor,
-                              color: avatarData.color
-                            }}
+                            style={{ backgroundColor: avatarData.bgColor, color: avatarData.color }}
                           >
                             {avatarData.initials}
                           </div>
                         );
+                        const nameEl = (
+                          <div className="text-[#1a2624] text-sm font-medium leading-tight truncate">
+                            {transformedTask.assignedTo}
+                          </div>
+                        );
+                        const showEmailTooltip = String(task?.assigneeType || '').toUpperCase() === 'VENDOR' && task?.vendor?.email;
+                        if (showEmailTooltip) {
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{task.vendor.email}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
+                        return (
+                          <div className="flex items-center gap-2">{avatar}{nameEl}</div>
+                        );
                       })()}
-                      <div className="text-[#1a2624] text-sm font-medium leading-tight truncate">
-                        {transformedTask.assignedTo}
-                      </div>
                     </div>
                   </td>
                   <td className="px-3 hidden lg:table-cell">

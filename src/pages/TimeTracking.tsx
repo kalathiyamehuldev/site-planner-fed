@@ -104,6 +104,7 @@ const TimeTracking = () => {
   const tasks: Task[] = useAppSelector(selectParentTasks);
   const projectTasks: Task[] = useAppSelector(selectParentProjectTasks);
   const currentUser = useAppSelector((state) => state.auth.user);
+  const isVendor = currentUser?.userType === 'VENDOR';
   const loading = useAppSelector(selectTimeTrackingLoading);
   const error = useAppSelector(selectTimeTrackingError);
   const pagination = useAppSelector(selectTimeTrackingPagination);
@@ -362,8 +363,19 @@ const TimeTracking = () => {
           bValue = b.task?.title?.toLowerCase() || '';
           break;
         case 'user':
-          aValue = a.user ? `${a.user.firstName} ${a.user.lastName}`.toLowerCase() : '';
-          bValue = b.user ? `${b.user.firstName} ${b.user.lastName}`.toLowerCase() : '';
+          if (isVendor) {
+            aValue = a.vendor ? `${a.vendor.firstName} ${a.vendor.lastName}`.toLowerCase() : '';
+            bValue = b.vendor ? `${b.vendor.firstName} ${b.vendor.lastName}`.toLowerCase() : '';
+          } else {
+            const aName = a.vendor
+              ? `${a.vendor.firstName} ${a.vendor.lastName}`
+              : (a.user ? `${a.user.firstName} ${a.user.lastName}` : '');
+            const bName = b.vendor
+              ? `${b.vendor.firstName} ${b.vendor.lastName}`
+              : (b.user ? `${b.user.firstName} ${b.user.lastName}` : '');
+            aValue = aName.toLowerCase();
+            bValue = bName.toLowerCase();
+          }
           break;
         default:
           return 0;
@@ -1119,7 +1131,7 @@ const TimeTracking = () => {
                             onClick={() => handleSort('user')}
                             className="text-left p-0 font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
                           >
-                            User
+                            {isVendor ? 'Vendor' : 'User'}
                             <RiArrowUpDownLine size={14} />
                           </button>
                         </th>
@@ -1240,15 +1252,27 @@ const TimeTracking = () => {
                                         maxHeight: '2.6em'
                                       }}
                                     >
-                                      {entry.user
-                                        ? `${entry.user.firstName} ${entry.user.lastName}`
-                                        : "Unknown user"}
+                                      {isVendor
+                                        ? (entry.vendor
+                                            ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                            : "Unknown vendor")
+                                        : (entry.vendor
+                                            ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                            : (entry.user
+                                                ? `${entry.user.firstName} ${entry.user.lastName}`
+                                                : "Unknown"))}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" align="start" className="max-w-xs">
-                                     <p>{entry.user
-                                       ? `${entry.user.firstName} ${entry.user.lastName}`
-                                       : "Unknown user"}</p>
+                                     <p>{isVendor
+                                       ? (entry.vendor
+                                           ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                           : "Unknown vendor")
+                                       : (entry.vendor
+                                           ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                           : (entry.user
+                                               ? `${entry.user.firstName} ${entry.user.lastName}`
+                                               : "Unknown"))}</p>
                                    </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

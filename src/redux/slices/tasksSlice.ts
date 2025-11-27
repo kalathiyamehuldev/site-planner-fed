@@ -26,6 +26,7 @@ export interface ApiTask {
   parentId?: string; // added for parent linking
   createdAt: string;
   updatedAt: string;
+  assignee?: string;
   member?: {
     id: string;
     firstName: string;
@@ -42,6 +43,13 @@ export interface ApiTask {
   };
   assigneeType?: 'VENDOR' | 'USER';
   assigneeId?: string;
+  assignedUserIds?: string[];
+  vendor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
 export interface CreateTaskData {
@@ -100,6 +108,12 @@ export interface Task {
   assigneeType?: 'VENDOR' | 'USER';
   assigneeId?: string;
   assignedUserIds?: string[];
+  vendor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
@@ -132,7 +146,14 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   priority: apiTask.priority,
   dueDate: apiTask.dueDate,
   estimatedHours: apiTask.estimatedHours,
-  assignee: apiTask.member ? `${apiTask.member.firstName} ${apiTask.member.lastName}` : undefined,
+  assignee:
+    apiTask.assignee ?? (
+      apiTask.assigneeType === 'VENDOR' && apiTask.vendor
+        ? `${apiTask.vendor.firstName} ${apiTask.vendor.lastName}`
+        : apiTask.member
+        ? `${apiTask.member.firstName} ${apiTask.member.lastName}`
+        : undefined
+    ),
   member: apiTask.member,
   project: apiTask.project,
   parentId: apiTask.parentId, // map parentId
@@ -141,11 +162,13 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   updatedAt: apiTask.updatedAt,
   assigneeType: apiTask.assigneeType,
   assigneeId: apiTask.assigneeId,
+  assignedUserIds: apiTask.assignedUserIds,
+  vendor: apiTask.vendor,
 });
 
 export const fetchAllTasksByCompany = createAsyncThunk(
   'tasks/fetchAllTasksByCompany',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
       const response = await api.get('/tasks');
       const { status, data, message, error } = response as unknown as ApiResponse<any>;
@@ -163,7 +186,15 @@ export const fetchAllTasksByCompany = createAsyncThunk(
         : Array.isArray(data as any)
           ? (data as any)
           : [];
-      return items.map(transformApiTask);
+      const mapped = items.map(transformApiTask);
+      const state = getState() as RootState;
+      const user = (state as any)?.auth?.user;
+      const userType = String(user?.userType || '').toUpperCase();
+      const isVendor = userType === 'VENDOR';
+      const scoped = isVendor
+        ? mapped.filter((t) => String(t.assigneeType || '').toUpperCase() === 'VENDOR' && t.assigneeId === user?.id)
+        : mapped;
+      return scoped;
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to fetch tasks';
       toast.error(errMsg);
@@ -175,9 +206,9 @@ export const fetchAllTasksByCompany = createAsyncThunk(
 // Fetch only parent tasks (for Tasks page, TaskView, TaskTimeline)
 export const fetchParentTasksByCompany = createAsyncThunk(
   'tasks/fetchParentTasksByCompany',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const response = await api.get('/tasks?parentId=null');
+      const response = await api.get('/tasks');
       const { status, data, message, error } = response as unknown as ApiResponse<any>;
 
       if (status === 'error') {
@@ -193,7 +224,15 @@ export const fetchParentTasksByCompany = createAsyncThunk(
         : Array.isArray(data as any)
           ? (data as any)
           : [];
-      return items.map(transformApiTask);
+      const mapped = items.map(transformApiTask);
+      const state = getState() as RootState;
+      const user = (state as any)?.auth?.user;
+      const userType = String(user?.userType || '').toUpperCase();
+      const isVendor = userType === 'VENDOR';
+      const scoped = isVendor
+        ? mapped.filter((t) => String(t.assigneeType || '').toUpperCase() === 'VENDOR' && t.assigneeId === user?.id)
+        : mapped;
+      return scoped.filter(t => !t.parentId);
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to fetch parent tasks';
       toast.error(errMsg);
@@ -204,14 +243,21 @@ export const fetchParentTasksByCompany = createAsyncThunk(
 
 export const fetchTasksByProject = createAsyncThunk(
   'tasks/fetchTasksByProject',
-  async (projectId: string, { rejectWithValue }) => {
+  async (projectId: string, { rejectWithValue, getState }) => {
     try {
       const response = await api.get(`/tasks/project/${projectId}`);
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
 
       if (status === 'success' && data) {
-        //toast.success(message || 'Project tasks fetched successfully');
-        return data.map(transformApiTask);
+        const mapped = data.map(transformApiTask);
+        const state = getState() as RootState;
+        const user = (state as any)?.auth?.user;
+        const userType = String(user?.userType || '').toUpperCase();
+        const isVendor = userType === 'VENDOR';
+        const scoped = isVendor
+          ? mapped.filter((t) => String(t.assigneeType || '').toUpperCase() === 'VENDOR' && t.assigneeId === user?.id)
+          : mapped;
+        return scoped;
       } else {
         const errMsg = error || message || 'Failed to fetch project tasks';
         toast.error(errMsg);
@@ -228,14 +274,22 @@ export const fetchTasksByProject = createAsyncThunk(
 // Fetch only parent tasks by project (for Tasks page, TaskView, TaskTimeline)
 export const fetchParentTasksByProject = createAsyncThunk(
   'tasks/fetchParentTasksByProject',
-  async (projectId: string, { rejectWithValue }) => {
+  async (projectId: string, { rejectWithValue, getState }) => {
     try {
-      const response = await api.get(`/tasks/project/${projectId}?parentId=null`);
+      const response = await api.get(`/tasks/project/${projectId}`);
       const { status, data, message, error } = response as unknown as ApiResponse<ApiTask[]>;
 
       if (status === 'success' && data) {
         //toast.success(message || 'Parent project tasks fetched successfully');
-        return data.map(transformApiTask);
+        const mapped = data.map(transformApiTask);
+        const state = getState() as RootState;
+        const user = (state as any)?.auth?.user;
+        const userType = String(user?.userType || '').toUpperCase();
+        const isVendor = userType === 'VENDOR';
+        const scoped = isVendor
+          ? mapped.filter((t) => String(t.assigneeType || '').toUpperCase() === 'VENDOR' && t.assigneeId === user?.id)
+          : mapped;
+        return scoped.filter(t => !t.parentId);
       } else {
         const errMsg = error || message || 'Failed to fetch parent project tasks';
         toast.error(errMsg);
@@ -633,11 +687,16 @@ export const fetchSubtasksByParent = createAsyncThunk(
         : Array.isArray(data as any)
           ? (data as any)
           : [];
-
       const mapped = items.map(transformApiTask);
+      const user = (state as any)?.auth?.user;
+      const userType = String(user?.userType || '').toUpperCase();
+      const isVendor = userType === 'VENDOR';
+      const scoped = isVendor
+        ? mapped.filter((t) => String(t.assigneeType || '').toUpperCase() === 'VENDOR' && t.assigneeId === user?.id)
+        : mapped;
       inflightSubtaskFetches.delete(parentId);
       //toast.success(message || 'Subtasks fetched successfully');
-      return { parentId, subtasks: mapped } as { parentId: string; subtasks: Task[] };
+      return { parentId, subtasks: scoped } as { parentId: string; subtasks: Task[] };
     } catch (error: any) {
       inflightSubtaskFetches.delete(parentId);
       const errMsg = error?.message || 'Failed to fetch subtasks';

@@ -13,6 +13,7 @@ import {
   fetchDocumentDetails
 } from '@/redux/slices/documentsSlice';
 import { fetchProjects, selectAllProjects } from '@/redux/slices/projectsSlice';
+import { selectUser } from '@/redux/slices/authSlice';
 import { fetchParentTasksByProject, selectParentProjectTasks } from '@/redux/slices/tasksSlice';
 import {
   fetchFolders,
@@ -135,6 +136,13 @@ const FolderView: React.FC = () => {
   const documents = useAppSelector(selectAllDocuments);
   const projects = useAppSelector(selectAllProjects);
   const tasks = useAppSelector(selectParentProjectTasks);
+  const currentUser = useAppSelector(selectUser);
+  const isVendor = currentUser?.userType === 'VENDOR';
+  const visibleTasks = useMemo(() => {
+    return isVendor
+      ? (tasks || []).filter(t => t.assigneeType === 'VENDOR' && t.assigneeId === currentUser?.id)
+      : (tasks || []);
+  }, [tasks, currentUser?.id, isVendor]);
   const folders = useAppSelector(selectAllFolders);
   const folderTree = useAppSelector(selectFolderTree);
   const documentsLoading = useAppSelector((state) => state.documents.loading);
@@ -175,7 +183,7 @@ const FolderView: React.FC = () => {
   // Helper functions for getting names
   const getTaskName = (document) => {
     if (!document.taskId) return 'No Task';
-    const task = tasks.find(t => t.id === document.taskId);
+    const task = visibleTasks.find(t => t.id === document.taskId);
     return task ? task.title : 'Unknown Task';
   };
 
@@ -899,7 +907,7 @@ const FolderView: React.FC = () => {
             className="hidden sm:block rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[100px] max-w-[140px] flex-shrink-0"
           >
             <option value="All">All Tasks</option>
-            {tasks.map(task => (
+            {visibleTasks.map(task => (
               <option key={task.id} value={task.id}>
                 {task.title}
               </option>
@@ -928,7 +936,7 @@ const FolderView: React.FC = () => {
                   options: [
                     { value: 'All', label: 'All Tasks' },
                     { value: 'no-task', label: 'No Task Assigned' },
-                    ...tasks.map(task => ({ value: task.id, label: task.title }))
+                    ...visibleTasks.map(task => ({ value: task.id, label: task.title }))
                   ]
                 },
                 {

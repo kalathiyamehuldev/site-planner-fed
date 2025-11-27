@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
-import { GlassCard } from "@/components/ui/glass-card";
+// Removed unused GlassCard import
 import TaskTable from "@/components/TaskTable";
 import KanbanBoard from "@/components/kanban/KanbanBoard";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Plus, Search, Filter, Calendar, Clock, User, List, LayoutGrid } from "lucide-react";
 import solar from "@solar-icons/react";
 import ActionButton from "@/components/ui/ActionButton";
-import { isAfter, isBefore, addDays, startOfDay, endOfDay, isSameDay, isWithinInterval } from "date-fns";
+import { addDays, isSameDay, isWithinInterval } from "date-fns";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTasks,
@@ -62,6 +62,13 @@ const Tasks = () => {
     dispatch(fetchProjects());
   }, [dispatch]);
 
+  const isVendor = currentUser?.userType === 'VENDOR';
+  const visibleAllTasks = useMemo(() => {
+    return isVendor
+      ? (allTasks || []).filter(t => t.assigneeType === 'VENDOR' && t.assigneeId === currentUser?.id)
+      : (allTasks || []);
+  }, [allTasks, currentUser?.id, isVendor]);
+
   // Helper function to check if a task matches the current filter
   const taskMatchesFilter = (task: any) => {
     if (searchTerm) {
@@ -75,6 +82,9 @@ const Tasks = () => {
 
     switch (filter) {
       case "mine":
+        if (currentUser?.userType === 'VENDOR') {
+          return task.assigneeType === 'VENDOR' && task.assigneeId === currentUser?.id;
+        }
         return task.member?.id === currentUser?.id;
       case "high-priority":
         return task.priority === "HIGH" || task.priority === "URGENT";
@@ -100,9 +110,13 @@ const Tasks = () => {
 
   // Enhanced filtering that considers both parent tasks and subtasks
   const filteredTasks = useMemo(() => {
+    const isVendor = currentUser?.userType === 'VENDOR';
+    const vendorScoped = isVendor
+      ? (allTasks || []).filter(t => t.assigneeType === 'VENDOR' && t.assigneeId === currentUser?.id)
+      : (allTasks || []);
     const accessibleIds = new Set((projects || []).map(p => p.id));
-    const parentTasks = allTasks.filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
-    const subtasks = allTasks.filter(task => task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
+    const parentTasks = vendorScoped.filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
+    const subtasks = vendorScoped.filter(task => task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)));
     
     const result: any[] = [];
 
@@ -125,14 +139,18 @@ const Tasks = () => {
     });
 
     return result;
-  }, [allTasks, filter, searchTerm, currentUser?.id]);
+  }, [allTasks, filter, searchTerm, currentUser?.id, currentUser?.userType]);
 
   const kanbanTasks = useMemo(() => {
+    const isVendor = currentUser?.userType === 'VENDOR';
+    const vendorScoped = isVendor
+      ? (allTasks || []).filter(t => t.assigneeType === 'VENDOR' && t.assigneeId === currentUser?.id)
+      : (allTasks || []);
     const accessibleIds = new Set((projects || []).map(p => p.id));
-    return allTasks
+    return vendorScoped
       .filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)))
       .filter(taskMatchesFilter);
-  }, [allTasks, projects, filter, searchTerm, currentUser?.id]);
+  }, [allTasks, projects, filter, searchTerm, currentUser?.id, currentUser?.userType]);
 
   const FilterButton = ({
     label,
@@ -342,7 +360,7 @@ const Tasks = () => {
         {viewMode === "kanban" ? (
           <KanbanBoard
              tasks={kanbanTasks}
-             allTasks={allTasks}
+             allTasks={visibleAllTasks}
              onTaskClick={handleTaskClick}
              onEditTask={handleEditTask}
              onDeleteTask={handleDeleteTask}

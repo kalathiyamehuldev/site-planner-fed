@@ -27,6 +27,7 @@ export interface ApiTimeEntry {
   taskId?: string;
   projectId?: string;
   userId: string;
+  vendorId?: string;
   createdAt: string;
   updatedAt: string;
   task?: {
@@ -41,6 +42,12 @@ export interface ApiTimeEntry {
     id: string;
     firstName: string;
     lastName: string;
+  };
+  vendor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
   };
 }
 
@@ -136,6 +143,7 @@ export interface TimeEntry {
   taskId: string;
   projectId: string;
   userId: string;
+  vendorId?: string;
   description: string;
   date: string;
   startTime: string;
@@ -159,6 +167,12 @@ export interface TimeEntry {
     firstName: string;
     lastName: string;
   };
+  vendor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -171,6 +185,7 @@ const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
   taskId: apiTimeEntry.taskId || '',
   projectId: apiTimeEntry.projectId || '',
   userId: apiTimeEntry.userId,
+  vendorId: apiTimeEntry.vendorId,
   description: apiTimeEntry.description || '',
   date: apiTimeEntry.date,
   startTime: apiTimeEntry.startTime || '',
@@ -187,6 +202,7 @@ const transformApiTimeEntry = (apiTimeEntry: ApiTimeEntry): TimeEntry => ({
   task: apiTimeEntry.task,
   project: apiTimeEntry.project,
   user: apiTimeEntry.user,
+  vendor: apiTimeEntry.vendor,
   createdAt: apiTimeEntry.createdAt,
   updatedAt: apiTimeEntry.updatedAt,
 });

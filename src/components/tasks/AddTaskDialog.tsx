@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createTaskAsync, updateTaskAsync, selectTaskLoading, selectTaskError } from '@/redux/slices/tasksSlice';
-import {
-  ProjectMember,
-  selectAllProjects,
-  getProjectMembers,
-} from "@/redux/slices/projectsSlice";
+import { selectAllProjects, getProjectMembers } from "@/redux/slices/projectsSlice";
 import { CreateTaskData, UpdateTaskData } from "@/redux/slices/tasksSlice";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
