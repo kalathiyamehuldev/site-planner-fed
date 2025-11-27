@@ -627,7 +627,20 @@ export const downloadDocument = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error(`Download failed: ${response.statusText}`);
+        let errMsg = `Download failed (${response.status} ${response.statusText})`;
+        try {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const body = await response.json();
+            errMsg = (body?.message || body?.error || errMsg);
+          } else {
+            const text = await response.text();
+            if (text) errMsg = text;
+          }
+        } catch (_) {
+          // ignore parsing errors, use default errMsg
+        }
+        return rejectWithValue(errMsg);
       }
       
       // Get the blob and filename

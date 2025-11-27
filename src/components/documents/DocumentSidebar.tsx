@@ -1286,6 +1286,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     variant="secondary"
                     className="w-full mt-2 flex items-center justify-center gap-1"
                     onClick={() => setIsVersionUploadOpen(true)}
+                    disabled={!hasPermission(resource, 'update')}
                     leftIcon={<Plus className="h-3 w-3" />}
                     text='Add a new version'
                   >
@@ -1400,6 +1401,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                   size="sm"
                   onClick={() => onEdit && onEdit(document)}
                   className="flex items-center gap-2 justify-center"
+                  disabled={!hasPermission(resource, 'update')}
                 >
                   <Edit3 className="h-4 w-4" />
                   <span className="text-sm">Edit</span>
@@ -1409,6 +1411,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                   size="sm"
                   onClick={handleDeleteDocument}
                   className="flex items-center gap-2 justify-center text-red-600 border-red-200 hover:bg-red-50"
+                  disabled={!hasPermission(resource, 'delete')}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span className="text-sm">Delete</span>
@@ -1426,6 +1429,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     size="sm"
                     onClick={() => setIsEditingDescription(true)}
                     className="h-8 w-8 p-0"
+                    disabled={!hasPermission(resource, 'update')}
                   >
                     <Edit3 className="h-4 w-4" />
                   </Button>
@@ -1442,7 +1446,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     <ActionButton
                       variant="primary"
                       onClick={handleSaveDescription}
-                      disabled={isUpdating}
+                      disabled={!hasPermission(resource, 'update') || isUpdating}
                       className="h-8 px-3"
                       text={isUpdating ? "Saving..." : "Save"}
                     />
@@ -1476,7 +1480,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     variant="default"
                     size="sm"
                     onClick={handleSaveAccessibility}
-                    disabled={isUpdating}
+                    disabled={!hasPermission(resource, 'update') || isUpdating}
                     className="h-8 px-3"
                   >
                     {isUpdating ? (
@@ -1569,6 +1573,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                     size="sm"
                     onClick={() => setIsEditingTask(true)}
                     className="h-8 w-8 p-0"
+                    disabled={!hasPermission(resource, 'update')}
                   >
                     <Edit3 className="h-4 w-4" />
                   </Button>
@@ -1594,7 +1599,7 @@ const DocumentSidebar: React.FC<DocumentSidebarProps> = ({
                         handleSaveTaskAssociation();
                         setIsEditingTask(false);
                       }}
-                      disabled={isUpdating}
+                      disabled={!hasPermission(resource, 'update') || isUpdating}
                       className="h-8 px-3"
                     >
                       {isUpdating ? (

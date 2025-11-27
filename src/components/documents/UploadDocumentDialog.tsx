@@ -108,7 +108,12 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
     const documentConflict = useAppSelector(selectDocumentConflict);
     const currentUser = useAppSelector(selectUser);
     const projectId = propProjectId || folderProjectId || project?.id;
-    const isRestrictedUploader = !!currentUser && (currentUser as any).userType && ((currentUser as any).userType === 'CUSTOMER' || (currentUser as any).userType === 'VENDOR');
+    const isRestrictedUploader = (() => {
+      const u: any = currentUser || {};
+      const raw = (u.userType || u.type || u.accountType || (u.role && u.role.name) || '').toString();
+      const t = raw.toUpperCase();
+      return t === 'CUSTOMER' || t === 'VENDOR';
+    })();
 
     // Show project selection only if no project is pre-selected AND no folder is selected
     // When a folder is selected, the project ID should come from the folder's project
@@ -280,9 +285,16 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
         taskId: taskId === 'none' ? undefined : taskId,
         folderId: folderId || undefined,
         file,
-        accessType: isRestrictedUploader ? AccessType.EVERYONE : formData.accessType,
-        userIds: isRestrictedUploader ? undefined : (formData.accessType === 'SELECTED_USERS' ? formData.userIds : undefined),
-      };
+        ...(isRestrictedUploader
+          ? {}
+          : {
+              accessType: formData.accessType,
+              userIds:
+                formData.accessType === AccessType.SELECTED_USERS
+                  ? formData.userIds
+                  : undefined,
+            }),
+      } as any;
 
       console.log('Creating document with data:', documentData);
       const result = await dispatch(createDocument(documentData));
@@ -739,7 +751,7 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
                 
                 {mode === 'upload' && (
                   <>
-                    {!isRestrictedUploader && (
+                    {!isRestrictedUploader && hasPermission(resource, 'update') && (
                       <>
                         <div className="space-y-2">
                           <Label>Access Control</Label>
