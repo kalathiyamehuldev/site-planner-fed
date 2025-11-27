@@ -40,6 +40,8 @@ export interface ApiTask {
     id: string;
     title: string;
   };
+  assigneeType?: 'VENDOR' | 'USER';
+  assigneeId?: string;
 }
 
 export interface CreateTaskData {
@@ -95,6 +97,9 @@ export interface Task {
   };
   createdAt: string;
   updatedAt: string;
+  assigneeType?: 'VENDOR' | 'USER';
+  assigneeId?: string;
+  assignedUserIds?: string[];
 }
 
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
@@ -134,6 +139,8 @@ const transformApiTask = (apiTask: ApiTask): Task => ({
   parent: apiTask.parent ? { id: apiTask.parent.id, title: apiTask.parent.title } : undefined,
   createdAt: apiTask.createdAt,
   updatedAt: apiTask.updatedAt,
+  assigneeType: apiTask.assigneeType,
+  assigneeId: apiTask.assigneeId,
 });
 
 export const fetchAllTasksByCompany = createAsyncThunk(
@@ -351,6 +358,78 @@ export const updateTaskStatusAsync = createAsyncThunk(
       }
     } catch (error: any) {
       const errMsg = error?.message || 'Failed to update task status';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
+export const assignVendorToTaskAsync = createAsyncThunk(
+  'tasks/assignVendorToTask',
+  async (
+    { id, vendorId }: { id: string; vendorId: string },
+    { rejectWithValue, getState }
+  ) => {
+    try {
+      const response = await api.post(`/tasks/${id}/assign-vendor/${vendorId}`);
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to assign vendor';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
+      }
+      const state = getState() as RootState;
+      const vendors = (state as any)?.admin?.vendors?.items || [];
+      const vendor = vendors.find((v: any) => v.id === data?.assigneeId);
+      const updated: Partial<Task> = {
+        assigneeType: 'VENDOR',
+        assigneeId: data?.assigneeId,
+        assignee: vendor ? `${vendor.firstName} ${vendor.lastName}` : undefined,
+        member: undefined,
+      };
+      return { id, updated } as { id: string; updated: Partial<Task> };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to assign vendor';
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
+export const assignUsersToTaskAsync = createAsyncThunk(
+  'tasks/assignUsersToTask',
+  async (
+    { id, userIds }: { id: string; userIds: string[] },
+    { rejectWithValue, getState }
+  ) => {
+    try {
+      const response = await api.post(`/tasks/${id}/assign-users`, { userIds });
+      const { status, data, message, error } = response as unknown as ApiResponse<any>;
+      if (status === 'error') {
+        const errMsg = error || message || 'Failed to assign users';
+        toast.error(errMsg);
+        return rejectWithValue(errMsg);
+      }
+      const state = getState() as RootState;
+      const allTasks = (state as any)?.tasks?.tasks || [];
+      const selected = (state as any)?.tasks?.selectedTask || undefined;
+      const task = selected?.id === id ? selected : allTasks.find((t: any) => t.id === id);
+      const projectId = task?.project?.id;
+      const membersMap = ((state as any)?.projects?.projectMembers || {})[projectId || ''] || [];
+      const names = (data?.userIds || userIds || []).map((uid: string) => {
+        const m = membersMap.find((pm: any) => pm.user?.id === uid);
+        return m ? `${m.user.firstName} ${m.user.lastName}` : undefined;
+      }).filter(Boolean);
+      const updated: Partial<Task> = {
+        assigneeType: 'USER',
+        assigneeId: undefined,
+        assignedUserIds: data?.userIds || userIds,
+        assignee: names && names.length ? names.join(', ') : undefined,
+        member: undefined,
+      };
+      return { id, updated } as { id: string; updated: Partial<Task> };
+    } catch (error: any) {
+      const errMsg = error?.message || 'Failed to assign users';
       toast.error(errMsg);
       return rejectWithValue(errMsg);
     }
@@ -784,6 +863,44 @@ export const tasksSlice = createSlice({
         }
       })
       .addCase(updateTaskStatusAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(assignVendorToTaskAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(assignVendorToTaskAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const { id, updated } = action.payload as { id: string; updated: Partial<Task> };
+        const idx = state.tasks.findIndex((t) => t.id === id);
+        if (idx !== -1) {
+          state.tasks[idx] = { ...state.tasks[idx], ...updated } as Task;
+        }
+        if (state.selectedTask?.id === id) {
+          state.selectedTask = { ...state.selectedTask, ...updated } as Task;
+        }
+      })
+      .addCase(assignVendorToTaskAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(assignUsersToTaskAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(assignUsersToTaskAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const { id, updated } = action.payload as { id: string; updated: Partial<Task> };
+        const idx = state.tasks.findIndex((t) => t.id === id);
+        if (idx !== -1) {
+          state.tasks[idx] = { ...state.tasks[idx], ...updated } as Task;
+        }
+        if (state.selectedTask?.id === id) {
+          state.selectedTask = { ...state.selectedTask, ...updated } as Task;
+        }
+      })
+      .addCase(assignUsersToTaskAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

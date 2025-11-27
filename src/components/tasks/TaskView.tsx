@@ -51,6 +51,10 @@ import {
 import { selectUser } from "@/redux/slices/authSlice";
 import usePermission from "@/hooks/usePermission";
 import { useToast } from "@/hooks/use-toast";
+import { fetchVendors } from '@/redux/slices/adminSlice';
+import { assignVendorToTaskAsync, assignUsersToTaskAsync } from '@/redux/slices/tasksSlice';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const statusLabel: Record<string, string> = {
   TODO: "Not Started",
@@ -119,6 +123,8 @@ const TaskView: React.FC = () => {
 
   const subtasks = useAppSelector(selectSubtasksByParentId(id || ""));
   const subtasksLoading = useAppSelector(selectSubtasksLoading);
+  const vendors = useAppSelector((state) => (state as any)?.admin?.vendors?.items || []);
+  const vendorsLoading = useAppSelector((state) => (state as any)?.admin?.vendors?.loading || false);
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [selectedSubtask, setSelectedSubtask] = useState<any>(null);
@@ -150,6 +156,8 @@ const TaskView: React.FC = () => {
   const [editingPriority, setEditingPriority] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingHeaderStatus, setEditingHeaderStatus] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>('');
   // Resolve parent task title from Redux store (no extra fetch that would override selectedTask)
   const parentTitle = useAppSelector((state) =>
     task?.parentId ? state.tasks.tasks.find((t) => t.id === task.parentId)?.title : undefined
@@ -166,6 +174,10 @@ const TaskView: React.FC = () => {
     if (!id) return;
     dispatch(fetchTaskCommentsAsync(id));
   }, [id, dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchVendors());
+  }, [dispatch]);
 
   const threaded = useMemo(() => {
     const byParent: Record<string, any[]> = {};
@@ -402,7 +414,15 @@ const TaskView: React.FC = () => {
     }
   };
 
-  const assignedName = task?.assignee || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
+  const assignedName = useMemo(() => {
+    const vendorName = (task?.assigneeType === 'VENDOR' && task?.assigneeId)
+      ? (() => {
+          const v = vendors.find((vx: any) => vx.id === task.assigneeId);
+          return v ? `${v.firstName} ${v.lastName}` : undefined;
+        })()
+      : undefined;
+    return task?.assignee || vendorName || (task?.member ? `${task.member.firstName} ${task.member.lastName}` : undefined);
+  }, [task?.assignee, task?.assigneeType, task?.assigneeId, task?.member, vendors]);
   const canAddSubtask = !task?.parentId; // if current task is a subtask, prohibit adding subtasks
 
   // Priority border colors for mobile cards
@@ -1773,30 +1793,118 @@ const TaskView: React.FC = () => {
                 )}
                 <InfoRow label="Assigned">
                   {editingAssignee ? (
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                        disabled={membersLoading}
-                        defaultValue={task?.member?.id || 'unassigned'}
-                        onBlur={() => setEditingAssignee(false)}
-                        onChange={(e) => {
-                          if (!task) return;
-                          const val = e.currentTarget.value;
-                          const memberId = val === 'unassigned' ? undefined : val;
-                          const currentId = task.member?.id;
-                          if (memberId !== currentId) {
-                            dispatch(updateTaskAsync({ id: task.id, taskData: { memberId } }));
-                          }
-                          setEditingAssignee(false);
-                        }}
-                      >
-                        <option value="unassigned">Unassigned</option>
-                        {members.map((m: any) => (
-                          <option key={m.user.id} value={m.user.id}>
-                            {m.user.firstName} {m.user.lastName}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="space-y-3">
+                      <Label>Assignee Type</Label>
+                      <RadioGroup className="grid grid-cols-2 gap-4" value={selectedVendorId ? 'VENDOR' : (selectedMemberIds.length ? 'USER' : undefined)} onValueChange={(val) => {
+                        const next = val as 'USER' | 'VENDOR';
+                        if (next === 'USER') { setSelectedVendorId(''); }
+                        if (next === 'VENDOR') { setSelectedMemberIds([]); }
+                      }}>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="USER" />
+                          <span className="text-sm">Users</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="VENDOR" />
+                          <span className="text-sm">Vendor</span>
+                        </div>
+                      </RadioGroup>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm font-medium mb-1">Select Users</div>
+                          <Select
+                            value={selectedMemberIds.length ? selectedMemberIds[selectedMemberIds.length - 1] : ''}
+                            onValueChange={(value) => {
+                              if (!value) return;
+                              setSelectedVendorId('');
+                              setSelectedMemberIds((prev) => {
+                                const exists = prev.includes(value);
+                                return exists ? prev.filter((id) => id !== value) : Array.from(new Set([...prev, value]));
+                              });
+                            }}
+                            disabled={membersLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={membersLoading ? 'Loading members...' : 'Select users'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(members || []).map((m: any) => (
+                                <SelectItem key={m.user.id} value={m.user.id}>
+                                  {m.user.firstName} {m.user.lastName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedMemberIds.length > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Selected: {
+                                selectedMemberIds
+                                  .map((uid) => {
+                                    const m = (members || []).find((mm: any) => mm.user.id === uid);
+                                    return m ? `${m.user.firstName} ${m.user.lastName}` : null;
+                                  })
+                                  .filter(Boolean)
+                                  .join(', ')
+                              }
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium mb-1">Select Vendor</div>
+                          {(() => {
+                            const pid = task?.project?.id;
+                            const projectVendors = (vendors || []).filter((v: any) => Array.isArray(v.projects) && v.projects.some((vp: any) => vp?.project?.id === pid));
+                            return (
+                              <Select
+                                value={selectedVendorId || ''}
+                                onValueChange={(value) => {
+                                  setSelectedMemberIds([]);
+                                  setSelectedVendorId(value);
+                                }}
+                                disabled={vendorsLoading}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={vendorsLoading ? 'Loading vendors...' : 'Select vendor'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {projectVendors.map((v: any) => (
+                                    <SelectItem key={v.id} value={v.id}>
+                                      {v.firstName} {v.lastName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <ActionButton
+                          variant="secondary"
+                          onClick={() => { setEditingAssignee(false); setSelectedMemberIds([]); setSelectedVendorId(''); }}
+                          text="Cancel"
+                        />
+                        <ActionButton
+                          variant="primary"
+                          onClick={async () => {
+                            if (!task) return;
+                            if (selectedVendorId) {
+                              await dispatch(assignVendorToTaskAsync({ id: task.id, vendorId: selectedVendorId })).unwrap();
+                              setEditingAssignee(false);
+                              return;
+                            }
+                            if (selectedMemberIds.length) {
+                              await dispatch(assignUsersToTaskAsync({ id: task.id, userIds: selectedMemberIds })).unwrap();
+                              setEditingAssignee(false);
+                              return;
+                            }
+                            setEditingAssignee(false);
+                          }}
+                          text="Save"
+                        />
+                      </div>
                     </div>
                   ) : (
                     <button className="flex items-center gap-2" onClick={() => hasPermission('tasks', 'update') && setEditingAssignee(true)}>

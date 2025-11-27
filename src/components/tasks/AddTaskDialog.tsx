@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import * as yup from 'yup';
+import { fetchVendors } from '@/redux/slices/adminSlice';
+import { assignVendorToTaskAsync, assignUsersToTaskAsync } from '@/redux/slices/tasksSlice';
 
 interface AddTaskDialogProps {
   open: boolean;
@@ -130,6 +133,11 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
   // Local state for members when fetching inside this component
   const [localMembers, setLocalMembers] = useState<any[]>([]);
   const [localMembersLoading, setLocalMembersLoading] = useState(false);
+  const vendors = useAppSelector((state) => (state as any)?.admin?.vendors?.items || []);
+  const vendorsLoading = useAppSelector((state) => (state as any)?.admin?.vendors?.loading || false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>('');
+  const [assigneeType, setAssigneeType] = useState<'USER' | 'VENDOR' | 'NONE'>('NONE');
   
   // Prefer members passed from parent; fall back to locally fetched ones
   const currentMembers = (projectMembers && projectMembers.length > 0) ? projectMembers : localMembers;
@@ -151,6 +159,23 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           memberId: task.member?.id || "unassigned",
           projectId: task.project?.id || projectId || "",
         });
+        if (task.assigneeType === 'VENDOR' && task.assigneeId) {
+          setAssigneeType('VENDOR');
+          setSelectedVendorId(task.assigneeId);
+          setSelectedMemberIds([]);
+        } else if (Array.isArray(task.assignedUserIds) && task.assignedUserIds.length) {
+          setAssigneeType('USER');
+          setSelectedMemberIds(task.assignedUserIds);
+          setSelectedVendorId('');
+        } else if (task.member?.id) {
+          setAssigneeType('USER');
+          setSelectedMemberIds([task.member.id]);
+          setSelectedVendorId('');
+        } else {
+          setAssigneeType('NONE');
+          setSelectedMemberIds([]);
+          setSelectedVendorId('');
+        }
       } else {
         setFormData({
           title: "",
@@ -162,6 +187,9 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           memberId: "unassigned",
           projectId: projectId || "",
         });
+        setAssigneeType('NONE');
+        setSelectedMemberIds([]);
+        setSelectedVendorId('');
       }
       setFormErrors({});
     }
@@ -187,6 +215,9 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
       .finally(() => {
         setLocalMembersLoading(false);
       });
+    if (!vendors || vendors.length === 0) {
+      dispatch(fetchVendors());
+    }
   }, [open, formData.projectId, projectId, task, projectMembers, dispatch]);
 
   // Handle form field changes
@@ -220,6 +251,7 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
         estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
         dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined
       }, { abortEarly: false });
+      // Assignee type constraints enforced via radio selection and dropdowns
       setFormErrors({});
       return true;
     } catch (error) {
@@ -260,16 +292,18 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           estimatedHours: formData.estimatedHours
             ? Number(formData.estimatedHours)
             : undefined,
-          memberId:
-            formData.memberId && formData.memberId !== "unassigned"
-              ? formData.memberId
-              : undefined,
+          memberId: undefined,
         };
 
         const result = await dispatch(
           updateTaskAsync({ id: task.id, taskData: updateData })
         );
         if (updateTaskAsync.fulfilled.match(result)) {
+          if (assigneeType === 'USER' && selectedMemberIds.length) {
+            await dispatch(assignUsersToTaskAsync({ id: task.id, userIds: selectedMemberIds })).unwrap();
+          } else if (assigneeType === 'VENDOR' && selectedVendorId) {
+            await dispatch(assignVendorToTaskAsync({ id: task.id, vendorId: selectedVendorId })).unwrap();
+          }
           if (onSuccess) {
             onSuccess();
           } else {
@@ -290,16 +324,19 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           estimatedHours: formData.estimatedHours
             ? Number(formData.estimatedHours)
             : undefined,
-          memberId:
-            formData.memberId && formData.memberId !== "unassigned"
-              ? formData.memberId
-              : undefined,
+          memberId: undefined,
           projectId: formData.projectId || projectId,
           parentId: parentId, // pass parent id if provided
         };
 
         const result = await dispatch(createTaskAsync(taskData));
         if (createTaskAsync.fulfilled.match(result)) {
+          const createdTask = result.payload as any;
+          if (assigneeType === 'USER' && selectedMemberIds.length) {
+            await dispatch(assignUsersToTaskAsync({ id: createdTask.id, userIds: selectedMemberIds })).unwrap();
+          } else if (assigneeType === 'VENDOR' && selectedVendorId) {
+            await dispatch(assignVendorToTaskAsync({ id: createdTask.id, vendorId: selectedVendorId })).unwrap();
+          }
           if (onSuccess) {
             onSuccess();
           } else {
@@ -474,35 +511,103 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               )}
             </div>
 
-            {/* Assigned Member */}
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="memberId">Assign to Member</Label>
-              <Select
-                value={formData.memberId}
-                onValueChange={(value) => handleInputChange("memberId", value)}
-                disabled={currentMembersLoading}
-              >
-                <SelectTrigger
-                  className={formErrors.memberId ? "border-red-500" : ""}
-                >
-                  <SelectValue
-                    placeholder={
-                      currentMembersLoading
-                        ? "Loading members..."
-                        : "Select a team member"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {currentMembers.map((member) => (
-                    <SelectItem key={member.user.id} value={member.user.id}>
-                      {member.user.firstName} {member.user.lastName} (
-                      {member.user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="md:col-span-2 space-y-3">
+              <Label>Assignee Type</Label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <RadioGroup value={assigneeType === 'NONE' ? undefined : assigneeType} onValueChange={(val) => {
+                    const next = (val as 'USER' | 'VENDOR');
+                    setAssigneeType(next);
+                    if (next === 'USER') { setSelectedVendorId(''); }
+                    if (next === 'VENDOR') { setSelectedMemberIds([]); }
+                  }} className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="USER" />
+                      <span className="text-sm">Users</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="VENDOR" />
+                      <span className="text-sm">Vendor</span>
+                    </div>
+                  </RadioGroup>
+                </label>
+              </div>
+
+              {assigneeType === 'USER' && (
+                <div className="space-y-2">
+                  <Label>Select Users</Label>
+                  <Select
+                    value={selectedMemberIds.length > 0 ? selectedMemberIds[selectedMemberIds.length - 1] : ''}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      setAssigneeType('USER');
+                      setSelectedVendorId('');
+                      setSelectedMemberIds((prev) => {
+                        const exists = prev.includes(value);
+                        return exists ? prev.filter((id) => id !== value) : Array.from(new Set([...prev, value]));
+                      });
+                    }}
+                    disabled={currentMembersLoading}
+                  >
+                    <SelectTrigger className={formErrors.memberId ? 'border-red-500' : ''}>
+                      <SelectValue placeholder={currentMembersLoading ? 'Loading members...' : 'Select users'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(currentMembers || []).map((member) => (
+                        <SelectItem key={member.user.id} value={member.user.id}>
+                          {member.user.firstName} {member.user.lastName} ({member.user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedMemberIds.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Selected: {
+                        selectedMemberIds
+                          .map((uid) => {
+                            const m = (currentMembers || []).find((mem: any) => mem.user.id === uid);
+                            return m ? `${m.user.firstName} ${m.user.lastName}` : null;
+                          })
+                          .filter(Boolean)
+                          .join(', ')
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {assigneeType === 'VENDOR' && (
+                <div className="space-y-2">
+                  <Label>Select Vendor</Label>
+                  {(() => {
+                    const pid = formData.projectId || projectId || task?.project?.id || '';
+                    const projectVendors = (vendors || []).filter((v: any) => Array.isArray(v.projects) && v.projects.some((vp: any) => vp?.project?.id === pid));
+                    return (
+                      <Select
+                        value={selectedVendorId || ''}
+                        onValueChange={(value) => {
+                          setAssigneeType('VENDOR');
+                          setSelectedMemberIds([]);
+                          setSelectedVendorId(value);
+                        }}
+                        disabled={vendorsLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={vendorsLoading ? 'Loading vendors...' : 'Select vendor'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projectVendors.map((v: any) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.firstName} {v.lastName} ({v.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
+                </div>
+              )}
+
               {formErrors.memberId && (
                 <p className="text-sm text-red-500">{formErrors.memberId}</p>
               )}
