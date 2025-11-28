@@ -102,9 +102,9 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-full hover:bg-gray-100"
+                className="h-10 w-10 rounded-full hover:bg-gray-100"
               >
-                <solar.Ui.AddSquare weight="LineDuotone" color="#1C274C" className="h-6 w-6 text-gray-700" />
+                <img src="/icons/AddSquare.svg" alt="Quick Add" className="w-6 h-6 md:w-7 md:h-7" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -126,9 +126,9 @@ const DashboardHeader = ({ title = "Dashboard" }: DashboardHeaderProps) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-full hover:bg-gray-100 relative"
+                className="h-10 w-10 rounded-full hover:bg-gray-100 relative"
               >
-                <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-6 h-6" />
+                <img src="/icons/Bell.svg" alt="Notifications" className="w-6 h-6 md:w-7 md:h-7" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
                     {unreadCount > 9 ? "9+" : unreadCount}

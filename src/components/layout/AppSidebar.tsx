@@ -95,10 +95,10 @@ const MobileHeader: React.FC<{
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0 relative"
+          className="h-10 w-10 text-gray-600 hover:bg-gray-100 flex-shrink-0 relative"
           onClick={onNotificationClick}
         >
-          <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-7 h-7" />
+          <img src="/icons/Bell.svg" alt="Notifications" className="w-6 h-6 md:w-7 md:h-7" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -108,10 +108,10 @@ const MobileHeader: React.FC<{
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0"
+          className="h-10 w-10 text-gray-600 hover:bg-gray-100 flex-shrink-0"
           onClick={onQuickAddClick}
         >
-          <solar.Ui.AddSquare weight="LineDuotone" color="#1C274C" className="h-7 w-7 text-gray-700" />
+          <img src="/icons/AddSquare.svg" alt="Quick Add" className="w-6 h-6 md:w-7 md:h-7" />
         </Button>
       </div>
     </div>

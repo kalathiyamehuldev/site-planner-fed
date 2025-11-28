@@ -90,53 +90,53 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: 'Poppins', sans-serif !important;
-  letter-spacing: 0 !important;
-  line-height: 120% !important;
-  font-style: normal !important;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0;
+  line-height: 120%;
+  font-style: normal;
   /* Reset UA logical margins robustly */
-  margin-block-start: 0 !important;
-  margin-inline-start: 0 !important;
-  margin-inline-end: 0 !important;
-  color: rgb(17 24 39 / 1) !important; /* similar to text-gray-900 */
+  margin-block-start: 0;
+  margin-inline-start: 0;
+  margin-inline-end: 0;
+  color: rgb(17 24 39 / 1); /* allow utility classes to override */
 }
 
-/* Mobile First Typography */
-h1 { font-weight: 600 !important; font-size: 22px !important; }
-h2 { font-weight: 600 !important; font-size: 20px !important; }
-h3 { font-weight: 500 !important; font-size: 15px !important; }
-h4 { font-weight: 400 !important; font-size: 14px !important; }
-h5 { font-weight: 400 !important; font-size: 12px !important; line-height: 18px !important; letter-spacing: 0 !important; }
-h6 { font-weight: 600 !important; font-size: 9px !important; letter-spacing: 0 !important; }
+/* Mobile First Typography (utilities can override) */
+h1 { font-weight: 600; font-size: 22px; }
+h2 { font-weight: 600; font-size: 20px; }
+h3 { font-weight: 500; font-size: 15px; }
+h4 { font-weight: 400; font-size: 14px; }
+h5 { font-weight: 400; font-size: 12px; line-height: 18px; letter-spacing: 0; }
+h6 { font-weight: 600; font-size: 9px; letter-spacing: 0; }
 
 p {
-  font-family: 'Manrope', sans-serif !important;
-  font-weight: 400 !important;
-  font-size: 11px !important;
-  line-height: 15px !important;
-  letter-spacing: 0 !important;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400 ;
+  font-size: 11px ;
+  line-height: 15px ;
+  letter-spacing: 0 ;
 }
 
 /* Responsive Typography - Tablet */
 @media (min-width: 768px) and (max-width: 1023px) {
-  h1 { font-weight: 600 !important; font-size: 24px !important; }
-  h2 { font-weight: 600 !important; font-size: 22px !important; }
-  h3 { font-weight: 500 !important; font-size: 16px !important; }
-  h4 { font-weight: 400 !important; font-size: 15px !important; }
-  h5 { font-weight: 400 !important; font-size: 13px !important; line-height: 19px !important; }
-  h6 { font-weight: 600 !important; font-size: 10px !important; }
-  p { font-weight: 400 !important; font-size: 12px !important; line-height: 16px !important; }
+  h1 { font-weight: 600; font-size: 24px; }
+  h2 { font-weight: 600; font-size: 22px; }
+  h3 { font-weight: 500; font-size: 16px; }
+  h4 { font-weight: 400; font-size: 15px; }
+  h5 { font-weight: 400; font-size: 13px; line-height: 19px; }
+  h6 { font-weight: 600; font-size: 10px; }
+  p { font-weight: 400; font-size: 12px; line-height: 16px; }
 }
 
 /* Responsive Typography - Desktop */
 @media (min-width: 1024px) {
-  h1 { font-weight: 600 !important; font-size: 28px !important; }
-  h2 { font-weight: 600 !important; font-size: 24px !important; }
-  h3 { font-weight: 500 !important; font-size: 18px !important; }
-  h4 { font-weight: 400 !important; font-size: 16px !important; }
-  h5 { font-weight: 400 !important; font-size: 14px !important; line-height: 20px !important; }
-  h6 { font-weight: 600 !important; font-size: 10px !important; }
-  p { font-weight: 400 !important; font-size: 12px !important; line-height: 16px !important; }
+  h1 { font-weight: 600; font-size: 28px; }
+  h2 { font-weight: 600; font-size: 24px; }
+  h3 { font-weight: 500; font-size: 18px; }
+  h4 { font-weight: 400; font-size: 16px; }
+  h5 { font-weight: 400; font-size: 14px; line-height: 20px; }
+  h6 { font-weight: 600; font-size: 10px; }
+  p { font-weight: 400; font-size: 12px; line-height: 16px; }
 }
 
 /* Collective class for common typography properties */

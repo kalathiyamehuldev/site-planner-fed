@@ -162,11 +162,11 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-full hover:bg-gray-100 relative"
+                className="h-10 w-10 rounded-full hover:bg-gray-100 relative"
               >
-                <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-6 h-6" />
+                <img src="/icons/Bell.svg" alt="Notifications" className="w-6 h-6 md:w-7 md:h-7" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-2  right-1.5 bg-red-500 text-white font-light text-[9px] rounded-full w-2.5 h-2.5 flex items-center justify-center">
+                  <span className="absolute top-2  right-1.5 bg-red-500 text-white font-light text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center">
                     {unreadCount}
                   </span>
                 )}
@@ -248,25 +248,15 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                       >
                         <div className="flex items-start gap-3">
                           <div className="mt-1 bg-gray-200 w-10 h-10 flex items-center justify-center rounded-full">
-                            <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-6 h-6" />
+                            <img src="/icons/Bell.svg" alt="Notification" className="w-5 h-5 md:w-6 md:h-6" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <p className="text-sm font-semibold text-gray-900">
                                 {notification.title}
                               </p>
-                              {!notification.read && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                                  New
-                                </span>
-                              )}
-                              {notification.category && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-                                  {notification.category}
-                                </span>
-                              )}
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="font-medium text-gray-600 mt-1">
                               {notification.message}
                             </p>
                             
@@ -275,14 +265,15 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                               <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                                 {notification.project && (
                                   <span className="flex items-center gap-1">
-                                    📁 {notification.project.name}
+                                    <solar.Folders.Folder2 className="h-4 w-4" />
+                                    {notification.project.name}
                                   </span>
                                 )}
-                                {notification.task && (
+                                {/* {notification.task && (
                                   <span className="flex items-center gap-1">
                                     📋 {notification.task.title}
                                   </span>
-                                )}
+                                )} */}
                               </div>
                             )}
                             
@@ -290,7 +281,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                               {getTimeAgo(notification.createdAt)}
                             </p>
                           </div>
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -305,9 +296,9 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                               }}
                             >
                               {notification.read ? (
-                                <span className="text-xs">↩</span>
+                                <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">↩</span>
                               ) : (
-                                <span className="text-xs">✓</span>
+                                <span className="w-2 h-2 rounded-full bg-red-500 self-start mt-1 flex-shrink-0" />
                               )}
                             </Button>
                           </div>
@@ -324,13 +315,13 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
           {canShowPlus && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full hover:bg-gray-100"
-                >
-                  <solar.Ui.AddSquare weight="LineDuotone" color="#1C274C" className="h-6 w-6 text-gray-700" />
-                </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full hover:bg-gray-100"
+              >
+                  <img src="/icons/AddSquare.svg" alt="Quick Add" className="w-6 h-6 md:w-7 md:h-7" />
+              </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 {canCreateTask && (
@@ -464,16 +455,6 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                           <p className="text-sm font-medium text-gray-900">
                             {notification.title}
                           </p>
-                          {!notification.read && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                              New
-                            </span>
-                          )}
-                          {notification.category && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-                              {notification.category}
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
                           {notification.message}
@@ -499,7 +480,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                           {getTimeAgo(notification.createdAt)}
                         </p>
                       </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -514,9 +495,9 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                           }}
                         >
                           {notification.read ? (
-                            <span className="text-xs">↩</span>
+                            <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">↩</span>
                           ) : (
-                            <span className="text-xs">✓</span>
+                            <span className="w-2 h-2 rounded-full bg-red-500 self-start mt-1 flex-shrink-0" />
                           )}
                         </Button>
                       </div>

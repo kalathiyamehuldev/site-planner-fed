@@ -76,7 +76,7 @@ export const fetchNotifications = createAsyncThunk(
         notifications: data.items || [],
         total: data.total || 0,
         page: data.page || 1,
-        limit: data.limit || 10,
+        limit: data.limit || 100,
         totalPages: data.totalPages || 1
       };
     } catch (error: any) {

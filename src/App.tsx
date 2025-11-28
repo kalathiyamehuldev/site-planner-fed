@@ -38,6 +38,7 @@ import RolesPage from "./pages/Roles";
 import CreateRolePage from "./components/roles/CreateRole";
 import EditRolePage from "./components/roles/EditRole";
 import Profile from "./pages/Profile";
+import NotificationPreferences from "./components/settings/NotificationPreferences";
 import Photos from "./pages/PhotoGallery";
 import AlbumPhotos from "./pages/AlbumPhotos";
 import AlbumView from "./components/photos/VisitView";
@@ -129,6 +130,7 @@ const App = () => (
                           <Route path="/photos/album/:visitId" element={<AlbumView />} />
                           <Route path="/photos/viewer/:photoId" element={<PhotoViewer />} />
                           <Route path="/profile" element={<Profile />} />
+                          <Route path="/settings" element={<NotificationPreferences />} />
                           <Route path="/admin" element={<Admin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
