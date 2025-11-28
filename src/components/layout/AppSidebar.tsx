@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu, User, ChevronDown, ChevronRight, Plus, Bell } from "lucide-react";
+import { LogOut, Menu, User, ChevronDown, ChevronRight } from "lucide-react";
 import { logout, selectUser } from "@/redux/slices/authSlice";
 import { 
   fetchNotifications,
@@ -75,40 +75,43 @@ const MobileHeader: React.FC<{
   
   return (
     <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-4 py-3 h-16 mobile-header-fixed">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0"
-        onClick={onOpen}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-      
-      <Link to="/" className="flex items-center gap-2">
-        <img src="/logo/logo.svg" alt="ProjectIQ" className="h-7 w-auto" />
-      </Link>
-      
-      <div className="flex items-center gap-2">
+      {/* Left group: menu + logo */}
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0"
-          onClick={onQuickAddClick}
+          onClick={onOpen}
         >
-          <Plus className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
         </Button>
+        <Link to="/" className="flex items-center">
+          <img src="/logo/logo.svg" alt="ProjectIQ" className="h-7 w-auto" />
+        </Link>
+      </div>
+
+      {/* Right group: bell + add square */}
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0 relative"
           onClick={onNotificationClick}
         >
-          <Bell className="h-5 w-5" />
+          <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-7 h-7" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-600 hover:bg-gray-100 flex-shrink-0"
+          onClick={onQuickAddClick}
+        >
+          <solar.Ui.AddSquare weight="LineDuotone" color="#1C274C" className="h-7 w-7 text-gray-700" />
         </Button>
       </div>
     </div>

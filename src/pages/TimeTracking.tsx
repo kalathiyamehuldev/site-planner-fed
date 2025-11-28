@@ -8,21 +8,19 @@ import ActionButton from "@/components/ui/ActionButton";
 import { MotionButton } from "@/components/ui/motion-button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import solar from "@solar-icons/react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Clock,
   Calendar,
   Plus,
-  Play,
-  Pause,
   Filter,
-  FileText,
-  Download,
   RefreshCw,
   ChevronDown,
   Hourglass,
   Trash2,
   Pencil,
-  ArrowUpDown,
 } from "lucide-react";
 import { RiArrowUpDownLine } from "@remixicon/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -176,6 +174,7 @@ const TimeTracking = () => {
     endTimeInput: "17:00",
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<
     Partial<UpdateTimeEntryData & { startTimeInput?: string; endTimeInput?: string; taskId?: string; projectId?: string }>
@@ -318,15 +317,15 @@ const TimeTracking = () => {
 
   // Helper function to format duration from decimal hours to readable format
   const formatDuration = (durationInHours: number) => {
-    if (!durationInHours || durationInHours === 0) return "0 minutes";
+    if (!durationInHours || durationInHours === 0) return "0 mins";
     const hours = Math.floor(durationInHours);
     const minutes = Math.round((durationInHours - hours) * 60);
     if (hours === 0) {
-      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+      return `${minutes} min${minutes !== 1 ? 's' : ''}`;
     } else if (minutes === 0) {
-      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      return `${hours} hr${hours !== 1 ? 's' : ''}`;
     } else {
-      return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+      return `${hours} hr${hours !== 1 ? 's' : ''} ${minutes} min${minutes !== 1 ? 's' : ''}`;
     }
   };
 
@@ -343,6 +342,10 @@ const TimeTracking = () => {
         return true;
     }
   });
+
+  const trackedProjectsCount = new Set(
+    timeEntries.map((e) => e.project?.id).filter(Boolean)
+  ).size;
   
   // Apply sorting
   if (sortConfig) {
@@ -396,6 +399,26 @@ const TimeTracking = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const getAvatarData = (name?: string) => {
+    const safeName = (name || '').trim();
+    const words = safeName.split(' ').filter(Boolean);
+    const initials = words.length >= 2
+      ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+      : (safeName.substring(0, 2).toUpperCase() || '?');
+    const colors = [
+      '#1B78F9', '#00C2FF', '#3DD598', '#FFB547', '#FF6B6B',
+      '#A970FF', '#FF82D2', '#29C499', '#E89F3D', '#2F95D8'
+    ];
+    const colorIndex = safeName
+      ? safeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length
+      : 0;
+    return {
+      initials,
+      color: colors[colorIndex],
+      bgColor: `${colors[colorIndex]}1A`
+    };
   };
 
 
@@ -822,7 +845,7 @@ const TimeTracking = () => {
           title="Time Tracking" 
           subtitle="Track and manage your working hours"
         >
-          <div className="flex gap-3">
+          <div className="hidden md:flex gap-3">
             {/* <ActionButton
               variant="secondary"
               motion="subtle"
@@ -842,115 +865,131 @@ const TimeTracking = () => {
         </PageHeader>
 
         {/* Active Timer Card */}
-        <GlassCard className="p-6 animate-scale-in">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm text-muted-foreground mb-1">
-                CURRENTLY TRACKING
-              </h3>
+        <GlassCard className="p-3 md:p-6 animate-scale-in">
+          <div className="self-stretch flex md:items-center justify-between gap-3">
+            <div className="flex-1 inline-flex flex-col justify-start items-start gap-1.5">
+              <h5 className="uppercase text-gray-600">CURRENTLY TRACKING</h5>
               {runningTimeEntry ? (
                 <>
-                  <div className="text-xl font-medium mb-1">
-                    {runningTimeEntry.task?.title || runningTimeEntry.description || "No description"}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {runningTimeEntry.project?.name || "No project/task"}
-                  </div>
+                  <h2 className="text-gray-800 font-semibold">
+                    {runningTimeEntry.task?.title || runningTimeEntry.description || "No active Time"}
+                  </h2>
+                  <h5 className="text-gray-600">
+                    {runningTimeEntry.project?.name || "Start Tracking time"}
+                  </h5>
                 </>
               ) : (
                 <>
-                  <div className="text-xl font-medium mb-1">
-                    No active timer
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Start tracking time
-                  </div>
+                  <h2 className="text-gray-800 font-semibold">No active Time</h2>
+                  <h5 className="text-gray-600">Start Tracking time</h5>
                 </>
               )}
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-3xl font-light tabular-nums">
-                {isTimerRunning
-                  ? formatElapsedTime()
-                  : "00:00:00"}
-              </div>
-
+            <div className="inline-flex flex-col justify-between items-end gap-2">
+              <h2 className="text-right text-gray-800 leading-8">
+                {isTimerRunning ? formatElapsedTime().slice(0,5) : "00:00"}
+              </h2>
               {hasPermission('time_tracking', 'create') && (
-                <MotionButton
-                  variant={isTimerRunning ? "outline" : "default"}
-                  size="icon"
-                  motion="subtle"
+                <Button
                   onClick={isTimerRunning ? handleStopTimerButton : handleStartTimerModal}
+                  className="px-3 gap-1.5 py-1.5 bg-[#1b78f9] text-white rounded-lg h-auto h5 font-semibold"
                 >
-                  {isTimerRunning ? <Pause size={18} /> : <Play size={18} />}
-                </MotionButton>
+                  <solar.Video.Play weight="Bold" size={14} className="mr-1.5" />
+                  Start Timer
+                </Button>
               )}
             </div>
           </div>
         </GlassCard>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in animation-delay-[0.1s]">
-          <GlassCard className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
-                <Clock size={16} className="text-primary sm:size-5" />
+        {/* Stat cards matching Dashboard style */}
+        {(() => {
+          const StatCard = ({
+            icon: Icon,
+            label,
+            value,
+            className,
+            iconBgColor = "#00c2ff",
+          }: {
+            icon: React.ElementType;
+            label: string;
+            value: string;
+            className?: string;
+            iconBgColor?: string;
+          }) => (
+            <GlassCard
+              variant="clean"
+              className={cn(
+                "p-2.5 sm:p-3 bg-white rounded-lg flex items-start gap-2 overflow-hidden w-full",
+                className
+              )}
+            >
+              <div
+                className="p-1.5 sm:p-2 rounded-sm flex items-center gap-2 flex-shrink-0"
+                style={{ backgroundColor: `${iconBgColor}1A` }}
+              >
+                  <Icon size={24} className="sm:w-full sm:h-full" style={{ color: iconBgColor }} />
               </div>
-              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
-                Total Hours
-              </h3>
-            </div>
-            <p className="text-2xl sm:text-3xl font-light">{formatDuration(totalHours)}</p>
-            <div className="mt-2 text-xs sm:text-sm">
-              <span className="text-green-600 font-medium">↑ 12%</span> from
-              last {selectedTimeRange}
-            </div>
-          </GlassCard>
+              <div className="flex-1 flex flex-col justify-center items-start gap-1 sm:gap-2 min-w-0">
+                <div className="w-full flex flex-col justify-start items-start">
+                  <h5 className="w-full text-right text-gray-600 font-normal truncate">{label}</h5>
+                  <h3 className="w-full text-right text-gray-800 font-semibold truncate">{value}</h3>
+                </div>
+              </div>
+            </GlassCard>
+          );
 
-          <GlassCard className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
-                <Hourglass size={16} className="text-primary sm:size-5" />
-              </div>
-              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
-                Billable Hours
-              </h3>
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+              <StatCard
+                icon={solar.Time.ClockCircle}
+                label="Total Hours"
+                value={formatDuration(totalHours)}
+                className="animation-delay-[0.1s]"
+                iconBgColor="#00c2ff"
+              />
+              <StatCard
+                icon={solar.Money.Bill}
+                label="Billable Hours"
+                value={formatDuration(billableHours)}
+                className="animation-delay-[0.2s]"
+                iconBgColor="#ffb547"
+              />
+              <StatCard
+                icon={solar.Tools.Layers}
+                label="Tracked Projects"
+                value={trackedProjectsCount.toString()}
+                className="animation-delay-[0.3s]"
+                iconBgColor="#29c499"
+              />
             </div>
-            <p className="text-2xl sm:text-3xl font-light">{formatDuration(billableHours)}</p>
-            <div className="mt-2 text-xs sm:text-sm">
-              <span className="text-green-600 font-medium">↑ 8%</span> from last{" "}
-              {selectedTimeRange}
-            </div>
-          </GlassCard>
-
-          <GlassCard className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary/10">
-                <FileText size={16} className="text-primary sm:size-5" />
-              </div>
-              <h3 className="text-muted-foreground font-medium text-xs sm:text-sm">
-                Tracked Projects
-              </h3>
-            </div>
-            <p className="text-2xl sm:text-3xl font-light">3</p>
-            <div className="mt-2 text-xs sm:text-sm">
-              <span className="text-green-600 font-medium">1 new</span> this{" "}
-              {selectedTimeRange}
-            </div>
-          </GlassCard>
-        </div>
+          );
+        })()}
 
         {/* Time Entries Table */}
         <div className="animate-fade-in animation-delay-[0.2s]">
           <Tabs defaultValue="entries" className="w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-              <TabsList>
-                <TabsTrigger value="entries">Time Entries</TabsTrigger>
-                <TabsTrigger value="summary">Summary</TabsTrigger>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-0 gap-4 bg-white rounded-t-xl p-3 sm:p-4 border border-gray-200 w-full">
+              <TabsList className={cn("bg-transparent border-0 rounded-none p-0", isMobile ? "w-full" : "")}>
+                <div className="flex w-full items-center">
+                  <TabsTrigger
+                    value="entries"
+                    className="px-0 mr-6 text-sm md:text-lg fw-medium text-gray-600 data-[state=active]:text-[#1b78f9] relative after:content-[''] after:absolute after:left-0 after:bottom-[-6px] after:h-[2px] after:bg-[#1b78f9] after:w-0 data-[state=active]:after:w-full"
+                  >
+                    Time Entries
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="summary"
+                    className="px-0 text-sm md:text-lg fw-medium text-gray-600 data-[state=active]:text-[#1b78f9] relative after:content-[''] after:absolute after:left-0 after:bottom-[-6px] after:h-[2px] after:bg-[#1b78f9] after:w-0 data-[state=active]:after:w-full"
+                  >
+                    Summary
+                  </TabsTrigger>
+                </div>
               </TabsList>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden md:flex flex-wrap gap-2">
                 <MotionButton
                   variant="outline"
                   size="sm"
@@ -1036,11 +1075,79 @@ const TimeTracking = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-            </div>
 
+              {isMobile && (
+                <div className="flex w-full gap-3">
+                  <Select
+                    value={filter}
+                    onValueChange={(val) => setFilter(val as any)}
+                  >
+                    <SelectTrigger className="h-9 px-3 pr-8 rounded-xl border border-gray-300 bg-white text-[14px] text-gray-700 w-fit">
+                      <SelectValue placeholder="Status: All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="billable">Billable</SelectItem>
+                      <SelectItem value="nonbillable">Non-Billable</SelectItem>
+                      <SelectItem value="pending">To Do</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <ChevronDown size={14} className="-ml-8 mt-2 text-gray-500 pointer-events-none" />
+
+                  <div>
+                    <Select
+                      value={selectedTimeRange}
+                      onValueChange={(val) => {
+                        setSelectedTimeRange(val as any);
+                        if (val === "custom") {
+                          setIsCustomDatePickerOpen(true);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9 px-3 pr-8 rounded-xl border border-gray-300 bg-white text-[14px] text-gray-700 w-fit">
+                        <SelectValue placeholder="Date: All" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                        <SelectItem value="month">This Month</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <ChevronDown size={14} className="relative -ml-6 -mt-7 float-right mr-2 text-gray-500 pointer-events-none" />
+
+                    {selectedTimeRange === "custom" && (
+                      <Popover open={isCustomDatePickerOpen} onOpenChange={setIsCustomDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <button className="hidden" aria-hidden="true" type="button" />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="range"
+                            defaultMonth={customDateRange?.from || new Date()}
+                            selected={customDateRange}
+                            onSelect={(range: DateRange | undefined) => {
+                              setCustomDateRange(range);
+                              if (range?.from && range?.to) {
+                                setIsCustomDatePickerOpen(false);
+                              }
+                            }}
+                            numberOfMonths={1}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
+            
             <TabsContent value="entries" className="mt-0">
-              <GlassCard>
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-3 sm:p-4 gap-3 border-b border-border">
+              <GlassCard variant="clean" className="bg-white border border-gray-200 border-t-0 rounded-b-xl rounded-t-none">
+                <div className="hidden md:flex md:flex-row md:items-center justify-between p-3 sm:p-4 gap-3 border-b border-border">
                   <div className="text-base sm:text-lg font-medium">Recent Time Entries</div>
 
                   <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -1095,7 +1202,65 @@ const TimeTracking = () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="md:hidden p-2 md:space-y-3">
+                  {loading ? (
+                    <div className="p-6 text-center text-muted-foreground">Loading time entries...</div>
+                  ) : error ? (
+                    <div className="p-6 text-center text-red-600">{error}</div>
+                  ) : filteredEntries.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground">No time entries found</div>
+                  ) : (
+                    filteredEntries.map((entry) => (
+                      <div key={entry.id} className="border-t border-gray-200 p-4 first:border-t-0 flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                          <h4 className="fw-bold text-[#1A2624]">
+                            {entry.task?.title || entry.project?.name || "Untitled"}
+                          </h4>
+                          <h5 className="text-[#1A2624B2]">
+                            {entry.project?.name || "No project"}
+                          </h5>
+                        </div>
+                        <h5 className="flex items-center fw-medium fs-xs-i text-gray-700-i gap-1">
+                          {(() => {
+                            const name = isVendor
+                              ? (entry.vendor
+                                  ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                  : 'Unknown vendor')
+                              : (entry.vendor
+                                  ? `${entry.vendor.firstName} ${entry.vendor.lastName}`
+                                  : (entry.user
+                                      ? `${entry.user.firstName} ${entry.user.lastName}`
+                                      : 'Unknown'));
+                            const a = getAvatarData(name);
+                            return (
+                              <>
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium"
+                                  style={{ backgroundColor: a.bgColor, color: a.color }}
+                                >
+                                  {a.initials}
+                                </div>
+                                <span>{name}</span>
+                              </>
+                            );
+                          })()}
+                        </h5>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-sm font-normal">
+                            <Clock size={12} />
+                            <span>{formatDuration(entry.duration || 0)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Calendar size={12} />
+                            <h5>{entry.date}</h5>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
                     <thead>
                       <tr className="bg-muted/30">
@@ -1347,7 +1512,7 @@ const TimeTracking = () => {
             </TabsContent>
 
             <TabsContent value="summary" className="mt-0">
-              <GlassCard className="p-8">
+              <GlassCard variant="clean" className="bg-white border border-gray-200 border-t-0 rounded-b-xl rounded-t-none p-8">
                 <h3 className="text-xl font-medium mb-6">Time Summary Comming Soon ...</h3>
 
                 {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1487,205 +1652,14 @@ const TimeTracking = () => {
           </Tabs>
         </div>
 
-        {/* New Time Entry Form */}
         {hasPermission('time_tracking', 'create') && (
-          <div className="animate-fade-in animation-delay-[0.3s]">
-            <GlassCard className="p-6">
-              <h3 className="text-lg font-medium mb-4">Add New Time Entry</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Project <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
-                    value={newTimeEntry.projectId || ""}
-                    onChange={(e) =>
-                      setNewTimeEntry((prev) => ({
-                        ...prev,
-                        projectId: e.target.value || undefined,
-                        taskId: undefined,
-                      }))
-                    }
-                  >
-                    <option value="">Select Project</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.title}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
-                    size={16}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Task <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
-                    value={newTimeEntry.taskId || ""}
-                    onChange={(e) =>
-                      setNewTimeEntry((prev) => ({
-                        ...prev,
-                        taskId: e.target.value || undefined,
-                      }))
-                    }
-                  >
-                    <option value="">Select Task</option>
-                    {projectTasks.map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
-                    size={16}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={newTimeEntry.date || ""}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      date: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Start Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={newTimeEntry.startTimeInput || ""}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      startTimeInput: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  End Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={newTimeEntry.endTimeInput || ""}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      endTimeInput: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
-                Description
-              </label>
-              <input
-                type="text"
-                placeholder="What are you working on?"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={newTimeEntry.description || ""}
-                onChange={(e) =>
-                  setNewTimeEntry((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="flex items-center mt-4 space-x-4">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                  checked={newTimeEntry.isBillable || false}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      isBillable: e.target.checked,
-                    }))
-                  }
-                />
-                <span className="text-sm">Billable</span>
-              </label>
-
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Hourly Rate (AED)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={newTimeEntry.hourlyRate || ""}
-                  onChange={(e) =>
-                    setNewTimeEntry((prev) => ({
-                      ...prev,
-                      hourlyRate: e.target.value
-                        ? parseFloat(e.target.value)
-                        : undefined,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              {!isTimerRunning && (
-                <ActionButton
-                  variant="secondary"
-                  motion="subtle"
-                  leftIcon={<Play size={16} className="mr-2" />}
-                  text="Start Timer"
-                  onClick={handleStartTimerModal}
-                >
-                </ActionButton>
-              )}
-              <ActionButton
-                variant="primary"
-                motion="subtle"
-                onClick={handleCreateTimeEntry}
-                leftIcon={<Plus size={16} className="mr-2" />}
-                text="Add Time Entry"
-              >
-              </ActionButton>
-            </div>
-          </GlassCard>
-        </div>
+          <Button
+            variant="default"
+            onClick={handleNewTimeEntry}
+            className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-3"
+          >
+            <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+          </Button>
         )}
       </div>
 
@@ -1948,7 +1922,7 @@ const TimeTracking = () => {
               onClick={handleStartTimerSubmit}
               motion="subtle"
               text="Start Timer"
-              leftIcon={<Play size={16} />}
+              leftIcon={<solar.Video.Play weight="Bold" size={14} className="mr-1" />}
               className="bg-green-600 hover:bg-green-700"
             />
           </div>

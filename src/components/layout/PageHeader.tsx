@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Bell, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,7 +143,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
               {title}
             </h1>
             {subtitle && (
-              <span className="text-sm text-gray-500 mt-1">{subtitle}</span>
+              <h4 className=" text-[#4B5563] mt-1">{subtitle}</h4>
             )}
           </div>
         </div>
@@ -152,35 +152,6 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
         <div className="flex items-center gap-3 flex-shrink-0">
           {/* Page-specific children */}
           {children}
-
-          {/* Quick Add Dropdown */}
-          {canShowPlus && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full hover:bg-gray-100"
-                >
-                  <Plus className="h-5 w-5 text-gray-700" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {canCreateTask && (
-                  <DropdownMenuItem onClick={() => setShowTaskDialog(true)}>
-                    <solar.Notes.ArchiveMinimalistic className="h-4 w-4 mr-2" />
-                    Create Task
-                  </DropdownMenuItem>
-                )}
-                {canCreateProject && (
-                  <DropdownMenuItem onClick={() => setShowProjectDialog(true)}>
-                    <solar.Tools.Layers className="h-4 w-4 mr-2" />
-                    Create Project
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
 
           {/* Notifications Dropdown */}
           <DropdownMenu
@@ -193,7 +164,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                 size="icon"
                 className="h-9 w-9 rounded-full hover:bg-gray-100 relative"
               >
-                <Bell className="text-[#3a3a3a] w-5 h-5" />
+                <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-6 h-6" />
                 {unreadCount > 0 && (
                   <span className="absolute top-2  right-1.5 bg-red-500 text-white font-light text-[9px] rounded-full w-2.5 h-2.5 flex items-center justify-center">
                     {unreadCount}
@@ -277,7 +248,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
                       >
                         <div className="flex items-start gap-3">
                           <div className="mt-1 bg-gray-200 w-10 h-10 flex items-center justify-center rounded-full">
-                            <Bell className="h-5 w-5 text-gray-400" />
+                            <solar.Notifications.Bell color="#1C274C" weight="LineDuotone" className="text-[#3a3a3a] w-6 h-6" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -348,6 +319,35 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Quick Add Dropdown */}
+          {canShowPlus && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full hover:bg-gray-100"
+                >
+                  <solar.Ui.AddSquare weight="LineDuotone" color="#1C274C" className="h-6 w-6 text-gray-700" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {canCreateTask && (
+                  <DropdownMenuItem onClick={() => setShowTaskDialog(true)}>
+                    <solar.Notes.ArchiveMinimalistic className="h-4 w-4 mr-2" />
+                    Create Task
+                  </DropdownMenuItem>
+                )}
+                {canCreateProject && (
+                  <DropdownMenuItem onClick={() => setShowProjectDialog(true)}>
+                    <solar.Tools.Layers className="h-4 w-4 mr-2" />
+                    Create Project
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -369,7 +369,7 @@ const PageHeader = ({ title, subtitle, children, showBackButton, onBackClick }: 
           </h1>
         </div>
         {subtitle && (
-          <p className="text-sm text-gray-500 ml-1">{subtitle}</p>
+          <h4 className="text-[#4B5563] text-sm font-normal ml-1">{subtitle}</h4>
         )}
 
         {children && (

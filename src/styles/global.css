@@ -317,6 +317,14 @@ td {
   font-weight: var(--font-bold);
 }
 
+/* Utility override to beat heading !important weights when needed */
+.fw-bold { font-weight: 700 !important; }
+
+/* Additional overrides to apply on heading tags that use !important */
+.fw-medium { font-weight: 500 !important; }
+.fs-xs-i { font-size: 12px !important; }
+.text-gray-700-i { color: #374151 !important; }
+
 .text-primary {
   color: var(--brand-primary);
 }
