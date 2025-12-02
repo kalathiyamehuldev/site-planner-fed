@@ -1656,7 +1656,7 @@ const TimeTracking = () => {
           <Button
             variant="default"
             onClick={handleNewTimeEntry}
-            className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-3"
+            className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
           >
             <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
           </Button>

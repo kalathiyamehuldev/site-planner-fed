@@ -3,18 +3,14 @@ import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Button } from "@/components/ui/button";
 import ActionButton from "@/components/ui/ActionButton";
+import { Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  Check, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  ChevronDown, 
-  Clock 
-} from "lucide-react";
+import solar, { Pen2, TrashBinTrash } from "@solar-icons/react";
+import { MotionButton } from "@/components/ui/motion-button";
 import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectAllTodos,
@@ -30,22 +26,34 @@ import {
 } from "@/redux/slices/todoSlice";
 import { selectAllProjects, fetchProjects } from "@/redux/slices/projectsSlice";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Pencil, Trash2 } from "lucide-react";
 
 const TodoList = () => {
   const dispatch = useAppDispatch();
   const activeTodos = useAppSelector(selectActiveTodos);
   const completedTodos = useAppSelector(selectCompletedTodos);
+  const allTodos = useAppSelector(selectAllTodos);
   const projects = useAppSelector(selectAllProjects);
   const { loading, error } = useAppSelector((state) => state.todos);
 
-  const [showCompleted, setShowCompleted] = useState(true);
-  const [segment, setSegment] = useState<'all'|'active'|'completed'>('all');
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
   const [newTodoText, setNewTodoText] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [filterProject, setFilterProject] = useState("");
   const [selectedDueDate, setSelectedDueDate] = useState("");
   const [editTodoId, setEditTodoId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openFilterDialog, setOpenFilterDialog] = useState(false);
+  const projectColors = [
+    '#1B78F9', '#00C2FF', '#3DD598', '#FFB547', '#FF6B6B',
+    '#A970FF', '#FF82D2', '#29C499', '#E89F3D', '#2F95D8'
+  ];
+  const getProjectColor = (name: string) => {
+    const idx = name.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % projectColors.length;
+    return projectColors[idx];
+  };
 
   useEffect(() => {
     dispatch(fetchProjects());
@@ -57,7 +65,6 @@ const TodoList = () => {
   }, [dispatch, filterProject]);
 
   useEffect(() => {
-    // Clear error after 5 seconds
     if (error) {
       const timer = setTimeout(() => {
         dispatch(clearError());
@@ -66,37 +73,25 @@ const TodoList = () => {
     }
   }, [error, dispatch]);
 
-  useEffect(() => {
-    if (segment === 'completed') {
-      setShowCompleted(true);
-    } else if (segment === 'active') {
-      setShowCompleted(false);
-    }
-  }, [segment]);
+  
 
-  // Filter view by segment
-  const displayedTodos = segment === 'all'
-    ? (showCompleted ? [...completedTodos] : [...activeTodos])
-    : segment === 'active'
-      ? [...activeTodos]
-      : [...completedTodos];
+  const displayedTodos = (showCompletedOnly ? [...completedTodos] : [...allTodos])
+    .filter((t) => (filterProject ? t.project?.id === filterProject : true))
+    .filter((t) => (searchTerm ? t.text.toLowerCase().includes(searchTerm.toLowerCase()) : true));
 
   const handleAddTodo = () => {
     if (newTodoText.trim() === "" || !selectedProject) {
-      alert("Please enter todo text and select a project");
       return;
     }
-
     const todoData: CreateTodoData = {
       text: newTodoText,
       projectId: selectedProject,
       ...(selectedDueDate && { dueDate: selectedDueDate }),
     };
-
     dispatch(createTodo(todoData));
-
     setNewTodoText("");
     setSelectedDueDate("");
+    setOpenAddDialog(false);
   };
 
   const handleToggleTodo = (id: string, completed: boolean) => {
@@ -152,121 +147,78 @@ const TodoList = () => {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="hidden md:block overflow-x-auto pb-1 -mx-1 px-1">
-              <ToggleGroup type="single" value={segment} onValueChange={(v) => v && setSegment(v as 'all'|'active'|'completed')} variant="outline" size="sm" className="gap-2">
-                <ToggleGroupItem value="all" aria-label="Show all">All</ToggleGroupItem>
-                <ToggleGroupItem value="active" aria-label="Show active">Active</ToggleGroupItem>
-                <ToggleGroupItem value="completed" aria-label="Show completed">Completed</ToggleGroupItem>
-              </ToggleGroup>
+      <div className="max-w-4xl mr-auto space-y-4 md:space-y-8">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0 relative">
+              <input
+                type="text"
+                placeholder="Search todos..."
+                className="w-full rounded-lg border border-input bg-background pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <div className="md:hidden flex items-center gap-2 w-full overflow-x-auto pb-1">
-              <div className="min-w-[5.5rem]">
-                <Select value={segment} onValueChange={(v) => setSegment(v as 'all'|'active'|'completed')}>
-                  <SelectTrigger className="w-full h-8 text-xs">
-                    <SelectValue placeholder="View" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="relative flex-1 min-w-0">
-                <select
-                  className="w-full h-8 text-xs rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
-                  value={filterProject}
-                  onChange={(e) => setFilterProject(e.target.value)}
-                >
-                  <option value="">Project</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
-                  size={14}
-                />
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Switch
-                  checked={showCompleted}
-                  onCheckedChange={(v) => {
-                    const checked = !!v;
-                    setShowCompleted(checked);
-                    setSegment((prev) => prev === 'all' ? prev : (checked ? 'completed' : 'active'));
-                  }}
-                  aria-label="Show completed"
-                />
-                <span className="text-xs text-muted-foreground">Done</span>
-              </div>
+            <div className="hidden md:block relative">
+              <select
+                className="rounded-md border border-input bg-background px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                value={filterProject}
+                onChange={(e) => setFilterProject(e.target.value)}
+              >
+                <option value="">All projects</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="hidden md:flex items-center gap-3">
-              <div className="relative md:w-48">
-                <select
-                  className="w-full h-8 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
-                  value={filterProject}
-                  onChange={(e) => setFilterProject(e.target.value)}
-                >
-                  <option value="">Filter by project</option>
-                  {projects.map((project) => (
-                     <option key={project.id} value={project.id}>
-                       {project.title}
-                     </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
-                  size={14}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={showCompleted}
-                  onCheckedChange={(v) => {
-                    const checked = !!v;
-                    setShowCompleted(checked);
-                    setSegment((prev) => prev === 'all' ? prev : (checked ? 'completed' : 'active'));
-                  }}
-                  aria-label="Show completed"
-                />
-                <span className="text-xs md:text-sm text-muted-foreground">Show completed</span>
-              </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setOpenFilterDialog(true)}
+              aria-label="Filter"
+            >
+              <Filter className="w-6 h-6 md:w-5 md:h-5" />
+            </Button>
+            <div className="hidden md:inline-flex">
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                text="Add"
+                leftIcon={<solar.Ui.AddSquare className="w-5 h-5" />}
+                onClick={() => setOpenAddDialog(true)}
+              />
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={showCompletedOnly}
+              onCheckedChange={(v) => setShowCompletedOnly(!!v)}
+              aria-label="Completed only"
+            />
+            <span className="text-xs md:text-sm text-muted-foreground">Completed only</span>
+          </div>
+        </div>
 
-        {/* Add Todo Form */}
-        <GlassCard className="p-4 animate-scale-in">
-          <div className="flex flex-col space-y-3">
-            <div className="flex space-x-3">
+        <Dialog open={openAddDialog} onOpenChange={setOpenAddDialog}>
+          <DialogContent className="w-5/6 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add New Task</DialogTitle>
+              <DialogDescription>Enter details for the new to-do item.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
               <input
                 type="text"
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
-                placeholder="Add a new task..."
-                className="flex-1 rounded-xl border border-input bg-background px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-                onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
+                placeholder="Task title"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
-
-              <ActionButton
-                variant="primary"
-                onClick={handleAddTodo}
-                disabled={
-                  newTodoText.trim() === "" || !selectedProject || loading
-                }
-                motion="subtle"
-                leftIcon={<Plus size={18} />}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3">
               <div className="relative">
                 <select
-                  className="rounded-lg border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
                 >
@@ -277,25 +229,67 @@ const TodoList = () => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"
-                  size={16}
-                />
               </div>
-
-              <div className="flex items-center gap-1">
-                <Clock size={14} className="text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <solar.Time.ClockCircle className="w-4 h-4 text-muted-foreground" />
                 <input
                   type="date"
                   value={selectedDueDate}
                   onChange={(e) => setSelectedDueDate(e.target.value)}
-                  className="rounded-lg border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="Due date"
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
-          </div>
-        </GlassCard>
+            <DialogFooter>
+              <ActionButton
+                variant="secondary"
+                motion="subtle"
+                text="Cancel"
+                onClick={() => setOpenAddDialog(false)}
+              />
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                text="Add"
+                onClick={handleAddTodo}
+                disabled={newTodoText.trim() === "" || !selectedProject || loading}
+              />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openFilterDialog} onOpenChange={setOpenFilterDialog}>
+          <DialogContent className="w-5/6 sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Filter</DialogTitle>
+              <DialogDescription>Select a project to filter todos.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="relative">
+                <select
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+                  value={filterProject}
+                  onChange={(e) => setFilterProject(e.target.value)}
+                >
+                  <option value="">All projects</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <ActionButton
+                variant="secondary"
+                motion="subtle"
+                text="Close"
+                onClick={() => setOpenFilterDialog(false)}
+              />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Todo List */}
         <div className="space-y-2 animate-fade-in animation-delay-[0.1s]">
@@ -369,7 +363,7 @@ const TodoList = () => {
                         )}
                         aria-label={todo.completed ? 'Mark as active' : 'Mark as completed'}
                       >
-                        {todo.completed && <Check size={14} />}
+                        {todo.completed && <solar.Ui.CheckCircle className="w-4 h-4 md:w-3.5 md:h-3.5" />}
                       </button>
 
                       <div className="space-y-1">
@@ -385,9 +379,17 @@ const TodoList = () => {
 
                         <div className="flex flex-wrap gap-2">
                           {todo.project && (
-                            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full">
-                              {todo.project.name}
-                            </span>
+                            (() => {
+                              const color = getProjectColor(todo.project.name);
+                              return (
+                                <span
+                                  className="px-2 py-0.5 rounded-full text-[#1a2624]"
+                                  style={{ backgroundColor: `${color}1A` }}
+                                >
+                                  {todo.project.name}
+                                </span>
+                              );
+                            })()
                           )}
 
                           {todo.dueDate && (
@@ -406,7 +408,7 @@ const TodoList = () => {
                                   "bg-gray-100 text-gray-600"
                               )}
                             >
-                              <Clock size={10} className="inline-block mr-1" /> {todo.dueDate}
+                              <solar.Time.ClockCircle className="inline-block mr-1 w-4 h-4 md:w-3 md:h-3" /> {todo.dueDate}
                             </span>
                           )}
                         </div>
@@ -414,20 +416,26 @@ const TodoList = () => {
                     </div>
 
                     <div className="flex items-center space-x-1">
-                      <button
+                      <MotionButton
+                        variant="ghost"
+                        size="sm"
+                        motion="subtle"
                         onClick={() => startEdit(todo.id, todo.text)}
-                        className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-secondary"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         aria-label="Edit todo"
                       >
-                        <Edit size={16} />
-                      </button>
-                      <button
+                        <Pencil className="w-5 h-5 md:w-4 md:h-4" />
+                      </MotionButton>
+                      <MotionButton
+                        variant="ghost"
+                        size="sm"
+                        motion="subtle"
                         onClick={() => handleDeleteTodo(todo.id)}
-                        className="text-muted-foreground hover:text-red-500 p-1 rounded-md hover:bg-secondary"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         aria-label="Delete todo"
                       >
-                        <Trash2 size={16} />
-                      </button>
+                        <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
+                      </MotionButton>
                     </div>
                   </div>
                 )}
@@ -443,6 +451,13 @@ const TodoList = () => {
           )}
         </div>
       </div>
+      <Button
+        variant="default"
+        onClick={() => setOpenAddDialog(true)}
+        className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2 py-2.5"
+      >
+        <solar.Ui.AddSquare className="w-7 h-7" style={{ width: 28, height: 28 }} />
+      </Button>
     </PageContainer>
   );
 };

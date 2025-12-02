@@ -56,6 +56,7 @@ const Tasks = () => {
   const [lockNewTaskStatus, setLockNewTaskStatus] = useState(false);
 
   const [viewMode, setViewMode] = useState<"list" | "kanban" | "timeline">("kanban");
+  const [projectFilter, setProjectFilter] = useState<string>("");
 
   useEffect(() => {
     dispatch(fetchAllTasksByCompany());
@@ -69,15 +70,26 @@ const Tasks = () => {
       : (allTasks || []);
   }, [allTasks, currentUser?.id, isVendor]);
 
+  const visibleAllTasksFiltered = useMemo(() => {
+    if (!projectFilter) return visibleAllTasks;
+    return (visibleAllTasks || []).filter(t => t.project?.id === projectFilter);
+  }, [visibleAllTasks, projectFilter]);
+
   // Helper function to check if a task matches the current filter
   const taskMatchesFilter = (task: any) => {
+    // 1) Narrow by selected project first
+    if (projectFilter && task.project?.id !== projectFilter) return false;
+
+    // 2) Apply search within the narrowed set
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      return (
+      if (!(
         task.title.toLowerCase().includes(term) ||
         (task.project?.name || "").toLowerCase().includes(term) ||
         (task.assignee || "").toLowerCase().includes(term)
-      );
+      )) {
+        return false;
+      }
     }
 
     switch (filter) {
@@ -139,7 +151,7 @@ const Tasks = () => {
     });
 
     return result;
-  }, [allTasks, filter, searchTerm, currentUser?.id, currentUser?.userType]);
+  }, [allTasks, filter, searchTerm, currentUser?.id, currentUser?.userType, projectFilter]);
 
   const kanbanTasks = useMemo(() => {
     const isVendor = currentUser?.userType === 'VENDOR';
@@ -150,7 +162,7 @@ const Tasks = () => {
     return vendorScoped
       .filter(task => !task.parentId && (!task.project?.id || accessibleIds.has(task.project.id)))
       .filter(taskMatchesFilter);
-  }, [allTasks, projects, filter, searchTerm, currentUser?.id, currentUser?.userType]);
+  }, [allTasks, projects, filter, searchTerm, currentUser?.id, currentUser?.userType, projectFilter]);
 
   const FilterButton = ({
     label,
@@ -301,6 +313,18 @@ const Tasks = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <div className="relative">
+            <select
+              className="w-full h-9 text-xs rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+            >
+              <option value="">All Projects</option>
+              {(projects || []).map((p) => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             <FilterButton label="All Tasks" value="all" icon={Filter} />
             <FilterButton label="My Tasks" value="mine" icon={User} />
@@ -325,6 +349,19 @@ const Tasks = () => {
             />
           </div>
 
+          <div className="relative md:w-56">
+            <select
+              className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-2 focus:ring-ring appearance-none pr-8"
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+            >
+              <option value="">All Projects</option>
+              {(projects || []).map((p) => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
             <FilterButton label="All Tasks" value="all" icon={Filter} />
             <FilterButton label="My Tasks" value="mine" icon={User} />
@@ -338,7 +375,7 @@ const Tasks = () => {
         </div>
 
         {/* Desktop Filter Info Banner */}
-        {(filter !== "all" || searchTerm) && (
+        {(filter !== "all" || searchTerm || projectFilter) && (
           <div className="hidden md:block bg-blue-50 border border-blue-200 rounded-lg p-3 animate-fade-in">
             <div className="flex items-center gap-2 text-sm text-blue-700">
               <Filter size={16} />
@@ -346,7 +383,11 @@ const Tasks = () => {
                 {searchTerm ? (
                   <>Showing tasks matching "{searchTerm}"</>
                 ) : (
-                  <>Showing {filter === "mine" ? "your tasks" : filter === "high-priority" ? "high priority tasks" : "upcoming tasks"}</>
+                  projectFilter ? (
+                    <>Showing tasks for selected project</>
+                  ) : (
+                    <>Showing {filter === "mine" ? "your tasks" : filter === "high-priority" ? "high priority tasks" : "upcoming tasks"}</>
+                  )
                 )}
                 {viewMode === "kanban" 
                   ? " (Kanban groups tasks by status)" 
@@ -360,7 +401,7 @@ const Tasks = () => {
         {viewMode === "kanban" ? (
           <KanbanBoard
              tasks={kanbanTasks}
-             allTasks={visibleAllTasks}
+             allTasks={visibleAllTasksFiltered}
              onTaskClick={handleTaskClick}
              onEditTask={handleEditTask}
              onDeleteTask={handleDeleteTask}

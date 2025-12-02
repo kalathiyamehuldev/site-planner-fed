@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 // Removed unused Link import
 import AddProjectDialog from "@/components/projects/AddProjectDialog";
-import ProjectMemberManagement from "@/components/projects/ProjectMemberManagement";
+import ProjectMemberManagement, { ProjectMemberManagementRef } from "@/components/projects/ProjectMemberManagement";
+import solar from "@solar-icons/react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   fetchProjectById,
@@ -145,6 +146,7 @@ const ProjectDetails = () => {
   const taskResource = 'tasks';
   const documentResource = 'documents';
   const locationResource = 'projects';
+  const invoiceResource = 'invoices';
   const navigate = useNavigate();
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -157,6 +159,7 @@ const ProjectDetails = () => {
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showDocumentSidebar, setShowDocumentSidebar] = useState(false);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
+  const pmRef = useRef<ProjectMemberManagementRef>(null);
 
   // Handle task creation success - refetch project tasks
   const handleTaskCreated = () => {
@@ -359,7 +362,6 @@ const ProjectDetails = () => {
         {/* Header */}
         <PageHeader 
           title={projectDetails.title} 
-          subtitle={`Client: ${projectDetails.client}`}
           showBackButton={true}
           onBackClick={() => navigate('/projects')}
         >
@@ -405,12 +407,37 @@ const ProjectDetails = () => {
           onValueChange={setActiveTab}
           className="w-full animate-fade-in animation-delay-[0.2s]"
         >
-          <TabsList className="mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsList className="mb-6 w-full grid grid-cols-5 bg-white rounded-md md:flex md:gap-2">
+            <TabsTrigger 
+              value="overview"
+              className="w-full px-2 md:px-3 py-2 text-xs md:text-base font-semibold text-[#1a2624] bg-white data-[state=active]:shadow-[inset_0_-2px_0_0_#1b78f9]"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tasks"
+              className="w-full px-2 md:px-3 py-2 text-xs md:text-base font-semibold text-[#1a2624] bg-white data-[state=active]:shadow-[inset_0_-2px_0_0_#1b78f9]"
+            >
+              Tasks
+            </TabsTrigger>
+            <TabsTrigger 
+              value="documents"
+              className="w-full px-2 md:px-3 py-2 text-xs md:text-base font-semibold text-[#1a2624] bg-white data-[state=active]:shadow-[inset_0_-2px_0_0_#1b78f9]"
+            >
+              Documents
+            </TabsTrigger>
+            <TabsTrigger 
+              value="members"
+              className="w-full px-2 md:px-3 py-2 text-xs md:text-base font-semibold text-[#1a2624] bg-white data-[state=active]:shadow-[inset_0_-2px_0_0_#1b78f9]"
+            >
+              Members
+            </TabsTrigger>
+            <TabsTrigger 
+              value="locations"
+              className="w-full px-2 md:px-3 py-2 text-xs md:text-base font-semibold text-[#1a2624] bg-white data-[state=active]:shadow-[inset_0_-2px_0_0_#1b78f9]"
+            >
+              Locations
+            </TabsTrigger>
             {/* <TabsTrigger value="invoices">Invoices</TabsTrigger> */}
           </TabsList>
 
@@ -419,50 +446,60 @@ const ProjectDetails = () => {
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.1s]">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                    <Calendar size={18} className="text-primary" />
+                  <div
+                    className="p-1.5 sm:p-2 rounded-sm flex items-center gap-2 flex-shrink-0"
+                    style={{ backgroundColor: `#1B78F91A` }}
+                  >
+                    <solar.Time.Calendar className="w-6 h-6" style={{ color: '#1B78F9' }} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Due Date</p>
-                    <p className="font-medium">{projectDetails.dueDate}</p>
+                    <p className="text-[#4B5563] text-xs font-normal font-['Poppins']">Due Date</p>
+                    <p className="text-gray-900 text-sm font-medium font-['Poppins']">{projectDetails.dueDate}</p>
                   </div>
                 </div>
               </GlassCard>
 
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.2s]">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                    <Clock size={18} className="text-primary" />
+                  <div
+                    className="p-1.5 sm:p-2 rounded-sm flex items-center gap-2 flex-shrink-0"
+                    style={{ backgroundColor: `#3DD5981A` }}
+                  >
+                    <solar.Ui.CheckCircle className="w-6 h-6" style={{ color: '#3DD598' }} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Progress</p>
-                    <p className="font-medium">{projectDetails.progress}%</p>
+                    <p className="text-[#4B5563] text-xs font-normal font-['Poppins']">Progress</p>
+                    <p className="text-gray-900 text-sm font-medium font-['Poppins']">{projectDetails.progress}%</p>
                   </div>
                 </div>
               </GlassCard>
 
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.3s]">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                    <Users size={18} className="text-primary" />
+                  <div
+                    className="p-1.5 sm:p-2 rounded-sm flex items-center gap-2 flex-shrink-0"
+                    style={{ backgroundColor: `#00C2FF1A` }}
+                  >
+                    <solar.Security.ShieldUser className="w-6 h-6" style={{ color: '#00C2FF' }} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Team</p>
-                    <p className="font-medium">
-                      {projectDetails.team.length} members
-                    </p>
+                    <p className="text-[#4B5563] text-xs font-normal font-['Poppins']">Team</p>
+                    <p className="text-gray-900 text-sm font-medium font-['Poppins']">{projectDetails.team.length === 1 ? '1 member' : `${projectDetails.team.length} members`}</p>
                   </div>
                 </div>
               </GlassCard>
 
               <GlassCard className="p-4 animate-scale-in animation-delay-[0.4s]">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full w-10 h-10 flex items-center justify-center bg-primary/10">
-                    <ShoppingBag size={18} className="text-primary" />
+                  <div
+                    className="p-1.5 sm:p-2 rounded-sm flex items-center gap-2 flex-shrink-0"
+                    style={{ backgroundColor: `#FFB5471A` }}
+                  >
+                    <solar.Money.Bill className="w-6 h-6" style={{ color: '#FFB547' }} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Budget</p>
-                    <p className="font-medium">{projectDetails.budget}</p>
+                    <p className="text-[#4B5563] text-xs font-normal font-['Poppins']">Budget</p>
+                    <p className="text-gray-900 text-sm font-medium font-['Poppins']">{projectDetails.budget}</p>
                   </div>
                 </div>
               </GlassCard>
@@ -500,27 +537,29 @@ const ProjectDetails = () => {
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                      Team Members
-                    </h3>
-                    <div className="space-y-2">
-                      {projectDetails.team.map((member, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                            {member
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                  {projectDetails.team.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                        Team Members
+                      </h3>
+                      <div className="space-y-2">
+                        {projectDetails.team.map((member, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                              {member
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </div>
+                            <span>{member}</span>
                           </div>
-                          <span>{member}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">
@@ -571,12 +610,12 @@ const ProjectDetails = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Locations</h2>
               {hasPermission(locationResource, 'create') && (
-                <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2">
                   <ActionButton 
                     onClick={() => setAddLocationDialogOpen(true)} 
                     variant="primary" 
                     text="Add New Location" 
-                    leftIcon={<Plus size={18} />}
+                    leftIcon={<solar.Ui.AddSquare className="w-7 h-7" />}
                   />
                 </div>
               )}
@@ -590,8 +629,20 @@ const ProjectDetails = () => {
               ) : locationsError ? (
                 <div className="text-sm text-red-600">{locationsError}</div>
               ) : projectLocations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No locations found for this project
+                <div className="text-center bg-white rounded-md p-12">
+                  <solar.Tools.Layers weight="Bold" size={24} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No locations found for this project</p>
+                  {hasPermission(locationResource, 'create') && (
+                    <div className="mt-4">
+                      <ActionButton
+                        variant="primary"
+                        motion="subtle"
+                        text="Add New Location"
+                        leftIcon={<solar.Ui.AddSquare className="w-6 h-6" />}
+                        onClick={() => setAddLocationDialogOpen(true)}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -691,25 +742,51 @@ const ProjectDetails = () => {
                 </div>
               )}
             </GlassCard>
+            {hasPermission(locationResource, 'create') && (
+              <Button
+                variant="default"
+                onClick={() => setAddLocationDialogOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+              >
+                <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">All Tasks</h2>
-              {/* {hasPermission(taskResource, 'create') && (
-                <ActionButton
-                  variant="primary"
-                  motion="subtle"
-                  onClick={() => setAddTaskDialogOpen(true)}
-                  leftIcon={<Plus size={16} className="mr-2" />}
-                  text="Add Task"
-                >
-                </ActionButton>
-              )} */}
+              {hasPermission(taskResource, 'create') && (
+                <div className="hidden md:flex">
+                  <ActionButton
+                    variant="primary"
+                    motion="subtle"
+                    onClick={() => setAddTaskDialogOpen(true)}
+                    text="Add Task"
+                    leftIcon={<solar.Ui.AddSquare className="w-7 h-7" />}
+                  />
+                </div>
+              )}
             </div>
             {tasksLoading ? (
               <div className="flex items-center justify-center p-12">
                 <div className="text-lg">Loading tasks...</div>
+              </div>
+            ) : visibleProjectTasks.length === 0 ? (
+              <div className="text-center bg-white rounded-md p-12">
+                <solar.List.ChecklistMinimalistic className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No tasks found for this project</p>
+                {hasPermission(taskResource, 'create') && (
+                  <div className="mt-4">
+                    <ActionButton
+                      variant="primary"
+                      motion="subtle"
+                      text="Add Task"
+                      leftIcon={<solar.Ui.AddSquare className="w-6 h-6" />}
+                      onClick={() => setAddTaskDialogOpen(true)}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <TaskTable
@@ -720,19 +797,30 @@ const ProjectDetails = () => {
                 showProject={false}
               />
             )}
+            {hasPermission(taskResource, 'create') && (
+              <Button
+                variant="default"
+                onClick={() => setAddTaskDialogOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+              >
+                <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Documents</h2>
               {hasPermission(documentResource, 'create') && (
-                <ActionButton 
-                  variant="primary" 
-                  motion="subtle"
-                  onClick={() => setUploadDocumentDialogOpen(true)}
-                  text="Upload Document"
-                  leftIcon={<Plus size={16} />}
-                />
+                <div className="hidden md:flex">
+                  <ActionButton 
+                    variant="primary" 
+                    motion="subtle"
+                    onClick={() => setUploadDocumentDialogOpen(true)}
+                    text="Upload Document"
+                    leftIcon={<solar.Ui.AddSquare className="w-7 h-7" />}
+                  />
+                </div>
               )}
             </div>
             <GlassCard className="overflow-hidden animate-scale-in">
@@ -741,11 +829,20 @@ const ProjectDetails = () => {
                   <div className="text-lg">Loading documents...</div>
                 </div>
               ) : projectDocuments.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center bg-white rounded-md p-12">
                   <DocumentsMinimalistic weight="Bold" size={24} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">
-                    No documents found for this project
-                  </p>
+                  <p className="text-gray-600">No documents found for this project</p>
+                  {hasPermission(documentResource, 'create') && (
+                    <div className="mt-4">
+                      <ActionButton
+                        variant="primary"
+                        motion="subtle"
+                        text="Upload Document"
+                        leftIcon={<solar.Ui.AddSquare className="w-6 h-6" />}
+                        onClick={() => setUploadDocumentDialogOpen(true)}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="w-full bg-white rounded-md overflow-hidden">
@@ -898,27 +995,87 @@ const ProjectDetails = () => {
                 </div>
               )}
             </GlassCard>
+            {hasPermission(documentResource, 'create') && (
+              <Button
+                variant="default"
+                onClick={() => setUploadDocumentDialogOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+              >
+                <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="members" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Members</h2>
+              {hasPermission(resource, 'create') && (
+                <div className="hidden md:flex">
+                  <ActionButton
+                    variant="primary"
+                    motion="subtle"
+                    text="Add Member"
+                    leftIcon={<solar.Ui.AddSquare className="w-7 h-7" />}
+                    onClick={() => pmRef.current?.openAddDialog()}
+                  />
+                </div>
+              )}
             </div>
             <GlassCard className="overflow-hidden animate-scale-in">
               {project?.id && (
-                <ProjectMemberManagement projectId={project.id} hideHeader={true} />
+                <ProjectMemberManagement ref={pmRef} projectId={project.id} hideHeader={true} />
               )}
             </GlassCard>
+            {hasPermission(resource, 'create') && (
+              <Button
+                variant="default"
+                onClick={() => pmRef.current?.openAddDialog()}
+                className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+              >
+                <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="invoices" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Invoices</h2>
-              <ActionButton variant="primary" motion="subtle" text="Create Invoice" leftIcon={<Plus size={16} />} />
+              {hasPermission(invoiceResource, 'create') && (
+                <div className="hidden md:flex">
+                  <ActionButton 
+                    variant="primary" 
+                    motion="subtle" 
+                    text="Create Invoice" 
+                    leftIcon={<solar.Ui.AddSquare className="w-7 h-7" />} 
+                    onClick={() => {/* TODO: open create invoice dialog */}}
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex items-center justify-center p-12 text-muted-foreground animate-fade-in">
-              No invoices created yet for this project.
+            <div className="text-center bg-white rounded-md p-12">
+              <solar.Money.Bill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No invoices created yet for this project</p>
+              {hasPermission(invoiceResource, 'create') && (
+                <div className="mt-4">
+                  <ActionButton
+                    variant="primary"
+                    motion="subtle"
+                    text="Create Invoice"
+                    leftIcon={<solar.Ui.AddSquare className="w-6 h-6" />}
+                    onClick={() => {/* TODO: open create invoice dialog */}}
+                  />
+                </div>
+              )}
             </div>
+            {hasPermission(invoiceResource, 'create') && (
+              <Button
+                variant="default"
+                onClick={() => {/* TODO: open create invoice dialog */}}
+                className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+              >
+                <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+              </Button>
+            )}
           </TabsContent>
         </Tabs>
       </div>

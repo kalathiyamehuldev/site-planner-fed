@@ -116,7 +116,7 @@ const ProjectCard = ({
             <Users size={14} className="text-gray-500" />
           </div>
           <div className="text-gray-500 text-xs font-normal font-['Poppins']">
-            {team.length} team members
+            {team.length === 1 ? '1 member' : `${team.length} members`}
           </div>
         </div>
       </div>

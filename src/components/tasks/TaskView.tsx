@@ -2087,12 +2087,6 @@ const TaskView: React.FC = () => {
                     <span>{formatDate(task?.createdAt)}</span>
                   </div>
                 </InfoRow>
-                <InfoRow label="Updated">
-                  <div className="flex items-center gap-2">
-                    <solar.Time.ClockCircle className="size-4 text-muted-foreground" />
-                    <span className="truncate md:whitespace-normal">{formatDate(task?.updatedAt)}</span>
-                  </div>
-                </InfoRow>
                 <InfoRow label="Due Date">
                   {editingDueDate ? (
                     <div className="flex items-center gap-2">
@@ -2154,6 +2148,12 @@ const TaskView: React.FC = () => {
                       {task?.priority}
                     </button>
                   )}
+                </InfoRow>
+                <InfoRow label="Updated">
+                  <div className="flex items-center gap-2">
+                    <solar.Time.ClockCircle className="size-4 text-muted-foreground" />
+                    <span className="truncate md:whitespace-normal">{formatDate(task?.updatedAt)}</span>
+                  </div>
                 </InfoRow>
                 {/* Add Subtask removed from Task Info to avoid duplication */}
               </div>

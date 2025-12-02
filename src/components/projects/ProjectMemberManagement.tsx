@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import ActionButton from '@/components/ui/ActionButton';
 import {Button} from '@/components/ui/button';
@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Trash2, UserPlus } from 'lucide-react';
 import { RiArrowUpDownLine } from '@remixicon/react';
-import { useToast } from '@/hooks/use-toast';
+ 
 import { RootState, AppDispatch } from '@/redux/store';
 import {
   getProjectMembers,
@@ -34,17 +33,17 @@ import {
 import { fetchMembers, Member } from "@/redux/slices/adminSlice";
 import usePermission from "@/hooks/usePermission";
 
+export interface ProjectMemberManagementRef {
+  openAddDialog: () => void;
+}
+
 interface ProjectMemberManagementProps {
   projectId: string;
   hideHeader?: boolean;
 }
 
-const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
-  projectId,
-  hideHeader = false,
-}) => {
+const ProjectMemberManagement = React.forwardRef<ProjectMemberManagementRef, ProjectMemberManagementProps>(({ projectId, hideHeader = false }, ref) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { toast } = useToast();
   const { hasPermission } = usePermission();
   const resource = 'projects';
 
@@ -70,11 +69,6 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
   // Handle adding member to project
   const handleAddMember = async () => {
     if (!selectedUserId || !selectedMember) {
-      toast({
-        title: "Error",
-        description: "Please select a user",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -88,35 +82,15 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
       );
 
       if (addMemberToProject.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Member added to project successfully",
-        });
-
-        // Refresh project members
-        dispatch(getProjectMembers(projectId));
-
         setIsAddDialogOpen(false);
         setSelectedUserId("");
         setSelectedMember(null);
-      } else {
-        toast({
-          title: "Error",
-          description: (result.payload as string) || "Failed to add member",
-          variant: "destructive",
-        });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add member to project",
-        variant: "destructive",
-      });
-    }
+    } catch (error) {}
   };
 
   // Handle removing member from project
-  const handleRemoveMember = async (userId: string, memberName: string) => {
+  const handleRemoveMember = async (userId: string) => {
     try {
       const result = await dispatch(
         removeMemberFromProject({
@@ -125,29 +99,13 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         })
       );
 
-      if (removeMemberFromProject.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: `${memberName} removed from project successfully`,
-        });
-
-        // Refresh project members
-        dispatch(getProjectMembers(projectId));
-      } else {
-        toast({
-          title: "Error",
-          description: (result.payload as string) || "Failed to remove member",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove member from project",
-        variant: "destructive",
-      });
-    }
+      if (removeMemberFromProject.fulfilled.match(result)) {}
+    } catch (error) {}
   };
+
+  useImperativeHandle(ref, () => ({
+    openAddDialog: () => setIsAddDialogOpen(true),
+  }));
 
   // Filter available members (exclude already added members)
   const availableMembers = companyMembers.filter(
@@ -200,62 +158,13 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Project Members</h3>
           {hasPermission(resource, 'create') && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <ActionButton 
-                  variant="primary" 
-                  motion="subtle"
-                  text="Add Member"
-                  leftIcon={<Plus className="h-4 w-4" />}
-                />
-              </DialogTrigger>
-                <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add Member to Project</DialogTitle>
-                  <DialogDescription>
-                    Select a team member to add to this project.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium pb-2">Select Member</label>
-                  <Select
-                    value={selectedUserId}
-                    onValueChange={(value) => {
-                      setSelectedUserId(value);
-                      const member = companyMembers.find(m => m.id === value);
-                      setSelectedMember(member || null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.firstName} {member.lastName} ({member.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddMember}
-                  disabled={memberLoading || !selectedUserId}
-                >
-                  {memberLoading ? "Adding..." : "Add Member"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            <ActionButton 
+              variant="primary" 
+              motion="subtle"
+              text="Add Member"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setIsAddDialogOpen(true)}
+            />
           )}
         </div>
       )}
@@ -271,9 +180,17 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
           <p className="text-gray-600">
             No members assigned to this project yet.
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Click "Add Member" to get started.
-          </p>
+          {hasPermission(resource, 'create') && (
+            <div className="mt-4">
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                text="Add Member"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => setIsAddDialogOpen(true)}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="w-full bg-white rounded-md overflow-hidden">
@@ -300,12 +217,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() =>
-                            handleRemoveMember(
-                              member.user.id,
-                              `${member.user.firstName} ${member.user.lastName}`
-                            )
-                          }
+                          onClick={() => handleRemoveMember(member.user.id)}
                           disabled={memberLoading}
                           className="w-6 h-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
                           aria-label="Remove member"
@@ -395,7 +307,7 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
                             onClick={() =>
                               handleRemoveMember(
                                 member.user.id,
-                                `${member.user.firstName} ${member.user.lastName}`
+                                
                               )
                             }
                             disabled={memberLoading}
@@ -417,8 +329,56 @@ const ProjectMemberManagement: React.FC<ProjectMemberManagementProps> = ({
       {memberError && (
         <div className="text-red-600 text-sm mt-2">Error: {memberError}</div>
       )}
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="w-5/6 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Member to Project</DialogTitle>
+            <DialogDescription>
+              Select a team member to add to this project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Select
+                value={selectedUserId}
+                onValueChange={(value) => {
+                  setSelectedUserId(value);
+                  const member = companyMembers.find(m => m.id === value);
+                  setSelectedMember(member || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstName} {member.lastName} ({member.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddMember}
+              disabled={memberLoading || !selectedUserId}
+            >
+              {memberLoading ? "Adding..." : "Add Member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
+});
 
 export default ProjectMemberManagement;
