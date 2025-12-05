@@ -71,6 +71,7 @@ import {
   X,
   Filter,
 } from 'lucide-react';
+import solar from '@solar-icons/react';
 import DeleteFolderModal from '@/components/modals/DeleteFolderModal';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
 import { useToast } from '@/hooks/use-toast';
@@ -840,14 +841,16 @@ const FolderView: React.FC = () => {
               />
             )}
             {hasPermission('documents', 'create') && (
-              <ActionButton
-                variant="primary"
-                motion="subtle"
-                onClick={() => setIsUploadDialogOpen(true)}
-                className="w-auto"
-                text="Upload Files"
-                leftIcon={<Upload size={16} />}
-              />
+              <div className="hidden md:flex items-center gap-2">
+                <ActionButton
+                  variant="primary"
+                  motion="subtle"
+                  onClick={() => setIsUploadDialogOpen(true)}
+                  className="w-auto"
+                  text="Upload Files"
+                  leftIcon={<Upload size={16} />}
+                />
+              </div>
             )}
           </div>
         </PageHeader>
@@ -1659,6 +1662,15 @@ const FolderView: React.FC = () => {
           />
         )}
       </div>
+      {hasPermission('documents', 'create') && (
+        <Button
+          variant="default"
+          onClick={() => setIsUploadDialogOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+        >
+          <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+        </Button>
+      )}
     </PageContainer>
   );
 };

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ChevronRight, Image, MoreVertical, Plus, Bell, Upload, Download, Square, Check, Trash2, X, Pencil } from "lucide-react";
+import solar from "@solar-icons/react";
 import { fetchAlbum, fetchAlbumPhotos, fetchChildrenAlbums, selectAlbumDetails, selectAlbumPhotos, uploadPhotoToAlbum } from "@/redux/slices/albumsSlice";
 import { selectAlbumsByParent, createAlbum } from "@/redux/slices/albumsSlice";
 import { fetchVisits, selectVisitsByProject, selectVisitsLoading, createVisit } from "@/redux/slices/visitsSlice";
@@ -274,12 +275,14 @@ const AlbumPhotos: React.FC = () => {
         onBackClick={handleBack}
       >
         {album?.parentId && (
-          <ActionButton
-            text="Add pictures"
-            variant="primary"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => document.getElementById('album-photo-upload')?.click()}
-          />
+          <div className="hidden md:flex items-center gap-2">
+            <ActionButton
+              text="Add pictures"
+              variant="primary"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => document.getElementById('album-photo-upload')?.click()}
+            />
+          </div>
         )}
       </PageHeader>
 
@@ -445,11 +448,18 @@ const AlbumPhotos: React.FC = () => {
       {album && album.parentId && (
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Photos</h2>
+            <div className="flex items-center justify-between sm:justify-start w-full">
+              <h2 className="text-lg font-semibold text-gray-900">Photos</h2>
+              {hasPermission('photos','create') && (
+                <div className="sm:hidden">
+                  <ActionButton text={isUploading ? 'Uploading...' : 'Import'} variant="secondary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => document.getElementById('album-photo-upload')?.click()} />
+                </div>
+              )}
+            </div>
             {hasPermission('photos','create') && (
               <>
                 <input type="file" multiple accept="image/*" onChange={(e) => handleFileSelect(e.target.files)} className="hidden" id="album-photo-upload" />
-            <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+            <div className="hidden sm:flex flex-wrap items-center gap-2 justify-center sm:justify-start">
               <ActionButton text={isUploading ? 'Uploading...' : 'Import'} variant="secondary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => document.getElementById('album-photo-upload')?.click()} />
               {photos.length > 0 && (
                 <>
@@ -565,6 +575,15 @@ const AlbumPhotos: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+      {album?.parentId && (
+        <Button
+          variant="default"
+          onClick={() => document.getElementById('album-photo-upload')?.click()}
+          className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+        >
+          <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+        </Button>
       )}
 
       {/* Create Visit Dialog */}

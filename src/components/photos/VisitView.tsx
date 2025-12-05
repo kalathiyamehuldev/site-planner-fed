@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import usePermission from "@/hooks/usePermission";
+import solar from "@solar-icons/react";
 import {
   fetchVisitById,
   updateVisit,
@@ -676,7 +677,7 @@ const VisitView: React.FC = () => {
           </h2>
           
           {canUpload && (
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <ActionButton
                 text="Add pictures"
                 variant="primary"
@@ -1262,6 +1263,16 @@ const VisitView: React.FC = () => {
           </GlassCard>
         )}
       </div>
+
+      {canUpload && (
+        <Button
+          variant="default"
+          onClick={() => { setPendingUploadLocationId(null); document.getElementById('photo-upload')?.click(); }}
+          className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+        >
+          <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+        </Button>
+      )}
 
       {/* Edit Photo Dialog */}
       <Dialog open={editPhotoId !== null} onOpenChange={(open) => {

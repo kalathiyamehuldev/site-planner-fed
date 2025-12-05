@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search, Eye, User, Mail, Phone } from 'lucide-react';
+import solar from '@solar-icons/react';
 import { RiArrowUpDownLine } from '@remixicon/react';
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
@@ -368,21 +369,23 @@ const CustomerManagement: React.FC = () => {
         </div>
         <div className="flex gap-2 justify-center md:justify-end">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            {hasPermission('users', 'create') && (
-              <ActionButton 
-                variant="primary" 
-                motion="subtle"
-                onClick={() => {
-                  setEditingCustomer(null);
-                  setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
-                  setFormErrors({});
-                }}
-                text="Add Customer"
-                leftIcon={<Plus className="h-4 w-4" />}
-              />
-            )}
-          </DialogTrigger>
+          <div className="hidden md:flex items-center gap-2">
+            <DialogTrigger asChild>
+              {hasPermission('users', 'create') && (
+                <ActionButton 
+                  variant="primary" 
+                  motion="subtle"
+                  onClick={() => {
+                    setEditingCustomer(null);
+                    setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
+                    setFormErrors({});
+                  }}
+                  text="Add Customer"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                />
+              )}
+            </DialogTrigger>
+          </div>
           <DialogContent className="w-5/6 sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -759,6 +762,20 @@ const CustomerManagement: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+      {hasPermission('users', 'create') && (
+        <Button
+          variant="default"
+          onClick={() => {
+            setEditingCustomer(null);
+            setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', password: '', selectedProjects: [] });
+            setFormErrors({});
+            setIsDialogOpen(true);
+          }}
+          className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+        >
+          <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+        </Button>
       )}
       {/* Bottom Sheet for Customer Actions */}
       <BottomSheet

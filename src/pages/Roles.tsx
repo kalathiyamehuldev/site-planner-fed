@@ -5,6 +5,8 @@ import { fetchRoles, deleteRole, selectAllRoles, selectRolesLoading } from '@/re
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { Plus, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import solar from '@solar-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
@@ -112,14 +114,16 @@ const RolesPage: React.FC = () => {
           subtitle="Manage user roles and permissions"
         >
           {hasPermission('roles', 'create') && (
-            <ActionButton
-              variant="primary"
-              motion="subtle"
-              onClick={handleCreateRole}
-              leftIcon={<Plus size={18} className="mr-2" />}
-              text="Create Role"
-            >
-            </ActionButton>
+            <div className="hidden md:flex items-center gap-2">
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                onClick={handleCreateRole}
+                leftIcon={<Plus size={18} className="mr-2" />}
+                text="Create Role"
+              >
+              </ActionButton>
+            </div>
           )}
         </PageHeader>
 
@@ -183,6 +187,16 @@ const RolesPage: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {hasPermission('roles', 'create') && (
+          <Button
+            variant="default"
+            onClick={handleCreateRole}
+            className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+          >
+            <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+          </Button>
         )}
 
         {/* Delete Confirmation Dialog */}

@@ -5,6 +5,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import ActionButton from "@/components/ui/ActionButton";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/contacts/ContactModal";
@@ -30,6 +31,7 @@ import {
   Clock,
   Tag as TagIcon,
 } from "lucide-react";
+import solar from "@solar-icons/react";
 import {
   fetchAllContactsByCompany,
   fetchContactsByProject,
@@ -227,14 +229,17 @@ const AddressBook = () => {
           title="Address Book" 
           subtitle="Manage clients, vendors, and other contacts"
         >
-          <ActionButton
-            variant="primary"
-            motion="subtle"
-            onClick={handleAddContact}
-            className={!hasPermission(resource, 'create') ? 'hidden' : ''}
-            text="Add Contact"
-            leftIcon={<Plus size={16} />}
-          />
+          {hasPermission(resource, 'create') && (
+            <div className="hidden md:flex items-center gap-2">
+              <ActionButton
+                variant="primary"
+                motion="subtle"
+                onClick={handleAddContact}
+                text="Add Contact"
+                leftIcon={<Plus size={16} />}
+              />
+            </div>
+          )}
         </PageHeader>
 
         {/* Filters and Search */}
@@ -811,6 +816,16 @@ const AddressBook = () => {
         contact={contactToDelete}
         onDeleted={handleContactDeleted}
       />
+
+      {hasPermission(resource, 'create') && (
+        <Button
+          variant="default"
+          onClick={handleAddContact}
+          className="md:hidden fixed bottom-6 right-6 rounded-2xl bg-[#1b78f9] text-white shadow-lg p-2"
+        >
+          <solar.Ui.AddSquare className="w-6 h-6" style={{ width: 24, height: 24 }} />
+        </Button>
+      )}
     </PageContainer >
   );
 };
