@@ -40,9 +40,10 @@ import EditRolePage from "./components/roles/EditRole";
 import Profile from "./pages/Profile";
 import NotificationPreferences from "./components/settings/NotificationPreferences";
 import Photos from "./pages/PhotoGallery";
-import AlbumPhotos from "./pages/AlbumPhotos";
+import AlbumPhotos from "./components/photos/AlbumPhotos";
 import AlbumView from "./components/photos/VisitView";
 import PhotoViewer from "./components/photos/PhotoViewer";
+import AllPhotosProject from "./components/photos/AllPhotosProject";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,7 @@ const App = () => (
                           <Route path="/roles/create" element={<CreateRolePage />}/>
                           <Route path="/roles/edit/:roleId" element={<EditRolePage />}/>
                           <Route path="/photos" element={<Photos />} />
+                          <Route path="/photos/all" element={<AllPhotosProject />} />
                           
                           <Route path="/albums/:albumId" element={<AlbumPhotos />} />
                           <Route path="/photos/album/:visitId" element={<AlbumView />} />

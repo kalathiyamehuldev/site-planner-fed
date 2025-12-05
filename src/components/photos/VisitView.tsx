@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Pencil,
   MoreHorizontal,
+  MoreVertical,
   X,
   Search,
   Filter,
@@ -1111,17 +1112,43 @@ const VisitView: React.FC = () => {
                             className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
                             onClick={() => isSelectionMode ? togglePhotoSelection(photo.id) : handlePhotoClick(photo.id)}
                           >
-                            <img src={photo.fileUrl} alt={photo.caption || photo.originalName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                          </div>
-                          {isSelectionMode && (
-                            <div className="absolute top-2 left-2">
-                              <div className={cn("h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition", selectedPhotoIds.has(photo.id) ? "bg-blue-600 text-white shadow" : "bg-white/90 text-transparent border border-gray-300")} onClick={(e) => { e.stopPropagation(); togglePhotoSelection(photo.id); }} aria-pressed={selectedPhotoIds.has(photo.id)}>
-                                <Check className="h-4 w-4" />
-                              </div>
+                              <img src={photo.fileUrl} alt={photo.caption || photo.originalName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            {isSelectionMode && (
+                              <div className="absolute top-2 left-2">
+                                <div className={cn("h-7 w-7 rounded-full flex items-center justify-center cursor-pointer transition", selectedPhotoIds.has(photo.id) ? "bg-blue-600 text-white shadow" : "bg-white/90 text-transparent border border-gray-300")} onClick={(e) => { e.stopPropagation(); togglePhotoSelection(photo.id); }} aria-pressed={selectedPhotoIds.has(photo.id)}>
+                                  <Check className="h-4 w-4" />
+                                </div>
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-7 h-7 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-36">
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditPhoto(photo.id); }} className="flex items-center gap-2">
+                                    <Pencil size={14} />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  {canDelete && (
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }} className="flex items-center gap-2 text-red-600 focus:text-red-600">
+                                      <Trash2 size={14} />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1180,6 +1207,32 @@ const VisitView: React.FC = () => {
                                 </div>
                               </div>
                             )}
+                            <div className="absolute top-2 right-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-7 h-7 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-36">
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditPhoto(photo.id); }} className="flex items-center gap-2">
+                                    <Pencil size={14} />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  {canDelete && (
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }} className="flex items-center gap-2 text-red-600 focus:text-red-600">
+                                      <Trash2 size={14} />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         ))}
                       </div>

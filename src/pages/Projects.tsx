@@ -247,6 +247,7 @@ const Projects = () => {
                       });
                 })()}
                 team={project.team}
+                totalMembers={project?.totalMembers}
                 tasks={tasksByProject[project.id] || []}
                 className={cn("opacity-0 animate-scale-in rounded-xl", {
                   "animation-delay-[0.1s]": index % 3 === 0,

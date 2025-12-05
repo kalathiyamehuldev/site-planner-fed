@@ -116,11 +116,7 @@ const PhotoViewer: React.FC = () => {
   }, [dispatch, photo?.projectId]);
 
   const handleBack = () => {
-    if (visitId) {
-      navigate(`/photos/album/${visitId}`);
-    } else {
-      navigate("/photos");
-    }
+    navigate(-1);
   };
 
   const handleNext = () => {
@@ -316,6 +312,17 @@ const PhotoViewer: React.FC = () => {
               </Button>
             </div>
 
+            {canManage && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setIsLocationPanelOpen(!isLocationPanelOpen)}
+                className="bg-black/20 border-0 text-white hover:bg-black/40 h-8 w-8 sm:hidden"
+              >
+                <MapPin className="h-4 w-4" />
+              </Button>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -498,7 +505,7 @@ const PhotoViewer: React.FC = () => {
           size="icon"
           onClick={() => setIsLocationPanelOpen(!isLocationPanelOpen)}
           className={cn(
-            "absolute bg-black/20 border-0 text-white hover:bg-black/40 h-8 w-8 sm:h-10 sm:w-10",
+            "hidden sm:inline-flex absolute bg-black/20 border-0 text-white hover:bg-black/40 h-8 w-8 sm:h-10 sm:w-10",
             // Position based on whether location panel is open
             isLocationPanelOpen 
               ? "top-2 right-2 sm:top-4 sm:right-[336px]" // 336px = 320px width + 16px margin

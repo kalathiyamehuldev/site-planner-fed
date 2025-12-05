@@ -19,7 +19,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { updateAlbum, deleteAlbum } from "@/redux/slices/albumsSlice";
 import { updateVisit, deleteVisit } from "@/redux/slices/visitsSlice";
-import { deletePhoto } from "@/redux/slices/photosSlice";
+import { deletePhoto, updatePhoto } from "@/redux/slices/photosSlice";
 
 const AlbumPhotos: React.FC = () => {
   const { albumId } = useParams();
@@ -44,6 +44,9 @@ const AlbumPhotos: React.FC = () => {
   const [uploadingFiles, setUploadingFiles] = useState<Array<{ file: File; progress: number; status: 'uploading' | 'completed' | 'error'; error?: string }>>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [editPhotoId, setEditPhotoId] = useState<string | null>(null);
+  const [editPhotoName, setEditPhotoName] = useState<string>("");
+  const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
   const [filterVisitDate, setFilterVisitDate] = useState<Date | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"visitDate" | "photos" | "createdBy">("visitDate");
   const [isEditAlbumOpen, setIsEditAlbumOpen] = useState(false);
@@ -182,6 +185,19 @@ const AlbumPhotos: React.FC = () => {
     const next = new Set(selectedPhotoIds);
     if (next.has(photoId)) next.delete(photoId); else next.add(photoId);
     setSelectedPhotoIds(next);
+  };
+
+  const openEditPhoto = (p: any) => {
+    setEditPhotoId(p.id);
+    setEditPhotoName(p.originalName || "");
+  };
+
+  const saveEditPhoto = async () => {
+    if (!editPhotoId) return;
+    await dispatch(updatePhoto({ id: editPhotoId, data: { originalName: editPhotoName.trim() || undefined } } as any));
+    setEditPhotoId(null);
+    setEditPhotoName("");
+    if (albumId) dispatch(fetchAlbumPhotos(albumId));
   };
 
   const handleBulkDelete = async () => {
@@ -373,6 +389,23 @@ const AlbumPhotos: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-3">
+              {/* All Photos virtual album */}
+              {album?.projectId && (
+                <GlassCard className="p-3 sm:p-6 hover:shadow-lg cursor-pointer" onClick={() => navigate(`/photos/all?projectId=${album.projectId}`)}>
+                  <div className="h-20 bg-gradient-to-b from-emerald-50 to-white rounded-lg flex items-center justify-center border">
+                    <Image className="h-7 w-7 text-emerald-500" />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold text-gray-900 truncate">All Photos</div>
+                      <div className="text-xs text-emerald-700">Default</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {/* No menu for virtual album */}
+                    </div>
+                  </div>
+                </GlassCard>
+              )}
               {children.map((child) => (
                 <GlassCard key={child.id} className="p-3 sm:p-6 hover:shadow-lg cursor-pointer" onClick={() => handleOpenAlbum(child.id)}>
                   <div className="h-20 bg-gradient-to-b from-blue-50 to-white rounded-lg flex items-center justify-center border">
@@ -485,7 +518,10 @@ const AlbumPhotos: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
           {photos.map((p) => (
             <div key={p.id} className="group relative">
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+              <div
+                className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+                onClick={() => isSelectionMode ? togglePhotoSelection(p.id) : navigate(`/photos/viewer/${p.id}`)}
+              >
                 <img src={p.fileUrl} alt={p.caption || p.originalName} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               </div>
               {isSelectionMode && (
@@ -502,12 +538,76 @@ const AlbumPhotos: React.FC = () => {
                   </div>
                 </div>
               )}
+              <div className="absolute top-2 right-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-7 h-7 p-0 text-[#1a2624]/60 hover:text-[#1a2624] hover:bg-gray-100 rounded"
+                    >
+                      <MoreVertical size={16} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditPhoto(p); }} className="flex items-center gap-2">
+                      <Pencil size={14} />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeletePhotoId(p.id); }} className="flex items-center gap-2 text-red-600 focus:text-red-600">
+                      <Trash2 size={14} />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {/* Create Visit Dialog */}
+      <Dialog open={editPhotoId !== null} onOpenChange={(open) => { if (!open) { setEditPhotoId(null); setEditPhotoName(""); } }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Photo</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="editPhotoName" className="text-sm font-medium">Display Name</label>
+              <Input id="editPhotoName" value={editPhotoName} onChange={(e) => setEditPhotoName(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setEditPhotoId(null); setEditPhotoName(""); }}>Cancel</Button>
+            <Button onClick={saveEditPhoto} disabled={editPhotoName.trim() === ""}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletePhotoId} onOpenChange={(open) => !open && setDeletePhotoId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete photo?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletePhotoId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deletePhotoId) return;
+                await dispatch(deletePhoto(deletePhotoId));
+                setDeletePhotoId(null);
+                if (albumId) dispatch(fetchAlbumPhotos(albumId));
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog open={isCreateVisitOpen} onOpenChange={setIsCreateVisitOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

@@ -26,6 +26,7 @@ export interface ApiProject {
   companyId: string;
   members?: ProjectMember[];
   tasks?: Task[];
+  totalMembers?: number;
 }
 
 export interface ProjectMember {
@@ -88,6 +89,7 @@ const transformApiProject = (apiProject: ApiProject) => ({
           'Not Started' as const,
   dueDate: '',
   team: apiProject.members?.map(member => `${member.user.firstName} ${member.user.lastName}`) || [],
+  totalMembers: typeof apiProject.totalMembers === 'number' ? apiProject.totalMembers : (apiProject.members ? apiProject.members.length : 0),
   progress: 0,
   description: apiProject.description || '',
   budget: apiProject.budget || 0,

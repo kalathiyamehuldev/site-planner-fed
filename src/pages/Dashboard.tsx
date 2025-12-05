@@ -286,7 +286,7 @@ const Dashboard = () => {
                             year: "numeric",
                           });
                     })()}
-                    team={project.team}
+                    totalMembers={project?.totalMembers}
                     tasks={tasksByProject[project.id] || []}
                   />
                 ))}

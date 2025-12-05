@@ -14,7 +14,8 @@ interface ProjectCardProps {
   client: string;
   status: "Active" | "Not Started" | "In Progress" | "On Hold" | "Completed" | "Hold";
   dueDate: string;
-  team: string[];
+  team?: string[];
+  totalMembers?: number | 0;
   progress?: number; // Make optional since we'll calculate it
   tasks?: any[]; // Add tasks for progress calculation
   className?: string;
@@ -28,7 +29,7 @@ const ProjectCard = ({
   client,
   status,
   dueDate,
-  team,
+  totalMembers,
   progress: providedProgress,
   tasks = [],
   className,
@@ -115,8 +116,8 @@ const ProjectCard = ({
           <div className="w-4 h-4 relative overflow-hidden">
             <Users size={14} className="text-gray-500" />
           </div>
-          <div className="text-gray-500 text-xs font-normal font-['Poppins']">
-            {team.length === 1 ? '1 member' : `${team.length} members`}
+          <div className="text-gray-900 text-sm font-medium font-['Poppins']">
+            {`${totalMembers} members`}
           </div>
         </div>
       </div>
