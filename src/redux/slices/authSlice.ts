@@ -6,11 +6,12 @@ import {
     CreateCompanyDto,
     ForgotPasswordDto,
     ResetPasswordDto,
-    CompanySelectionDto
+    CompanySelectionDto,
+    VerifyOtpDto
 } from '@/common/types/auth.types';
 import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { fetchPermissionsByRole } from './rolesSlice';
 import { forceStopTimer } from './timeTrackingSlice';
 
@@ -283,6 +284,52 @@ export const resetPassword = createAsyncThunk(
         }
     }
 );
+
+// New thunks for OTP-based flow
+export const sendForgotPasswordOtp = createAsyncThunk(
+  'auth/sendForgotPasswordOtp',
+  async (data: ForgotPasswordDto, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/auth/forgot-password/send-otp', data);
+      if (response?.status && response.status !== 'success') {
+        return rejectWithValue(response.error || response.message || 'Failed to send OTP');
+      }
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to send OTP');
+    }
+  }
+);
+
+export const verifyForgotPasswordOtp = createAsyncThunk(
+  'auth/verifyForgotPasswordOtp',
+  async (data: VerifyOtpDto, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/auth/forgot-password/verify-otp', data);
+      if (response?.status && response.status !== 'success') {
+        return rejectWithValue(response.error || response.message || 'Invalid OTP');
+      }
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Invalid OTP');
+    }
+  }
+);
+
+export const confirmForgotPassword = createAsyncThunk(
+  'auth/confirmForgotPassword',
+  async (data: ResetPasswordDto, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/auth/forgot-password/reset-password', data);
+      if (response?.status && response.status !== 'success') {
+        return rejectWithValue(response.error || response.message || 'Failed to reset password');
+      }
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to reset password');
+    }
+  }
+);
 export const getProfile = createAsyncThunk(
     'auth/getProfile',
     async (_, { rejectWithValue, dispatch }) => {
@@ -412,7 +459,7 @@ const authSlice = createSlice({
             .addCase(login.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
-                toast.error(action.payload as string);
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             // Get Profile
             .addCase(getProfile.pending, (state) => {
@@ -452,7 +499,7 @@ const authSlice = createSlice({
             .addCase(getProfile.rejected, (state, action) => {
               state.isLoading = false;
               state.error = action.payload as string;
-              toast.error(action.payload as string);
+              toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             // Update Profile
             .addCase(updateProfile.pending, (state) => {
@@ -475,7 +522,7 @@ const authSlice = createSlice({
             .addCase(updateProfile.rejected, (state, action) => {
               state.isLoading = false;
               state.error = action.payload as string;
-              toast.error(action.payload as string);
+              toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             // Register Company
             .addCase(registerCompany.pending, (state) => {
@@ -500,7 +547,7 @@ const authSlice = createSlice({
             .addCase(registerCompany.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
-                toast.error(action.payload as string);
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             // Select Company
             .addCase(selectCompany.pending, (state) => {
@@ -517,7 +564,49 @@ const authSlice = createSlice({
             .addCase(selectCompany.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
-                toast.error(action.payload as string);
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
+            })
+            // Send OTP
+            .addCase(sendForgotPasswordOtp.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(sendForgotPasswordOtp.fulfilled, (state) => {
+                state.isLoading = false;
+                state.error = null;
+            })
+            .addCase(sendForgotPasswordOtp.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
+            })
+            // Verify OTP
+            .addCase(verifyForgotPasswordOtp.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(verifyForgotPasswordOtp.fulfilled, (state) => {
+                state.isLoading = false;
+                state.error = null;
+            })
+            .addCase(verifyForgotPasswordOtp.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
+            })
+            // Confirm Reset
+            .addCase(confirmForgotPassword.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(confirmForgotPassword.fulfilled, (state) => {
+                state.isLoading = false;
+                state.error = null;
+            })
+            .addCase(confirmForgotPassword.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             .addCase(forgotPassword.pending, (state) => {
                 state.isLoading = true;
@@ -531,7 +620,7 @@ const authSlice = createSlice({
             .addCase(forgotPassword.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
-                toast.error(action.payload as string);
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             .addCase(resetPassword.pending, (state) => {
                 state.isLoading = true;
@@ -545,7 +634,7 @@ const authSlice = createSlice({
             .addCase(resetPassword.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
-                toast.error(action.payload as string);
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
             })
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;

@@ -67,12 +67,20 @@ export interface CompanySelectionDto {
 
 export interface ForgotPasswordDto {
     email: string;
+    userType: UserType;
 }
 
 export interface ResetPasswordDto {
     email: string;
     otp: string;
     newPassword: string;
+    userType: UserType;
+}
+
+export interface VerifyOtpDto {
+    email: string;
+    otp: string;
+    userType: UserType;
 }
 
 export interface AuthState {
