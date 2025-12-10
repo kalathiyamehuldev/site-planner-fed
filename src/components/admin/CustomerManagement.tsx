@@ -634,10 +634,10 @@ const CustomerManagement: React.FC = () => {
         /* Desktop Table View */
         <div className="w-full bg-white rounded-md overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] lg:table-fixed">
+            <table className="w-full min-w-[600px] sm:min-w-[700px] md:min-w-[800px] table-auto">
               <thead className="h-12">
                 <tr className="border-b border-[#1a2624]/10">
-                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/3 md:w-1/4 lg:w-2/5">
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight">
                     <button
                       onClick={() => handleSort('name')}
                       className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
@@ -646,7 +646,7 @@ const CustomerManagement: React.FC = () => {
                       <RiArrowUpDownLine size={14} />
                     </button>
                   </th>
-                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-full sm:w-1/4 md:w-1/6 lg:w-1/4 hidden sm:table-cell">
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight hidden sm:table-cell">
                     <button
                       onClick={() => handleSort('email')}
                       className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
@@ -655,7 +655,7 @@ const CustomerManagement: React.FC = () => {
                       <RiArrowUpDownLine size={14} />
                     </button>
                   </th>
-                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
+                  {/* <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-20 sm:w-24 md:w-28 hidden md:table-cell">
                     <button
                       onClick={() => handleSort('phone')}
                       className="text-left font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight flex items-center gap-1 hover:text-[#1a2624] transition-colors bg-transparent border-none p-0 cursor-pointer"
@@ -663,11 +663,11 @@ const CustomerManagement: React.FC = () => {
                       Phone
                       <RiArrowUpDownLine size={14} />
                     </button>
-                  </th>
-                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight w-24 sm:w-28 md:w-32 hidden lg:table-cell">
+                  </th> */}
+                  <th className="text-left px-3 font-normal text-sm text-[#2a2e35] font-['Poppins'] leading-tight hidden lg:table-cell">
                     Projects
                   </th>
-                  <th className="w-12 px-3 border-b border-[#1a2624]/10">
+                  <th className="min-w-[48px] w-auto px-3 border-b border-[#1a2624]/10">
                     {/* Actions column - empty header */}
                   </th>
                 </tr>
@@ -695,7 +695,7 @@ const CustomerManagement: React.FC = () => {
                         animationFillMode: "forwards",
                       }}
                     >
-                      <td className="px-3 max-w-xs">
+                      <td className="px-3 max-w-[360px]">
                         <div className="flex flex-col gap-0.5">
                           <div className="text-[#1a2624] text-sm font-bold font-['Manrope'] leading-normal truncate">
                             {`${customer.firstName} ${customer.lastName}`}
@@ -706,17 +706,17 @@ const CustomerManagement: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 max-w-xs hidden sm:table-cell">
+                      <td className="px-3 max-w-[520px] hidden sm:table-cell">
                         <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight truncate">
                           {customer.email}
                         </div>
                       </td>
-                      <td className="px-3 hidden md:table-cell">
+                      {/* <td className="px-3 hidden md:table-cell">
                         <div className="text-[#1a2624] text-sm font-medium font-['Manrope'] leading-tight">
                           {customer.phone || '-'}
                         </div>
-                      </td>
-                      <td className="px-3 hidden lg:table-cell">
+                      </td> */}
+                      <td className="px-3 max-w-[420px] hidden lg:table-cell">
                         <div className="text-sm">
                           {customer.projects && customer.projects.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
@@ -731,7 +731,7 @@ const CustomerManagement: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-3">
+                      <td className="px-3 min-w-[48px] w-auto">
                         <div className="flex items-center justify-center gap-1">
                           {hasPermission('users', 'update') && (
                             <Button
