@@ -7,7 +7,8 @@ import {
     ForgotPasswordDto,
     ResetPasswordDto,
     CompanySelectionDto,
-    VerifyOtpDto
+    VerifyOtpDto,
+    UserType
 } from '@/common/types/auth.types';
 import { RootState } from '@/redux/store';
 import api from '@/lib/axios';
@@ -330,6 +331,36 @@ export const confirmForgotPassword = createAsyncThunk(
     }
   }
 );
+
+export const changeAccountEmail = createAsyncThunk(
+  'auth/changeAccountEmail',
+  async (data: { newEmail: string; password: string; userType: UserType }, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/auth/account/change-email', data);
+      if (response?.status && response.status !== 'success') {
+        return rejectWithValue(response.error || response.message || 'Failed to update email');
+      }
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update email');
+    }
+  }
+);
+
+export const changeAccountPassword = createAsyncThunk(
+  'auth/changeAccountPassword',
+  async (data: { oldPassword: string; newPassword: string; userType: UserType }, { rejectWithValue }) => {
+    try {
+      const response: any = await api.post('/auth/account/change-password', data);
+      if (response?.status && response.status !== 'success') {
+        return rejectWithValue(response.error || response.message || 'Failed to update password');
+      }
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update password');
+    }
+  }
+);
 export const getProfile = createAsyncThunk(
     'auth/getProfile',
     async (_, { rejectWithValue, dispatch }) => {
@@ -604,6 +635,41 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(confirmForgotPassword.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
+            })
+            // Change Email
+            .addCase(changeAccountEmail.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(changeAccountEmail.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.error = null;
+                if (state.user) {
+                    state.user.email = (action.meta.arg as any).newEmail;
+                }
+                toast({ title: 'Email Updated', description: 'Your email was updated successfully' });
+            })
+            .addCase(changeAccountEmail.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                const raw = (action.payload as string) || 'Failed to update email';
+                const msg = /incorrect password/i.test(raw) ? 'Password is incorrect' : raw;
+                toast({ title: 'Error', description: msg, variant: 'destructive' });
+            })
+            // Change Password
+            .addCase(changeAccountPassword.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(changeAccountPassword.fulfilled, (state) => {
+                state.isLoading = false;
+                state.error = null;
+                toast({ title: 'Password Updated', description: 'Your password was updated successfully' });
+            })
+            .addCase(changeAccountPassword.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
                 toast({ title: 'Error', description: action.payload as string, variant: 'destructive' });
