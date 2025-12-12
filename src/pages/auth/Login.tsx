@@ -87,7 +87,12 @@ const Login = () => {
       <div className="w-full max-w-lg">
         <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
-            <CardTitle className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <img
+              src="/logo/logo.svg"
+              alt="Company Logo"
+              className="mx-auto mb-5 h-10 w-auto"
+            />
+            <CardTitle className="text-2xl font-bold bg-[#1e1e1e] bg-clip-text text-transparent">
               Welcome Back
             </CardTitle>
             <CardDescription className="text-lg text-gray-600 mt-2">
